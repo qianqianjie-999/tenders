@@ -1,0 +1,2767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>招投标信息展示系统</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <!-- Bootstrap 5 CSS -->
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Datepicker -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-datepicker.min.css') }}">
+<style>
+    :root {
+        /* 现代化配色方案 */
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+
+        --primary-color: #667eea;
+        --secondary-color: #764ba2;
+        --success-color: #4facfe;
+        --warning-color: #fa709a;
+        --info-color: #00f2fe;
+        --danger-color: #f5576c;
+
+        --bg-primary: #f8fafc;
+        --bg-secondary: #ffffff;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --border-color: #e2e8f0;
+
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+        --shadow-md: 0 3px 4px -1px rgba(0, 0, 0, 0.08), 0 2px 3px -1px rgba(0, 0, 0, 0.04);
+        --shadow-lg: 0 6px 10px -2px rgba(0, 0, 0, 0.08), 0 3px 5px -2px rgba(0, 0, 0, 0.04);
+        --shadow-xl: 0 12px 18px -4px rgba(0, 0, 0, 0.08), 0 6px 8px -3px rgba(0, 0, 0, 0.03);
+        --shadow-glow: 0 0 12px rgba(102, 126, 234, 0.2);
+
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 24px;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        min-height: 100vh;
+        color: var(--text-primary);
+    }
+
+    /* 头部样式 - 玻璃拟态效果 */
+    .header-container {
+        width: 100%;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+        color: white;
+        padding: 1.5rem 0;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-xl);
+        backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .header-container::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+        background-size: 20px 20px;
+        opacity: 0.3;
+        pointer-events: none;
+    }
+
+    .header-container h1 {
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+    }
+
+    /* 头部功能块容器 - 左对齐，允许多行 */
+    .header-blocks-container {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    /* 头部功能块 - 统一卡片样式 */
+    .header-function-block {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(12px);
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 10px 16px;
+        min-width: 130px;
+        height: 65px;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        text-decoration: none;
+        color: white;
+        flex: 1;
+        max-width: 180px;
+    }
+
+    /* 链接样式重置 */
+    a.header-function-block {
+        color: white;
+        text-decoration: none;
+    }
+
+    a.header-function-block:hover {
+        color: white;
+    }
+
+    /* 悬停效果 */
+    .header-function-block:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 功能块图标 */
+    .block-icon {
+        font-size: 1.5rem;
+        color: white;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    /* 功能块内容区域 */
+    .block-content {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+    }
+
+    /* 功能块标题 */
+    .block-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 2px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        line-height: 1.2;
+    }
+
+    /* 功能块数值/副标题 */
+    .block-value {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: white;
+        line-height: 1.2;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .block-subtitle {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: white;
+        line-height: 1.2;
+    }
+
+    /* 星期几显示 */
+    .block-weekday {
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.85);
+        line-height: 1.2;
+        margin-top: 2px;
+        letter-spacing: 0.5px;
+    }
+
+    /* 投标项目块特殊样式 */
+    #bid-projects-block:hover .block-icon {
+        background: rgba(250, 219, 20, 0.3);
+        color: #fadb14;
+    }
+
+    /* 分析标书块特殊样式 */
+    #analysis-block:hover .block-icon {
+        background: rgba(82, 196, 26, 0.3);
+        color: #52c41a;
+    }
+
+    /* 重点关注块特殊样式 */
+    #focus-block:hover .block-icon {
+        background: rgba(255, 77, 79, 0.3);
+        color: #ff4d4f;
+    }
+
+    /* 方案设计块特殊样式 */
+    #design-block:hover .block-icon {
+        background: rgba(24, 144, 255, 0.3);
+        color: #1890ff;
+    }
+
+    /* 项目跟踪验收审计块特殊样式 */
+    #audit-block:hover .block-icon {
+        background: rgba(114, 46, 209, 0.3);
+        color: #722ed1;
+    }
+
+    /* 数据看板块特殊样式 */
+    #dashboard-block:hover .block-icon {
+        background: rgba(102, 126, 234, 0.4);
+        color: #fff;
+    }
+
+    /* 监控中心块特殊样式 */
+    #monitor-block:hover .block-icon {
+        background: rgba(239, 68, 68, 0.3);
+        color: #ef4444;
+    }
+
+    /* 日期块特殊样式 - 非点击状态 */
+    #date-block {
+        cursor: default;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    #date-block:hover {
+        transform: none;
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    #date-block .block-icon {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* 移动端适配 */
+    @media (max-width: 992px) {
+        .header-function-block {
+            min-width: 120px;
+            padding: 10px 14px;
+            height: 60px;
+        }
+
+        .block-icon {
+            width: 32px;
+            height: 32px;
+            font-size: 1.3rem;
+        }
+
+        .block-value {
+            font-size: 1.1rem;
+        }
+
+        .block-subtitle {
+            font-size: 0.8rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .header-container h1 {
+            font-size: 1.4rem;
+        }
+
+        .header-blocks-container {
+            gap: 8px;
+        }
+
+        .header-function-block {
+            min-width: 100px;
+            height: 55px;
+            padding: 8px 12px;
+            flex: 1 1 30%;
+        }
+
+        .block-icon {
+            font-size: 1.2rem;
+            width: 28px;
+            height: 28px;
+        }
+
+        .block-title {
+            font-size: 0.7rem;
+        }
+
+        .block-value {
+            font-size: 1rem;
+        }
+
+        .block-subtitle {
+            font-size: 0.75rem;
+        }
+
+        .block-weekday {
+            font-size: 0.65rem;
+        }
+    }
+
+    /* 日期信息卡片 - 玻璃拟态 */
+    .date-info {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: var(--radius-lg);
+        padding: 12px 20px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: var(--shadow-md);
+        transition: all 0.3s ease;
+    }
+
+    .date-info:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
+    }
+
+    /* 统计卡片容器 */
+    #statistics-cards .col-md-4 {
+        display: flex;
+    }
+
+    .stat-card {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        box-shadow: var(--shadow-md);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: var(--shadow-xl);
+    }
+
+    /* 第3行：统计卡片高度降低1/3 - 减小card-body padding */
+    .stat-card .card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        z-index: 1;
+        padding: 1rem;
+    }
+
+    /* 统计卡片颜色 - 现代化渐变 */
+    .card-red {
+        background: var(--secondary-gradient);
+        color: white;
+    }
+
+    .card-yellow {
+        background: var(--warning-gradient);
+        color: white;
+    }
+
+    .card-green {
+        background: var(--success-gradient);
+        color: white;
+    }
+
+    /* 统计图标 - 降低1/3尺寸 */
+    .stat-icon {
+        font-size: 1.7em;
+        opacity: 0.8;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+
+    /* 统计数字 - 降低1/3尺寸 */
+    .stat-card h2 {
+        font-size: 1.7rem;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* 统计标题 - 相应减小 */
+    .stat-card h6 {
+        font-weight: 500;
+        opacity: 0.9;
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* 关键词标签 - 相应减小 */
+    .keyword-tag {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.9);
+        color: #1e293b;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75em;
+        margin: 1px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        transition: all 0.3s ease;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .keyword-tag:hover {
+        background: rgba(255, 255, 255, 1);
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* 第4行：筛选区域高度降低1/2 */
+    .filter-section {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: var(--radius-lg);
+        padding: 12px;
+        margin-bottom: 16px;
+        box-shadow: var(--shadow-lg);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .filter-section .form-label {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+        font-size: 0.85rem;
+    }
+
+    .filter-section .form-control,
+    .filter-section .form-select {
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        padding: 6px 10px;
+        transition: all 0.3s ease;
+        background: white;
+        font-size: 0.9rem;
+        height: auto;
+    }
+
+    .filter-section .form-control:focus,
+    .filter-section .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+        outline: none;
+    }
+
+    .filter-section .input-group .btn {
+        border: 2px solid var(--border-color);
+        border-left: none;
+        background: white;
+        color: var(--text-secondary);
+        transition: all 0.3s ease;
+        padding: 6px 10px;
+    }
+
+    .filter-section .input-group .btn:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    /* 今天按钮 - 高度降低1/2 */
+    .today-btn {
+        background: var(--primary-gradient);
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+        padding: 6px 10px;
+    }
+
+    .today-btn:hover {
+        transform: scale(1.05);
+        box-shadow: var(--shadow-glow);
+    }
+
+    /* 导出按钮 - 高度降低1/2 */
+    .export-btn {
+        background: var(--success-gradient);
+        border: none;
+        color: white;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-md);
+        font-size: 0.9rem;
+    }
+
+    .export-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    /* 高亮项目筛选开关 - 保持原有样式，但调整行高 */
+    .form-check-input {
+        width: 3em;
+        height: 1.2em;
+        cursor: pointer;
+        background-color: #e2e8f0;
+        border: none;
+    }
+
+    /* 开关未选中状态 */
+    .form-check-input:not(:checked) {
+        background-color: #fadb14 !important;
+    }
+
+    /* 开关选中状态 - 红色渐变 */
+    .form-check-input:checked {
+        background: linear-gradient(135deg, #f5576c 0%, #fa709a 100%) !important;
+        border: none;
+    }
+
+    /* 开关焦点状态 */
+    .form-check-input:focus {
+        box-shadow: 0 0 0 4px rgba(245, 87, 108, 0.2) !important;
+    }
+
+    /* 开关标签样式 */
+    .form-check-label {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-left: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+
+    /* 开关滑块 */
+    .form-check-input::before {
+        transition: transform 0.3s ease;
+    }
+
+    /* 筛选条件摘要 */
+    .filter-summary {
+        background: linear-gradient(135deg, rgba(168, 237, 234, 0.3) 0%, rgba(254, 214, 227, 0.3) 100%);
+        border-left: 4px solid var(--primary-color);
+        border-radius: var(--radius-md);
+        padding: 12px 20px;
+        margin: 16px 0;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        backdrop-filter: blur(5px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .filter-summary .summary-text {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .filter-summary .summary-details {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+
+    .filter-summary .export-info {
+        font-size: 0.8rem;
+        color: var(--success-color);
+        font-weight: 600;
+    }
+
+    /* 数据表格卡片 */
+    .data-table-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .data-table-card .card-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-bottom: 2px solid var(--border-color);
+        padding: 16px 24px;
+    }
+
+    .data-table-card .card-title {
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .data-table-card .card-title small {
+        font-weight: 500;
+    }
+
+    /* 表格样式 */
+    .data-table {
+        font-size: 0.9em;
+        margin-bottom: 0;
+    }
+
+    .data-table thead th {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        color: var(--text-primary);
+        font-weight: 700;
+        padding: 14px 16px;
+        border-bottom: 2px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .data-table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .data-table tbody tr:hover {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    }
+
+    .data-table td {
+        padding: 14px 16px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    /* 序号列样式 */
+    .data-table td:first-child,
+    .data-table th:first-child {
+        text-align: center;
+        font-weight: 600;
+        color: var(--text-secondary);
+        width: 5%;
+    }
+
+    /* 高亮行 */
+    .highlight-row {
+        background: linear-gradient(135deg, rgba(250, 112, 154, 0.08) 0%, rgba(254, 225, 64, 0.08) 100%) !important;
+        border-left: 4px solid var(--warning-color);
+    }
+
+    .highlight-row:hover {
+        background: linear-gradient(135deg, rgba(250, 112, 154, 0.15) 0%, rgba(254, 225, 64, 0.15) 100%) !important;
+    }
+
+    /* 类别徽章 */
+    .category-badge {
+        font-size: 0.75em;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .badge.bg-info {
+        background: var(--info-gradient) !important;
+        color: var(--text-primary);
+    }
+
+    .badge.bg-secondary {
+        background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%) !important;
+    }
+
+    .badge.bg-danger {
+        background: var(--secondary-gradient) !important;
+    }
+
+    /* 人工查阅标签 */
+    .highlight-keyword {
+        background: var(--secondary-gradient);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.75em;
+        animation: pulse 2s infinite;
+        box-shadow: var(--shadow-sm);
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.85; transform: scale(0.98); }
+    }
+
+    /* 详情链接 */
+    .detail-url {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--primary-color);
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .detail-url:hover {
+        color: var(--secondary-color);
+        text-decoration: underline;
+    }
+
+    /* 加载动画 */
+    .loading {
+        display: none;
+        text-align: center;
+        padding: 40px;
+    }
+
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        border-width: 0.3em;
+        color: var(--primary-color);
+    }
+
+    /* 无数据提示 */
+    .no-data {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+
+    .no-data i {
+        color: var(--border-color);
+        margin-bottom: 16px;
+    }
+
+    /* 分页 */
+    .card-footer {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-top: 2px solid var(--border-color);
+        padding: 16px 24px;
+    }
+
+    .pagination {
+        gap: 4px;
+    }
+
+    .page-item .page-link {
+        border: none;
+        border-radius: var(--radius-sm);
+        color: var(--text-primary);
+        font-weight: 500;
+        padding: 8px 14px;
+        transition: all 0.3s ease;
+    }
+
+    .page-item.active .page-link {
+        background: var(--primary-gradient);
+        color: white;
+        box-shadow: var(--shadow-md);
+    }
+
+    .page-item:not(.active) .page-link:hover {
+        background: rgba(102, 126, 234, 0.1);
+        color: var(--primary-color);
+    }
+
+    .page-item.disabled .page-link {
+        color: var(--text-secondary);
+        background: transparent;
+    }
+
+    /* 页面大小选择器 */
+    #page-size {
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        padding: 6px 12px;
+        font-weight: 500;
+    }
+
+    /* 底部说明区域 */
+    .usage-note {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        margin-top: 24px;
+        font-size: 0.9rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: var(--shadow-md);
+    }
+
+    .usage-note h6 {
+        color: var(--primary-color);
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+
+    .usage-note ul {
+        padding-left: 1.5rem;
+        margin-bottom: 0;
+    }
+
+    .usage-note li {
+        margin-bottom: 8px;
+        color: var(--text-secondary);
+    }
+
+    .usage-note li:last-child {
+        margin-bottom: 0;
+    }
+
+    /* 模态框样式 */
+    .modal-content {
+        border: none;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-xl);
+        overflow: hidden;
+    }
+
+    .modal-header {
+        background: var(--primary-gradient);
+        border: none;
+        padding: 20px 24px;
+    }
+
+    .modal-header .modal-title {
+        font-weight: 700;
+    }
+
+    .modal-header .btn-close {
+        filter: invert(1);
+    }
+
+    .modal-body {
+        padding: 24px;
+    }
+
+    .modal-footer {
+        border-top: 1px solid var(--border-color);
+        padding: 16px 24px;
+    }
+
+    .modal-footer .btn-secondary {
+        background: var(--border-color);
+        border: none;
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    /* 关键词管理表格 */
+    #keyword-table {
+        border-radius: var(--radius-md);
+        overflow: hidden;
+    }
+
+    #keyword-table thead th {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        font-weight: 700;
+        padding: 12px 16px;
+    }
+
+    #keyword-table tbody td {
+        padding: 12px 16px;
+        vertical-align: middle;
+    }
+
+    #keyword-table tbody tr:hover {
+        background: rgba(102, 126, 234, 0.05);
+    }
+
+    .edit-keyword, .delete-keyword {
+        min-width: 36px;
+        height: 36px;
+        border-radius: var(--radius-sm);
+        transition: all 0.3s ease;
+    }
+
+    .edit-keyword:hover {
+        background: var(--warning-gradient) !important;
+        color: white !important;
+        border-color: transparent !important;
+    }
+
+    .delete-keyword:hover {
+        background: var(--secondary-gradient) !important;
+        color: white !important;
+        border-color: transparent !important;
+    }
+
+    /* 添加关键词表单 */
+    #new-keyword-input {
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        padding: 12px 16px;
+    }
+
+    #new-keyword-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+    }
+
+    #add-keyword-btn {
+        background: var(--success-gradient);
+        border: none;
+        font-weight: 600;
+        padding: 12px 20px;
+        border-radius: var(--radius-sm);
+        transition: all 0.3s ease;
+    }
+
+    #add-keyword-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    /* 统计卡片链接 */
+    .stat-card-link {
+        text-decoration: none;
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* 动画效果 */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .stat-card {
+        animation: fadeInUp 0.6s ease forwards;
+    }
+
+    .stat-card:nth-child(1) { animation-delay: 0.1s; }
+    .stat-card:nth-child(2) { animation-delay: 0.2s; }
+    .stat-card:nth-child(3) { animation-delay: 0.3s; }
+
+    .filter-section {
+        animation: fadeInUp 0.6s ease 0.4s both;
+    }
+
+    .data-table-card {
+        animation: fadeInUp 0.6s ease 0.5s both;
+    }
+
+    .usage-note {
+        animation: fadeInUp 0.6s ease 0.6s both;
+    }
+
+    /* 搜索框 */
+    .search-box {
+        max-width: 300px;
+    }
+
+    /* 表格信息 */
+    #table-info {
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    /* 页面信息 */
+    #page-info {
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    /* 关键词项目数链接样式 */
+    .keyword-count-link {
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .keyword-count-link:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+    }
+
+    .keyword-count-link .badge {
+        transition: all 0.3s ease;
+    }
+
+    .keyword-count-link:hover .badge {
+        background: var(--primary-gradient) !important;
+        color: white !important;
+    }
+
+    /* 关键词项目列表模态框特殊样式 */
+    #keywordProjectsModal .modal-body {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    #keywordProjectsModal .table {
+        font-size: 0.9rem;
+    }
+
+    #keywordProjectsModal .badge-keyword {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+</style>
+</head>
+<body>
+     <!-- 头部 - 移出container，使其全宽 -->
+    <div class="header-container">
+        <div class="container">
+            <!-- 第一行：主标题 -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <h1 class="h3 fw-bold mb-0">
+                        <i class="fas fa-search-dollar me-2"></i>招投标信息展示系统
+                    </h1>
+                </div>
+            </div>
+            <!-- 第二行：7个功能块 -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="header-blocks-container">
+                        <!-- 投标项目 -->
+                        <a href="/bidding" class="header-function-block" id="bid-projects-block">
+                            <div class="block-icon">
+                                <i class="fas fa-file-signature"></i>
+                            </div>
+                            <div class="block-content">
+                                <div class="block-title">投标项目</div>
+                                <div class="block-value" id="bid-projects-count">0</div>
+                            </div>
+                        </a>
+
+                        <!-- 分析标书 -->
+                        <a href="/analysis" class="header-function-block" id="analysis-block">
+                            <div class="block-icon">
+                                <i class="fas fa-chart-pie"></i>
+                            </div>
+                            <div class="block-content">
+                                <div class="block-title">分析标书</div>
+                                <div class="block-value" id="analysis-count">0</div>
+                            </div>
+                        </a>
+
+                        <!-- 重点关注 -->
+                        <a href="/focus" class="header-function-block" id="focus-block">
+                            <div class="block-icon">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <div class="block-content">
+                                <div class="block-title">重点关注</div>
+                                <div class="block-value" id="focus-count">0</div>
+                            </div>
+                        </a>
+
+                        <!-- 方案设计 -->
+                        <div class="header-function-block" id="design-block">
+                            <div class="block-icon">
+                                <i class="fas fa-drafting-compass"></i>
+                            </div>
+                            <div class="block-content">
+                                <div class="block-title">方案设计</div>
+                                <div class="block-subtitle">方案跟踪</div>
+                            </div>
+                        </div>
+
+                        <!-- 项目跟踪验收审计 -->
+                        <div class="header-function-block" id="audit-block">
+                            <div class="block-icon">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <div class="block-content">
+                                <div class="block-title">项目跟踪</div>
+                                <div class="block-subtitle">验收审计</div>
+                            </div>
+                        </div>
+
+                        <!-- 数据看板 -->
+                        <a href="/dashboard" class="header-function-block" id="dashboard-block">
+                            <div class="block-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="block-content">
+                                <div class="block-title">统计中心</div>
+                                <div class="block-subtitle">数据看板</div>
+                            </div>
+                        </a>
+
+                        <!-- 监控中心 -->
+                        <a href="/monitor" class="header-function-block" id="monitor-block">
+                            <div class="block-icon">
+                                <i class="fas fa-heartbeat"></i>
+                            </div>
+                            <div class="block-content">
+                                <div class="block-title">监控中心</div>
+                                <div class="block-subtitle">爬虫监控</div>
+                            </div>
+                        </a>
+
+                        <!-- 今日日期（星期几） -->
+                        <div class="header-function-block" id="date-block">
+                            <div class="block-icon">
+                                <i class="fas fa-calendar-day"></i>
+                            </div>
+                            <div class="block-content">
+                                <div class="block-title">今日日期</div>
+                                <div class="block-subtitle" id="header-date">2024-01-31</div>
+                                <div class="block-weekday" id="header-weekday">星期三</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="row mb-4" id="statistics-cards">
+            <div class="col-md-4 mb-3">
+                <a href="javascript:void(0);" class="stat-card-link" id="total-card-link">
+                    <div class="card stat-card card-red">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-subtitle mb-2 opacity-85">总项目数</h6>
+                                    <h2 class="card-title mb-0" id="total-count">0</h2>
+                                </div>
+                                <i class="fas fa-list-alt stat-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4 mb-3">
+                <a href="javascript:void(0);" class="stat-card-link" id="highlight-card-link">
+                    <div class="card stat-card card-yellow">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-subtitle mb-2 opacity-85">需人工查验项目</h6>
+                                    <h2 class="card-title mb-0" id="highlight-count">0</h2>
+                                </div>
+                                <i class="fas fa-exclamation-circle stat-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4 mb-3">
+                <a href="javascript:void(0);" class="stat-card-link" id="keyword-card-link">
+                    <div class="card stat-card card-green">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-subtitle mb-2 opacity-85">关键词数量--关键词管理--关键词全量查询</h6>
+                                    <h2 class="card-title mb-0" id="keyword-count">0</h2>
+                                </div>
+                                <i class="fas fa-tags stat-icon"></i>
+                            </div>
+                            <div class="mt-2 small" id="keyword-tags">
+                                <!-- 关键词标签将通过JavaScript动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- 过滤区域 -->
+        <div class="filter-section">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-2">
+                    <label for="date-picker" class="form-label">
+                        <i class="fas fa-calendar-alt me-2"></i>选择日期
+                    </label>
+                    <div class="input-group">
+                        <input type="text" class="form-control datepicker" id="date-picker">
+                        <button class="btn btn-outline-primary today-btn" type="button" id="today-btn" title="切换到今天">
+                            <i class="fas fa-calendar-day"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label for="category-filter" class="form-label">
+                        <i class="fas fa-tags me-2"></i>项目分类
+                    </label>
+                    <select class="form-select" id="category-filter">
+                        <option value="全部">全部</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="source-filter" class="form-label">
+                        <i class="fas fa-folder me-2"></i>项目来源
+                    </label>
+                    <select class="form-select" id="source-filter">
+                        <option value="全部">全部</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="keyword-search" class="form-label">
+                        <i class="fas fa-search me-2"></i>项目搜索
+                    </label>
+                    <div class="input-group search-box">
+                        <input type="text" class="form-control" id="keyword-search" placeholder="输入项目关键词...">
+                        <button class="btn btn-outline-secondary" type="button" id="clear-search">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label d-block">&nbsp;</label>
+                    <button class="btn btn-success w-100 export-btn" id="export-btn">
+                        <i class="fas fa-download me-2"></i>导出CSV
+                    </button>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="highlight-only-switch">
+                        <label class="form-check-label" for="highlight-only-switch">
+                            仅显示高亮项目（包含关键词的项目）
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!-- 在 filter-summary 中添加范围标识 -->
+<div class="filter-summary" id="filter-summary">
+    <div class="summary-text">
+        <i class="fas fa-filter me-2"></i>当前筛选条件：
+        <span id="current-filters">全部数据</span>
+        <span id="date-range-badge" class="badge bg-info ms-2" style="display: none;">
+            <i class="fas fa-calendar-range me-1"></i>日期范围模式
+        </span>
+    </div>
+    <div class="export-info" id="export-info">
+        <i class="fas fa-info-circle me-1"></i>导出将基于当前筛选条件
+    </div>
+</div>
+
+        <!-- 数据表格 -->
+        <div class="card data-table-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-table me-2"></i>项目列表
+                    <small class="text-muted ms-2" id="table-info">共0个项目</small>
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="loading" id="loading">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-3 text-muted">正在加载数据...</p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover data-table mb-0" id="data-table">
+                        <thead>
+                            <tr>
+                                <th width="5%">序号</th>
+                                <th width="30%">项目名称</th>
+                                <th width="10%">发布日期</th>
+                                <th width="10%">项目来源</th>
+                                <th width="10%">项目分类</th>
+                                <th width="20%">详情链接</th>
+                                <th width="10%">爬取时间</th>
+                                <th width="5%" style="text-align: center;">关注</th>
+                            </tr>
+                        </thead>
+                        <tbody id="data-body">
+                            <!-- 数据将通过JavaScript动态填充 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="no-data" id="no-data">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <h5>暂无数据</h5>
+                    <p class="text-muted">选择其他日期或分类查看数据</p>
+                </div>
+            </div>
+
+            <!-- 分页 -->
+            <div class="card-footer">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="form-inline">
+                            <label class="me-2">每页显示:</label>
+                            <select class="form-select form-select-sm w-auto" id="page-size">
+                                <option value="10">10</option>
+                                <option value="20" selected>20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <span class="ms-3" id="page-info">第 0 页 / 共 0 页</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <nav aria-label="数据分页" class="float-end">
+                            <ul class="pagination pagination-sm mb-0" id="pagination">
+                                <!-- 分页将通过JavaScript动态生成 -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 说明区域 -->
+        <div class="alert alert-light usage-note border">
+            <h6 class="mb-3"><i class="fas fa-info-circle me-2 text-primary"></i>使用说明</h6>
+            <ul>
+                <li>系统默认显示当日招标数据</li>
+                <li><span class="highlight-keyword">红色高亮</span>显示包含关键词的项目</li>
+                <li>点击<span class="badge bg-success category-badge">关键词数量</span>统计卡片可管理关键词（添加/删除/修改）</li>
+                <li>点击关键词管理中的"近30天项目数"可直接查看该关键词匹配的项目列表</li>
+                <li>点击日期选择器可以查看历史数据</li>
+                <li>支持按分类、来源筛选和关键词搜索</li>
+                <li>可以导出基于当前筛选条件的数据为CSV文件</li>
+                <li>点击统计卡片可以快速筛选数据</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 关键词管理模态框 -->
+    <div class="modal fade" id="keywordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-tags me-2"></i>关键词管理
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 添加关键词表单 -->
+                    <div class="card mb-4 border-0 shadow-sm">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-plus me-2 text-success"></i>添加新关键词</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-md-5">
+                                    <label class="form-label small fw-bold">关键词</label>
+                                    <input type="text" class="form-control" id="new-keyword-input"
+                                           placeholder="输入新关键词..." autocomplete="off">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">
+                                        分类
+                                        <small class="text-muted">(留空自动判断)</small>
+                                    </label>
+                                    <select class="form-select" id="new-keyword-category">
+                                        <option value="">🤖 自动判断</option>
+                                        <option value="智能交通">🚦 智能交通</option>
+                                        <option value="大交通">🛣️ 大交通</option>
+                                        <option value="智能化">💻 智能化</option>
+                                        <option value="公安招标">👮 公安招标</option>
+                                        <option value="其他">📁 其他</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
+                                    <button class="btn btn-success w-100" id="add-keyword-btn">
+                                        <i class="fas fa-plus me-2"></i>添加
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-text text-muted mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                系统会根据关键词内容自动匹配分类，也可手动选择
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 关键词列表 -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>现有关键词列表</h6>
+                            <span class="badge bg-primary rounded-pill" id="modal-keyword-count">0个</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="keyword-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="35%">关键词</th>
+                                            <th width="20%">分类</th>
+                                            <th width="25%">近30天项目数</th>
+                                            <th width="20%" class="text-center">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="keyword-table-body">
+                                        <!-- 动态加载 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="alert alert-light m-3 border">
+                                <i class="fas fa-lightbulb me-2 text-warning"></i>
+                                <small class="text-muted">
+                                    <strong>提示：</strong>点击"近30天项目数"可查看该关键词匹配的项目详情。删除关键词后，历史标记不会自动移除，但新项目将不再匹配。
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 关键词项目列表模态框（新增） -->
+    <div class="modal fade" id="keywordProjectsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-project-diagram me-2"></i>
+                        关键词项目列表
+                        <span class="badge badge-keyword ms-2" id="modal-keyword-name">-</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        显示近30天内包含关键词 <strong id="alert-keyword-name">-</strong> 的所有项目
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="5%">序号</th>
+                                    <th width="35%">项目名称</th>
+                                    <th width="12%">发布日期</th>
+                                    <th width="12%">项目来源</th>
+                                    <th width="12%">项目分类</th>
+                                    <th width="24%">详情链接</th>
+                                </tr>
+                            </thead>
+                            <tbody id="keyword-projects-body">
+                                <!-- 动态加载 -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="text-center py-4" id="keyword-projects-loading" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2 text-muted">正在加载项目数据...</p>
+                    </div>
+
+                    <div class="text-center py-4" id="keyword-projects-empty" style="display: none;">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">近30天内没有找到包含该关键词的项目</p>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>关闭
+                    </button>
+                    <button type="button" class="btn btn-primary" id="view-in-main-btn">
+                        <i class="fas fa-external-link-alt me-2"></i>在主页面查看
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚本依赖 -->
+    <script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap-datepicker.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap-datepicker.zh-CN.min.js') }}"></script>
+
+    <script>
+
+        // 添加状态变量跟踪当前是单日期还是范围模式
+let currentDateFilter = {
+    type: 'single', // 'single' 或 'range'
+    date: null,
+    startDate: null,
+    endDate: null
+};
+
+let currentKeywordPage = 1; // 用于跟踪关键词项目列表的当前页码
+
+// 获取今天日期
+    function getTodayDate() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    // 更新日期选择器为范围模式显示
+    function updateDatePickerForRange(startDate, endDate) {
+        $('#date-picker').val(`${startDate} 至 ${endDate}`);
+        $('#date-range-badge').show();
+        $('#date-picker').data('range-mode', true);
+
+        $('#date-picker').off('click.range-mode').on('click.range-mode', function() {
+            showToast('当前处于日期范围模式，点击"今天"按钮可切换回单日期模式', 'info');
+        });
+    }
+
+    // 重置日期选择器为单日期模式
+    function resetDatePickerToSingle() {
+        $('#date-picker').removeData('range-mode');
+        $('#date-picker').off('click.range-mode');
+        $('#date-range-badge').hide();
+        const today = getTodayDate();
+        $('#date-picker').val(today);
+        $('#date-picker').datepicker('update', today);
+    }
+
+function renderKeywordProjectsPagination(pagination, keyword) {
+    const modalBody = $('#keywordProjectsModal .modal-body');
+
+    // 移除旧的分页容器
+    $('#keyword-projects-pagination-container').remove();
+
+    if (pagination.total_pages <= 1) return;
+
+    // 创建带唯一ID的分页容器
+    const paginationContainer = $('<div>', {
+        id: 'keyword-projects-pagination-container',
+        class: 'mt-3'
+    });
+
+    // 分页导航 HTML
+    let paginationHtml = '<nav aria-label="关键词项目分页"><ul class="pagination pagination-sm justify-content-center mb-2">';
+
+    // 上一页
+    const prevDisabled = pagination.page === 1 ? 'disabled' : '';
+    paginationHtml += `<li class="page-item ${prevDisabled}"><a class="page-link" href="#" data-page="${pagination.page - 1}"><span>&laquo;</span></a></li>`;
+
+    // 智能页码显示
+    let startPage = Math.max(1, pagination.page - 2);
+    let endPage = Math.min(pagination.total_pages, startPage + 4);
+    if (endPage - startPage < 4 && pagination.total_pages > 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+
+    // 第一页和省略号
+    if (startPage > 1) {
+        paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+        if (startPage > 2) paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+
+    // 页码
+    for (let i = startPage; i <= endPage; i++) {
+        const active = i === pagination.page ? 'active' : '';
+        paginationHtml += `<li class="page-item ${active}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+    }
+
+    // 省略号和最后一页
+    if (endPage < pagination.total_pages) {
+        if (endPage < pagination.total_pages - 1) paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="${pagination.total_pages}">${pagination.total_pages}</a></li>`;
+    }
+
+    // 下一页
+    const nextDisabled = pagination.page === pagination.total_pages ? 'disabled' : '';
+    paginationHtml += `<li class="page-item ${nextDisabled}"><a class="page-link" href="#" data-page="${pagination.page + 1}"><span>&raquo;</span></a></li></ul></nav>`;
+
+    // 【关键修复】分页信息 - 兼容多种字段名
+    const totalCount = pagination.total_count || pagination.total || pagination.totalCount ||
+                      pagination.total_items || pagination.totalItems || pagination.count || '多';
+
+    paginationHtml += `<div class="text-center text-muted small">第 ${pagination.page} 页 / 共 ${pagination.total_pages} 页，共 ${totalCount} 个项目</div>`;
+
+    paginationContainer.html(paginationHtml);
+    modalBody.find('.table-responsive').after(paginationContainer);
+
+    // 事件委托绑定
+    paginationContainer.on('click', '.page-link', function(e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        if (page && !$(this).parent().hasClass('disabled') && !$(this).parent().hasClass('active')) {
+            currentKeywordPage = page;
+            loadKeywordProjectsData(keyword, page);
+            modalBody.find('.table-responsive')[0].scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+}
+
+
+$(document).ready(function() {
+    // 更新头部日期显示
+    function updateHeaderDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        const weekday = weekdays[now.getDay()];
+
+        $('#header-date').text(`${year}-${month}-${day}`);
+        $('#header-weekday').text(weekday);
+    }
+
+    updateHeaderDate();
+
+
+    const todayDate = getTodayDate();
+
+    // 初始化日期选择器
+    $('.datepicker').datepicker({
+        format: 'yyyy-mm-dd',
+        language: 'zh-CN',
+        autoclose: true,
+        todayHighlight: true
+    }).on('changeDate', function() {
+        loadData();
+        updateFilterSummary();
+    });
+
+    $('#date-picker').val(todayDate);
+
+    // 初始化分类下拉框
+    $.get('/api/categories', function(response) {
+        if (response.success) {
+            const select = $('#category-filter');
+            response.categories.forEach(category => {
+                if (category !== '全部') {
+                    select.append(`<option value="${category}">${category}</option>`);
+                }
+            });
+        }
+    });
+
+    // 初始化来源下拉框
+    $.get('/api/sources', function(response) {
+        if (response.success) {
+            const select = $('#source-filter');
+            response.sources.forEach(source => {
+                if (source !== '全部') {
+                    select.append(`<option value="${source}">${source}</option>`);
+                }
+            });
+        }
+    });
+
+    // 初始化关键词标签
+    refreshKeywordTags();
+
+    // 初始化头部数量统计
+    updateBiddingCount();
+    updateAnalysisCount();
+    updateFocusCount();
+    updateDesignCount();
+    updateAuditCount();
+
+    // 绑定事件
+    $('#category-filter').change(function() {
+        loadData();
+        updateFilterSummary();
+    });
+    $('#source-filter').change(function() {
+        loadData();
+        updateFilterSummary();
+    });
+    $('#keyword-search').on('keyup', debounce(function() {
+        loadData();
+        updateFilterSummary();
+    }, 300));
+    $('#clear-search').click(function() {
+        $('#keyword-search').val('');
+        loadData();
+        updateFilterSummary();
+    });
+    $('#page-size').change(loadData);
+    $('#export-btn').click(exportFilteredData);
+
+    $('#highlight-only-switch').change(function() {
+        loadData();
+        updateFilterSummary();
+    });
+
+    $('#today-btn').click(function() {
+        const today = getTodayDate();
+        $('#date-picker').val(today);
+        loadData();
+        updateFilterSummary();
+    });
+
+    // 卡片点击事件
+    $('#total-card-link').click(function(e) {
+        e.preventDefault();
+        $('#category-filter').val('全部');
+        $('#source-filter').val('全部');
+        $('#keyword-search').val('');
+        $('#highlight-only-switch').prop('checked', false);
+        currentPage = 1;
+        loadData();
+        updateFilterSummary();
+    });
+
+    $('#highlight-card-link').click(function(e) {
+        e.preventDefault();
+        $('#category-filter').val('全部');
+        $('#source-filter').val('全部');
+        $('#keyword-search').val('');
+        $('#highlight-only-switch').prop('checked', true);
+        currentPage = 1;
+        loadData();
+        updateFilterSummary();
+    });
+
+    // 关键词管理卡片点击事件
+    $('#keyword-card-link').click(function(e) {
+        e.preventDefault();
+        loadKeywordList();
+        var keywordModal = new bootstrap.Modal(document.getElementById('keywordModal'));
+        keywordModal.show();
+    });
+
+    // 初始加载数据
+    loadData();
+    updateFilterSummary();
+
+    // 获取可用的日期
+    $.get('/api/dates', function(response) {
+        if (response.success && response.dates.length > 0) {
+            const currentDate = $('#date-picker').val();
+            if (!response.dates.includes(currentDate)) {
+                $('#date-picker').val(response.dates[0]);
+                loadData();
+                updateFilterSummary();
+            }
+        }
+    });
+});
+
+let currentPage = 1;
+let currentKeywordForProjects = ''; // 存储当前查看的关键词
+
+// 更新投标项目数量
+function updateBiddingCount() {
+    $.get('/bidding/api/list', { page_size: 1 }, function(response) {
+        if (response.success && response.statistics) {
+            let total = 0;
+            Object.values(response.statistics).forEach(count => {
+                total += parseInt(count) || 0;
+            });
+            $('#bid-projects-count').text(total);
+        } else {
+            $('#bid-projects-count').text('0');
+        }
+    }).fail(function() {
+        $('#bid-projects-count').text('0');
+    });
+}
+
+// 更新分析标书数量
+function updateAnalysisCount() {
+    $.get('/analysis/api/list', { page_size: 1 }, function(response) {
+        if (response.success && response.statistics) {
+            let total = 0;
+            Object.values(response.statistics).forEach(count => {
+                total += parseInt(count) || 0;
+            });
+            $('#analysis-count').text(total);
+        } else {
+            $('#analysis-count').text('0');
+        }
+    }).fail(function() {
+        $('#analysis-count').text('0');
+    });
+}
+
+// 更新重点关注数量
+function updateFocusCount() {
+    $.get('/focus/api/list', { page_size: 1 }, function(response) {
+        if (response.success && response.statistics) {
+            $('#focus-count').text(response.statistics.total);
+        } else {
+            $('#focus-count').text('0');
+        }
+    }).fail(function() {
+        $('#focus-count').text('0');
+    });
+}
+
+// 更新方案设计数量
+function updateDesignCount() {
+    $.get('/design/api/list', { page_size: 1 }, function(response) {
+        if (response.success) {
+            let total = 0;
+            if (response.statistics) {
+                Object.values(response.statistics).forEach(count => {
+                    total += parseInt(count) || 0;
+                });
+            } else if (response.total !== undefined) {
+                total = response.total;
+            }
+            $('#design-count').text(total);
+        } else {
+            $('#design-count').text('0');
+        }
+    }).fail(function() {
+        $('#design-count').text('0');
+    });
+}
+
+// 更新项目跟踪审计数量
+function updateAuditCount() {
+    $.get('/audit/api/list', { page_size: 1 }, function(response) {
+        if (response.success) {
+            let total = 0;
+            if (response.statistics) {
+                Object.values(response.statistics).forEach(count => {
+                    total += parseInt(count) || 0;
+                });
+            } else if (response.total !== undefined) {
+                total = response.total;
+            }
+            $('#audit-count').text(total);
+        } else {
+            $('#audit-count').text('0');
+        }
+    }).fail(function() {
+        $('#audit-count').text('0');
+    });
+}
+
+// 显示提示消息
+function showToast(message, type = 'info') {
+    const bgClass = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-primary';
+    const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+
+    const toast = `
+        <div class="toast align-items-center text-white ${bgClass} border-0 position-fixed"
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas ${icon} me-2"></i>${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+
+    $('body').append(toast);
+    const toastEl = $('.toast').last();
+    const bsToast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    bsToast.show();
+
+    toastEl.on('hidden.bs.toast', function() {
+        $(this).remove();
+    });
+}
+
+// 修改筛选摘要显示
+function updateFilterSummary() {
+    const category = $('#category-filter').val();
+    const source = $('#source-filter').val();
+    const keyword = $('#keyword-search').val();
+    const highlightOnly = $('#highlight-only-switch').is(':checked');
+
+    let summary = '';
+
+    // 根据模式显示日期信息
+    if (currentDateFilter.type === 'range' && currentDateFilter.startDate && currentDateFilter.endDate) {
+        summary = `日期范围: ${currentDateFilter.startDate} 至 ${currentDateFilter.endDate}`;
+    } else {
+        const date = $('#date-picker').val();
+        summary = `日期: ${date}`;
+    }
+
+    if (category !== '全部') summary += ` | 分类: ${category}`;
+    if (source !== '全部') summary += ` | 来源: ${source}`;
+    if (keyword) summary += ` | 搜索: ${keyword}`;
+    if (highlightOnly) summary += ` | 仅高亮项目`;
+
+    if (category === '全部' && source === '全部' && !keyword && !highlightOnly && currentDateFilter.type !== 'range') {
+        const date = $('#date-picker').val();
+        summary = `全部数据 (日期: ${date})`;
+    }
+
+    $('#current-filters').text(summary);
+}
+
+// 更新日期选择器为范围模式显示
+function updateDatePickerForRange(startDate, endDate) {
+    // 在日期选择器输入框显示范围文本
+    $('#date-picker').val(`${startDate} 至 ${endDate}`);
+
+    // 显示"日期范围模式"徽章
+    $('#date-range-badge').show();
+
+    // 禁用日期选择器的点击（因为范围模式下单日期选择器不适用）
+    $('.datepicker').datepicker('disable');
+
+    // 添加点击提示，告诉用户如何退出范围模式
+    $('#date-picker').off('click.range-mode').on('click.range-mode', function() {
+        showToast('当前处于日期范围模式，点击"今天"按钮可切换回单日期模式', 'info');
+    });
+}
+
+// 重置日期选择器为单日期模式
+function resetDatePickerToSingle() {
+    // 重新启用日期选择器
+    $('.datepicker').datepicker('enable');
+
+    // 移除点击提示
+    $('#date-picker').off('click.range-mode');
+
+    // 隐藏范围徽章
+    $('#date-range-badge').hide();
+
+    // 恢复为今天的日期
+    const today = getTodayDate();
+    $('#date-picker').val(today);
+}
+
+
+// 修改"在主页面查看"按钮事件
+$('#view-in-main-btn').click(function() {
+    if (!currentKeywordForProjects) return;
+
+    // 关闭模态框
+    var projectsModalEl = document.getElementById('keywordProjectsModal');
+    var projectsModal = bootstrap.Modal.getInstance(projectsModalEl);
+    if (projectsModal) {
+        projectsModal.hide();
+    }
+
+    // 计算近30天的日期范围
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+
+    const formatDate = (d) => {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    // 切换到日期范围模式
+    currentDateFilter.type = 'range';
+    currentDateFilter.startDate = formatDate(startDate);
+    currentDateFilter.endDate = formatDate(endDate);
+
+    // 设置搜索关键词
+    $('#keyword-search').val(currentKeywordForProjects);
+    currentPage = 1;
+
+    // 更新日期选择器显示（可选：添加一个范围显示标签）
+    updateDatePickerForRange(currentDateFilter.startDate, currentDateFilter.endDate);
+
+    // 加载数据
+    loadData();
+
+    // 滚动到表格区域
+    $('html, body').animate({
+        scrollTop: $('.data-table-card').offset().top - 100
+    }, 300);
+
+    showToast(`已切换到日期范围模式：近30天，关键词"${currentKeywordForProjects}"`, 'info');
+});
+
+// 添加重置日期范围的函数（例如点击"今天"按钮时）
+$('#today-btn').click(function() {
+    // 重置为单日期模式
+    currentDateFilter.type = 'single';
+    currentDateFilter.startDate = null;
+    currentDateFilter.endDate = null;
+
+    // 调用重置函数恢复 UI
+    resetDatePickerToSingle();
+
+    loadData();
+    updateFilterSummary();
+});
+
+// 日期选择器改变时重置为单日期模式
+$('#date-picker').on('changeDate', function() {
+    currentDateFilter.type = 'single';
+    currentDateFilter.startDate = null;
+    currentDateFilter.endDate = null;
+    loadData();
+    updateFilterSummary();
+});
+
+
+// 修改 loadData 函数支持日期范围
+function loadData() {
+    const category = $('#category-filter').val();
+    const source = $('#source-filter').val();
+    const keyword = $('#keyword-search').val();
+    const pageSize = $('#page-size').val();
+    const highlightOnly = $('#highlight-only-switch').is(':checked');
+
+    // 构建请求参数
+    let requestData = {
+        category: category,
+        source: source,
+        keyword: keyword,
+        page: currentPage,
+        page_size: pageSize,
+        highlight_only: highlightOnly ? 'true' : 'false'
+    };
+
+    // 根据当前模式添加日期参数
+    if (currentDateFilter.type === 'range' && currentDateFilter.startDate && currentDateFilter.endDate) {
+        requestData.start_date = currentDateFilter.startDate;
+        requestData.end_date = currentDateFilter.endDate;
+    } else {
+        // 单日期模式（默认）
+        requestData.date = $('#date-picker').val();
+    }
+
+    $('#loading').show();
+    $('#data-body').empty();
+    $('#no-data').hide();
+
+    $.ajax({
+        url: '/api/data',
+        method: 'GET',
+        data: requestData,
+        success: function(response) {
+            $('#loading').hide();
+
+            if (response.success) {
+                // 保存当前的日期过滤配置
+                if (response.date_filter) {
+                    currentDateFilter.type = response.date_filter.type;
+                    if (response.date_filter.type === 'range') {
+                        currentDateFilter.startDate = response.date_filter.params[0];
+                        currentDateFilter.endDate = response.date_filter.params[1];
+                    } else {
+                        currentDateFilter.date = response.date_filter.params[0];
+                    }
+                }
+
+                updateStatistics(response.statistics);
+                renderTable(response.data, pageSize);
+                checkAndUpdateFocusStatus(response.data);
+                updatePagination(response.pagination);
+
+                if (response.data.length === 0) {
+                    $('#no-data').show();
+                }
+
+                // 更新筛选摘要
+                updateFilterSummary();
+            } else {
+                alert('加载数据失败: ' + response.message);
+            }
+        },
+        error: function() {
+            $('#loading').hide();
+            $('#no-data').show();
+            alert('网络错误，请稍后重试');
+        }
+    });
+}
+
+
+
+// 更新统计信息
+function updateStatistics(stats) {
+    $('#total-count').text(stats.total_count);
+    $('#highlight-count').text(stats.highlight_count);
+}
+
+// 渲染表格
+function renderTable(data, pageSize) {
+    const tbody = $('#data-body');
+    tbody.empty();
+
+    const itemsPerPage = parseInt(pageSize) || 20;
+    let html = '';
+
+    data.forEach((item, index) => {
+        const sequenceNumber = (currentPage - 1) * itemsPerPage + index + 1;
+        const rowClass = item.is_highlighted ? 'highlight-row' : '';
+
+        const projectData = encodeURIComponent(JSON.stringify({
+            project_name: item.original_name || item.project_name.replace(/<[^>]*>/g, ''),
+            publish_date: item.publish_date,
+            project_source: item.project_source,
+            project_category: item.project_category,
+            detail_url: item.detail_url
+        }));
+
+        html += `
+        <tr class="${rowClass}" data-project-key="${item.project_key || ''}">
+            <td>${sequenceNumber}</td>
+            <td>
+                <div class="d-flex align-items-start">
+                    ${item.project_name}
+                    ${item.has_keyword ? '<span class="badge bg-warning ms-2 category-badge">人工查阅</span>' : ''}
+                </div>
+            </td>
+            <td>${item.publish_date}</td>
+            <td>
+                <span class="badge bg-info category-badge">${item.project_source}</span>
+            </td>
+            <td>
+                <span class="badge bg-secondary category-badge">${item.project_category || '未分类'}</span>
+            </td>
+            <td>
+                ${item.detail_url ?
+                    `<a href="${item.detail_url}" target="_blank" class="detail-url" title="${item.detail_url}">
+                        <i class="fas fa-external-link-alt me-1"></i>查看详情
+                    </a>` :
+                    '<span class="text-muted">无链接</span>'}
+            </td>
+            <td><small class="text-muted">${item.crawl_time}</small></td>
+            <td style="text-align: center;">
+                <button class="btn btn-sm btn-outline-warning focus-btn"
+                        data-project='${projectData}'
+                        onclick="toggleFocus(this)"
+                        title="加入重点关注">
+                    <i class="far fa-star"></i>
+                </button>
+            </td>
+        </tr>
+        `;
+    });
+
+    tbody.html(html);
+    $('#table-info').text(`共${data.length}个项目`);
+}
+
+function loadKeywordList() {
+    $.get('/api/keywords?detailed=true', function(response) {
+        if (response.success) {
+            const tbody = $('#keyword-table-body');
+            tbody.empty();
+            $('#modal-keyword-count').text(response.keywords.length + '个');
+
+            if (response.keywords.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                            暂无关键词，请添加
+                        </td>
+                    </tr>
+                `);
+            } else {
+                response.keywords.forEach(function(item) {
+                    // 根据分类设置不同颜色和图标
+                    let badgeClass = 'bg-secondary';
+                    let icon = 'fa-tag';
+
+                    if (item.category === '智能交通') {
+                        badgeClass = 'bg-danger';
+                        icon = 'fa-traffic-light';
+                    }
+                    else if (item.category === '大交通') {
+                        badgeClass = 'bg-warning text-dark';
+                        icon = 'fa-road';
+                    }
+                    else if (item.category === '智能化') {
+                        badgeClass = 'bg-info';
+                        icon = 'fa-microchip';
+                    }
+                    else if (item.category === '公安招标') {
+                        badgeClass = 'bg-primary';
+                        icon = 'fa-shield-alt';
+                    }
+
+                    // 项目数为0时不显示链接样式，大于0时才可点击
+                    const countClass = (item.project_count || 0) > 0 ? 'keyword-count-link' : '';
+                    const cursorStyle = (item.project_count || 0) > 0 ? 'cursor-pointer' : 'cursor-default';
+                    const clickHandler = (item.project_count || 0) > 0 ?
+                        `onclick="showKeywordProjects('${item.keyword}', ${item.project_count || 0})"` : '';
+
+                    tbody.append(`
+                        <tr data-keyword="${item.keyword}">
+                            <td class="fw-semibold">${item.keyword}</td>
+                            <td>
+                                <span class="badge ${badgeClass} category-badge">
+                                    <i class="fas ${icon} me-1"></i>${item.category || '其他'}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="javascript:void(0)" class="${countClass} ${cursorStyle} text-decoration-none"
+                                   ${clickHandler} title="${(item.project_count || 0) > 0 ? '点击查看项目列表' : '暂无匹配项目'}">
+                                    <span class="badge bg-light text-dark border">
+                                        <i class="fas fa-project-diagram me-1"></i>
+                                        ${item.project_count || 0} 个项目
+                                    </span>
+                                </a>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary edit-keyword"
+                                            data-keyword="${item.keyword}"
+                                            data-category="${item.category || '其他'}"
+                                            title="编辑">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-keyword"
+                                            data-keyword="${item.keyword}"
+                                            title="删除">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `);
+                });
+            }
+        } else {
+            showToast('加载关键词列表失败: ' + response.message, 'error');
+        }
+    }).fail(function() {
+        showToast('网络错误，无法加载关键词', 'error');
+    });
+}
+
+// 显示关键词项目列表（修复版）
+function showKeywordProjects(keyword, count) {
+    if (count <= 0) return;
+
+    // 更新当前关键词
+    currentKeywordForProjects = keyword;
+    currentKeywordPage = 1; // 重置页码
+    $('#modal-keyword-name').text(keyword);
+    $('#alert-keyword-name').text(keyword);
+
+    // 【关键修复】清空之前的数据和分页
+    $('#keyword-projects-body').empty();
+    $('#keyword-projects-pagination-container').remove();
+    $('#keyword-projects-empty').hide();
+    $('#keyword-projects-loading').show();
+
+    // 关闭关键词管理模态框
+    var keywordModalEl = document.getElementById('keywordModal');
+    var keywordModal = bootstrap.Modal.getInstance(keywordModalEl);
+    if (keywordModal) {
+        keywordModal.hide();
+    }
+
+    // 打开项目列表模态框
+    var projectsModal = new bootstrap.Modal(document.getElementById('keywordProjectsModal'));
+    projectsModal.show();
+
+    // 加载第一页数据
+    loadKeywordProjectsData(keyword, 1);
+}
+
+// 加载关键词项目数据（带分页支持）
+function loadKeywordProjectsData(keyword, page = 1) {
+    // 保存当前查看的关键词
+    currentKeywordForProjects = keyword;
+
+    // 显示加载状态
+    $('#keyword-projects-loading').show();
+    $('#keyword-projects-body').empty();
+    $('#keyword-projects-empty').hide();
+
+    // 【关键修复】清除之前的分页控件，避免切换关键词时残留
+    $('#keyword-projects-pagination-container').remove();
+
+    $.ajax({
+        url: '/api/keyword-projects',
+        method: 'GET',
+        data: {
+            keyword: keyword,
+            days: 30,
+            page: page,
+            page_size: 10 // 【修改】每页10条
+        },
+        success: function(response) {
+            $('#keyword-projects-loading').hide();
+
+            if (response.success && response.data && response.data.length > 0) {
+                renderKeywordProjectsTable(response.data);
+
+                // 渲染分页控件（如果有多个页面）
+                if (response.pagination && response.pagination.total_pages > 1) {
+                    renderKeywordProjectsPagination(response.pagination, keyword);
+                }
+            } else {
+                $('#keyword-projects-empty').show();
+            }
+        },
+        error: function() {
+            $('#keyword-projects-loading').hide();
+            showToast('加载项目数据失败', 'error');
+            $('#keyword-projects-empty').show();
+        }
+    });
+}
+
+// 渲染关键词项目表格
+function renderKeywordProjectsTable(data) {
+    const tbody = $('#keyword-projects-body');
+    tbody.empty();
+
+    data.forEach((item, index) => {
+        const rowClass = item.is_highlighted ? 'highlight-row' : '';
+        // 计算正确的序号（基于当前页）
+        const pageSize = 10;
+        const currentPage = currentKeywordPage || 1;
+        const sequenceNumber = (currentPage - 1) * pageSize + index + 1;
+
+        tbody.append(`
+            <tr class="${rowClass}">
+                <td>${sequenceNumber}</td>
+                <td>
+                    <div class="d-flex align-items-start">
+                        ${item.project_name}
+                        ${item.is_highlighted ? '<span class="badge bg-warning ms-2 category-badge">人工查阅</span>' : ''}
+                    </div>
+                </td>
+                <td>${item.publish_date}</td>
+                <td>
+                    <span class="badge bg-info category-badge">${item.project_source}</span>
+                </td>
+                <td>
+                    <span class="badge bg-secondary category-badge">${item.project_category || '未分类'}</span>
+                </td>
+                <td>
+                    ${item.detail_url ?
+                        `<a href="${item.detail_url}" target="_blank" class="detail-url" title="${item.detail_url}">
+                            <i class="fas fa-external-link-alt me-1"></i>查看详情
+                        </a>` :
+                        '<span class="text-muted">无链接</span>'}
+                </td>
+            </tr>
+        `);
+    });
+}
+
+// 在主页面查看按钮事件（新增）
+$('#view-in-main-btn').click(function() {
+    if (!currentKeywordForProjects) return;
+
+    // 关闭模态框
+    var projectsModalEl = document.getElementById('keywordProjectsModal');
+    var projectsModal = bootstrap.Modal.getInstance(projectsModalEl);
+    if (projectsModal) {
+        projectsModal.hide();
+    }
+
+    // 在主页面设置搜索关键词并加载数据
+    $('#keyword-search').val(currentKeywordForProjects);
+    currentPage = 1;
+    loadData();
+    updateFilterSummary();
+
+    // 滚动到表格区域
+    $('html, body').animate({
+        scrollTop: $('.data-table-card').offset().top - 100
+    }, 300);
+});
+
+// 添加关键词
+$('#add-keyword-btn').click(function() {
+    const input = $('#new-keyword-input');
+    const categorySelect = $('#new-keyword-category');
+    const keyword = input.val().trim();
+    const category = categorySelect.val();
+
+    if (!keyword) {
+        showToast('请输入关键词', 'warning');
+        input.focus();
+        return;
+    }
+
+    const btn = $(this);
+    const originalText = btn.html();
+    btn.html('<i class="fas fa-spinner fa-spin me-2"></i>添加中...').prop('disabled', true);
+
+    $.ajax({
+        url: '/api/keywords',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            keyword: keyword,
+            category: category || null
+        }),
+        success: function(response) {
+            if (response.success) {
+                showToast(response.message || '关键词添加成功', 'success');
+                input.val('');
+                categorySelect.val('');
+                loadKeywordList();
+                refreshKeywordTags();
+                refreshKeywordStats();
+            } else {
+                showToast(response.message || '添加失败', 'error');
+            }
+        },
+        error: function(xhr) {
+            let msg = '网络错误，请稍后重试';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                msg = xhr.responseJSON.message;
+            }
+            showToast(msg, 'error');
+        },
+        complete: function() {
+            btn.html(originalText).prop('disabled', false);
+        }
+    });
+});
+
+// 回车键添加关键词
+$('#new-keyword-input').keypress(function(e) {
+    if (e.which === 13) {
+        $('#add-keyword-btn').click();
+    }
+});
+
+// 删除关键词
+$(document).on('click', '.delete-keyword', function() {
+    const keyword = $(this).data('keyword');
+    const row = $(this).closest('tr');
+
+    if (!confirm(`确定要删除关键词 "${keyword}" 吗？\n\n删除后，包含该关键词的项目将不再自动高亮显示。`)) {
+        return;
+    }
+
+    row.addClass('table-danger');
+    $(this).html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
+
+    $.ajax({
+        url: `/api/keywords/${encodeURIComponent(keyword)}`,
+        method: 'DELETE',
+        success: function(response) {
+            if (response.success) {
+                showToast('关键词删除成功', 'success');
+                row.fadeOut(300, function() {
+                    $(this).remove();
+                    if ($('#keyword-table-body tr').length === 0) {
+                        $('#keyword-table-body').append(`
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                    暂无关键词，请添加
+                                </td>
+                            </tr>
+                        `);
+                    }
+                });
+                refreshKeywordTags();
+                refreshKeywordStats();
+            } else {
+                row.removeClass('table-danger');
+                showToast(response.message || '删除失败', 'error');
+            }
+        },
+        error: function(xhr) {
+            row.removeClass('table-danger');
+            $(this).html('<i class="fas fa-trash-alt"></i>').prop('disabled', false);
+            let msg = '网络错误，删除失败';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                msg = xhr.responseJSON.message;
+            }
+            showToast(msg, 'error');
+        }
+    });
+});
+
+// 编辑关键词
+$(document).on('click', '.edit-keyword', function() {
+    const oldKeyword = $(this).data('keyword');
+    const oldCategory = $(this).data('category');
+    const newKeyword = prompt(`修改关键词 "${oldKeyword}"：`, oldKeyword);
+
+    if (newKeyword === null) return;
+    if (newKeyword.trim() === '') {
+        showToast('关键词不能为空', 'warning');
+        return;
+    }
+    if (newKeyword.trim() === oldKeyword) {
+        showToast('关键词未修改', 'info');
+        return;
+    }
+
+    $.ajax({
+        url: `/api/keywords/${encodeURIComponent(oldKeyword)}`,
+        method: 'PUT',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            new_keyword: newKeyword.trim(),
+            new_category: oldCategory
+        }),
+        success: function(response) {
+            if (response.success) {
+                showToast('关键词修改成功', 'success');
+                loadKeywordList();
+                refreshKeywordTags();
+                refreshKeywordStats();
+            } else {
+                showToast(response.message || '修改失败', 'error');
+            }
+        },
+        error: function(xhr) {
+            let msg = '网络错误，修改失败';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                msg = xhr.responseJSON.message;
+            }
+            showToast(msg, 'error');
+        }
+    });
+});
+
+// 刷新关键词标签展示
+function refreshKeywordTags() {
+    $.get('/api/keywords', function(response) {
+        if (response.success) {
+            const container = $('#keyword-tags');
+            container.empty();
+            $('#keyword-count').text(response.keywords.length);
+            $('#modal-keyword-count').text(response.keywords.length + '个');
+
+            const displayedKeywords = response.keywords.slice(0, 3);
+            displayedKeywords.forEach(keyword => {
+                container.append(`<span class="keyword-tag">${typeof keyword === 'string' ? keyword : keyword.keyword}</span>`);
+            });
+
+            if (response.keywords.length > 3) {
+                container.append(`<span class="text-muted">等${response.keywords.length}个</span>`);
+            }
+        }
+    });
+}
+
+// 刷新关键词统计
+function refreshKeywordStats() {
+    refreshKeywordTags();
+    loadData();
+}
+
+// 模态框关闭时刷新
+$('#keywordModal').on('hidden.bs.modal', function() {
+    loadData();
+});
+
+// 关键词项目列表模态框关闭时刷新主数据
+$('#keywordProjectsModal').on('hidden.bs.modal', function() {
+    loadData();
+});
+
+// 批量检查关注状态
+function checkAndUpdateFocusStatus(data) {
+    if (data.length === 0) return;
+
+    const keys = data.map(item => item.project_key).filter(key => key).join(',');
+    if (!keys) return;
+
+    $.get('/focus/api/check', { keys: keys }, function(response) {
+        if (response.success && response.focused) {
+            response.focused.forEach(key => {
+                const btn = $(`tr[data-project-key="${key}"] .focus-btn`);
+                if (btn.length) {
+                    btn.removeClass('btn-outline-warning').addClass('btn-warning');
+                    btn.prop('disabled', true);
+                    btn.attr('title', '已关注');
+                    btn.find('i').removeClass('far').addClass('fas');
+                }
+            });
+        }
+    });
+}
+
+// 切换关注状态
+function toggleFocus(btn) {
+    if ($(btn).hasClass('btn-warning') || $(btn).prop('disabled')) {
+        showToast('该项目已在关注列表中', 'info');
+        return;
+    }
+
+    let projectData;
+    try {
+        projectData = JSON.parse(decodeURIComponent($(btn).attr('data-project')));
+    } catch(e) {
+        showToast('数据解析失败', 'error');
+        return;
+    }
+
+    if (!projectData.project_name || !projectData.publish_date || !projectData.project_source) {
+        showToast('项目信息不完整', 'error');
+        return;
+    }
+
+    const originalHtml = $(btn).html();
+    $(btn).html('<i class="fas fa-spinner fa-spin"></i>');
+    $(btn).prop('disabled', true);
+
+    $.ajax({
+        url: '/focus/api/add',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(projectData),
+        success: function(response) {
+            if (response.success) {
+                $(btn).removeClass('btn-outline-warning').addClass('btn-warning');
+                $(btn).html('<i class="fas fa-star"></i>');
+                $(btn).attr('title', '已关注');
+                showToast('已成功加入重点关注列表', 'success');
+                updateFocusCount();
+            } else {
+                $(btn).html(originalHtml);
+                $(btn).prop('disabled', false);
+
+                if (response.message && response.message.includes('已在关注列表')) {
+                    $(btn).removeClass('btn-outline-warning').addClass('btn-warning');
+                    $(btn).html('<i class="fas fa-star"></i>');
+                    $(btn).attr('title', '已关注');
+                    $(btn).prop('disabled', true);
+                } else {
+                    showToast(response.message || '添加失败', 'error');
+                }
+            }
+        },
+        error: function(xhr) {
+            $(btn).html(originalHtml);
+            $(btn).prop('disabled', false);
+            let msg = '网络错误，请稍后重试';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                msg = xhr.responseJSON.message;
+            }
+            showToast(msg, 'error');
+        }
+    });
+}
+
+// 更新分页
+function updatePagination(pagination) {
+    const paginationContainer = $('#pagination');
+    paginationContainer.empty();
+
+    const totalPages = pagination.total_pages;
+
+    if (totalPages <= 1) {
+        $('#page-info').text(`第 ${pagination.page} 页 / 共 ${totalPages} 页`);
+        return;
+    }
+
+    const prevDisabled = currentPage === 1 ? 'disabled' : '';
+    paginationContainer.append(`
+        <li class="page-item ${prevDisabled}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </li>
+    `);
+
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, startPage + 4);
+
+    for (let i = startPage; i <= endPage; i++) {
+        const active = i === currentPage ? 'active' : '';
+        paginationContainer.append(`
+            <li class="page-item ${active}">
+                <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+            </li>
+        `);
+    }
+
+    const nextDisabled = currentPage === totalPages ? 'disabled' : '';
+    paginationContainer.append(`
+        <li class="page-item ${nextDisabled}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>
+    `);
+
+    $('#page-info').text(`第 ${currentPage} 页 / 共 ${totalPages} 页`);
+}
+
+// 改变页码
+function changePage(page) {
+    if (page >= 1 && page !== currentPage) {
+        currentPage = page;
+        loadData();
+        $('html, body').animate({
+            scrollTop: $('.data-table-card').offset().top - 100
+        }, 300);
+    }
+    return false;
+}
+
+// 导出数据
+function exportFilteredData() {
+    const date = $('#date-picker').val();
+    const category = $('#category-filter').val();
+    const source = $('#source-filter').val();
+    const keyword = $('#keyword-search').val();
+    const highlightOnly = $('#highlight-only-switch').is(':checked');
+
+    let exportUrl = `/api/export?date=${date}`;
+
+    if (category !== '全部') {
+        exportUrl += `&category=${encodeURIComponent(category)}`;
+    }
+
+    if (source !== '全部') {
+        exportUrl += `&source=${encodeURIComponent(source)}`;
+    }
+
+    if (keyword) {
+        exportUrl += `&keyword=${encodeURIComponent(keyword)}`;
+    }
+
+    if (highlightOnly) {
+        exportUrl += `&highlight_only=true`;
+    }
+
+    $('#export-info').html(`<i class="fas fa-spinner fa-spin me-1"></i>正在生成文件...`);
+
+    setTimeout(function() {
+        window.location.href = exportUrl;
+        setTimeout(function() {
+            $('#export-info').html(`<i class="fas fa-info-circle me-1"></i>导出将基于当前筛选条件`);
+        }, 2000);
+    }, 500);
+}
+
+// 防抖函数
+function debounce(func, wait) {
+    let timeout;
+    return function() {
+        const context = this;
+        const args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            func.apply(context, args);
+        }, wait);
+    };
+}
+    </script>
+</body>
+</html>

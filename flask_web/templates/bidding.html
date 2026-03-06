@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投标项目 - 招投标信息展示系统</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+
+            --primary-color: #667eea;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+
+            --shadow-md: 0 3px 4px -1px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 6px 10px -2px rgba(0, 0, 0, 0.08);
+            --shadow-xl: 0 12px 18px -4px rgba(0, 0, 0, 0.08);
+
+            --radius-lg: 16px;
+            --radius-md: 12px;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        /* 头部样式 */
+        .header-container {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(10px);
+        }
+
+        .back-btn {
+            color: white;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border-radius: var(--radius-md);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* 统计卡片 */
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: all 0.3s ease;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-gradient);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* 筛选栏 */
+        .filter-bar {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .form-control, .form-select {
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+        }
+
+        .btn-primary-gradient {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        /* 项目卡片 */
+        .project-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .project-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .project-card.status-pending::before { background: linear-gradient(to bottom, #fa8c16, #ffa940); }
+        .project-card.status-won::before { background: linear-gradient(to bottom, #52c41a, #73d13d); }
+        .project-card.status-lost::before { background: linear-gradient(to bottom, #ff4d4f, #cf1322); }
+
+        .project-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+        }
+
+        .meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .meta-item i {
+            color: var(--primary-color);
+        }
+
+        .status-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .status-pending { background: rgba(250, 140, 22, 0.1); color: #fa8c16; border-color: rgba(250, 140, 22, 0.2); }
+        .status-won { background: rgba(82, 196, 26, 0.1); color: #52c41a; border-color: rgba(82, 196, 26, 0.2); }
+        .status-lost { background: rgba(255, 77, 79, 0.1); color: #ff4d4f; border-color: rgba(255, 77, 79, 0.2); }
+
+        .price-tag {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: var(--danger-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .btn-action {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-edit {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .btn-outline-custom {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline-custom:hover {
+            background: var(--primary-gradient);
+            color: white;
+            border-color: transparent;
+        }
+
+        .info-box {
+            background: rgba(102, 126, 234, 0.05);
+            border-left: 3px solid var(--primary-color);
+            padding: 0.75rem;
+            border-radius: 0 8px 8px 0;
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .summary-box {
+            background: rgba(82, 196, 26, 0.05);
+            border-left: 3px solid #52c41a;
+            padding: 0.75rem;
+            border-radius: 0 8px 8px 0;
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .summary-box.lost {
+            background: rgba(255, 77, 79, 0.05);
+            border-left-color: #ff4d4f;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.8);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(10px);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* 模态框 */
+        .modal-content {
+            border: none;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 1.5rem;
+        }
+
+        .btn-close-white {
+            filter: invert(1);
+        }
+
+        .code-input {
+            letter-spacing: 0.5rem;
+            font-size: 1.5rem;
+            text-align: center;
+            font-weight: bold;
+            padding: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        .code-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+        }
+
+        /* 报价管理样式 */
+        .bid-price-row {
+            background: rgba(255,255,255,0.8);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .bid-price-row:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        }
+
+        .bid-price-row.our-company {
+            border-color: #52c41a;
+            background: rgba(82, 196, 26, 0.05);
+        }
+
+        /* 分页 */
+        .pagination .page-link {
+            border: none;
+            color: var(--text-primary);
+            margin: 0 0.25rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .pagination .page-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .pagination .page-item.active .page-link {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .pagination .page-item.disabled .page-link {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .stat-value { font-size: 1.5rem; }
+            .btn-action { width: 100%; margin-right: 0; justify-content: center; }
+            .meta-item { display: block; margin-bottom: 0.5rem; }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <!-- 头部 -->
+    <div class="header-container">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="h3 fw-bold mb-0">
+                        <i class="fas fa-file-signature me-2"></i>投标项目列表
+                    </h1>
+                    <p class="mb-0 mt-2 opacity-75">管理投标过程及中标结果</p>
+                </div>
+                <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                    <a href="/analysis" class="back-btn me-2 mb-2">
+                        <i class="fas fa-chart-pie"></i> 分析标书
+                    </a>
+                    <a href="/" class="back-btn">
+                        <i class="fas fa-arrow-left"></i> 返回首页
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value" id="stat-total">0</div>
+                            <div class="stat-label">总项目数</div>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value text-warning" id="stat-pending">0</div>
+                            <div class="stat-label">进行中</div>
+                        </div>
+                        <div class="stat-icon" style="background: var(--warning-gradient);">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value text-success" id="stat-won">0</div>
+                            <div class="stat-label">已中标</div>
+                        </div>
+                        <div class="stat-icon" style="background: var(--success-gradient);">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value text-danger" id="stat-lost">0</div>
+                            <div class="stat-label">未中标</div>
+                        </div>
+                        <div class="stat-icon" style="background: var(--danger-gradient);">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 筛选栏 -->
+        <div class="filter-bar">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">状态筛选</label>
+                    <select class="form-select" id="status-filter" onchange="loadData(1)">
+                        <option value="all">全部状态</option>
+                        <option value="pending">进行中</option>
+                        <option value="won">已中标</option>
+                        <option value="lost">未中标</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">关键词搜索</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="search-input" placeholder="搜索项目名称..." onkeyup="debounceSearch()">
+                        <button class="btn btn-outline-secondary" onclick="clearSearch()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary-gradient w-100" onclick="loadData(1)">
+                        <i class="fas fa-search me-2"></i>查询
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据列表 -->
+        <div id="project-list"></div>
+
+        <!-- 分页 -->
+        <div class="d-flex justify-content-center mt-4" id="pagination-container" style="display: none !important;">
+            <nav aria-label="Page navigation">
+                <ul class="pagination" id="pagination"></ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- 口令验证模态框 -->
+    <div class="modal fade" id="codeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-lock me-2"></i>安全验证</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <div class="mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light" style="width: 80px; height: 80px;">
+                            <i class="fas fa-shield-alt fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-3">请输入访问口令以编辑此记录</p>
+                    <input type="password" class="form-control code-input mb-3" id="access-code" placeholder="••••••" maxlength="20">
+                    <div id="code-error" class="text-danger small" style="display:none;">
+                        <i class="fas fa-exclamation-circle me-1"></i>口令错误，请重试
+                    </div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary-gradient px-4" onclick="verifyCode()">验证</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑模态框（含详细报价） -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-file-contract me-2"></i>管理投标信息</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="edit-id">
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">项目名称</label>
+                            <p class="form-control-plaintext border rounded p-3 bg-light fw-bold text-primary" id="view-project-name">-</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">招标控制价</label>
+                            <p class="form-control-plaintext border rounded p-3 bg-light" id="view-control-price">-</p>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">标书制作人</label>
+                            <input type="text" class="form-control" id="edit-creator" placeholder="负责制作标书的人员">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">当前状态</label>
+                            <select class="form-select" id="edit-final-status" onchange="toggleSummaryField()">
+                                <option value="pending">🟡 进行中</option>
+                                <option value="won">🟢 已中标</option>
+                                <option value="lost">🔴 未中标</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">标书重点信息</label>
+                            <textarea class="form-control" id="edit-key-points" rows="2" placeholder="技术要求、评分标准等重点注意事项..."></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label d-flex justify-content-between align-items-center">
+                                <span class="fw-bold">各家报价信息</span>
+                                <button type="button" class="btn btn-sm btn-primary-gradient" onclick="addBidPriceRow()">
+                                    <i class="fas fa-plus me-1"></i> 添加报价
+                                </button>
+                            </label>
+                            <div id="bid-prices-container" class="border rounded p-3 bg-light">
+                                <!-- 动态添加 -->
+                            </div>
+                            <small class="text-muted d-block mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                填写参与投标的所有公司报价，勾选"我方"标识本公司报价
+                            </small>
+                        </div>
+
+                        <div class="col-12" id="summary-field" style="display: none;">
+                            <label class="form-label fw-bold" id="summary-label">经验教训总结</label>
+                            <textarea class="form-control" id="edit-summary" rows="3" placeholder="中标原因分析 或 未中标经验总结..."></textarea>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">操作人</label>
+                            <input type="text" class="form-control" id="edit-operator" placeholder="您的姓名">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary-gradient" onclick="saveEdit()">
+                        <i class="fas fa-save me-2"></i>保存修改
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
+    <script>
+        const API_BASE = '/bidding/api';
+        let currentPage = 1;
+        let currentEditId = null;
+        let verifiedCode = null;
+
+        $(document).ready(function() {
+            loadData(1);
+        });
+
+        function debounceSearch() {
+            clearTimeout(window.searchTimeout);
+            window.searchTimeout = setTimeout(() => loadData(1), 500);
+        }
+
+        function clearSearch() {
+            $('#search-input').val('');
+            loadData(1);
+        }
+
+        function loadData(page) {
+            currentPage = page;
+            const status = $('#status-filter').val();
+            const keyword = $('#search-input').val();
+
+            $.get(`${API_BASE}/list`, {
+                status: status,
+                keyword: keyword,
+                page: page,
+                page_size: 10
+            }, function(res) {
+                if (res.success) {
+                    renderList(res.data);
+                    renderStats(res.statistics);
+                    renderPagination(res.pagination);
+                } else {
+                    showToast('加载失败：' + res.message, 'error');
+                }
+            }).fail(function() {
+                showToast('网络错误，请稍后重试', 'error');
+            });
+        }
+
+        function renderStats(stats) {
+            const total = (stats.pending || 0) + (stats.won || 0) + (stats.lost || 0);
+            $('#stat-total').text(total);
+            $('#stat-pending').text(stats.pending || 0);
+            $('#stat-won').text(stats.won || 0);
+            $('#stat-lost').text(stats.lost || 0);
+        }
+
+        function renderList(data) {
+            const container = $('#project-list');
+            container.empty();
+
+            if (data.length === 0) {
+                container.html(`
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h5>暂无投标项目</h5>
+                        <p>请先在"分析标书"中标记为投标后转换</p>
+                    </div>
+                `);
+                return;
+            }
+
+            data.forEach(item => {
+                const statusClass = item.final_status || 'pending';
+
+                // 展示报价摘要
+                let bidPriceHtml = '';
+                if (item.bid_prices && item.bid_prices.length > 0) {
+                    const ourBid = item.bid_prices.find(p => p.is_our) || item.bid_prices[0];
+                    const ourPrice = ourBid.price ? parseFloat(ourBid.price).toFixed(2) : '未报价';
+                    bidPriceHtml = `
+                        <div class="mb-1">
+                            <span class="price-tag">¥${ourPrice}万</span>
+                            <small class="text-muted">(${ourBid.name || '本公司'})</small>
+                        </div>
+                        ${item.bid_prices.length > 1 ? `<span class="badge bg-light text-dark border">共${item.bid_prices.length}家报价</span>` : ''}
+                    `;
+                } else {
+                    bidPriceHtml = '<span class="text-muted">暂无报价</span>';
+                }
+
+                const html = `
+                    <div class="project-card status-${statusClass}">
+                        <div class="row align-items-center">
+                            <div class="col-md-5 mb-3 mb-md-0">
+                                <div class="project-title">${item.project_name}</div>
+                                <div class="mb-2">
+                                    <div class="meta-item">
+                                        <i class="fas fa-building"></i>
+                                        <span>${item.project_source}</span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-user-edit"></i>
+                                        <span>制作人:${item.bid_document_creator || '未指派'}</span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <i class="fas fa-calendar"></i>
+                                        <span>${item.created_at}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center flex-wrap gap-2">
+                                    <span class="status-badge status-${statusClass}">${item.final_status_text}</span>
+                                    ${item.operator ? `<span class="badge bg-light text-dark border"><i class="fas fa-user me-1"></i>${item.operator}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-center border-start border-end mb-3 mb-md-0">
+                                <div class="mb-2 text-muted small fw-bold">我方报价</div>
+                                ${bidPriceHtml}
+                                ${item.control_price ? `<div class="small text-muted mt-2"><i class="fas fa-calculator me-1"></i>控制价: ¥${parseFloat(item.control_price).toFixed(2)}万</div>` : ''}
+                            </div>
+                            <div class="col-md-3 ps-md-4">
+                                ${item.detail_url ? `
+                                    <a href="${item.detail_url}" target="_blank" class="btn-action btn-outline-custom w-100 mb-2 justify-content-center">
+                                        <i class="fas fa-external-link-alt"></i> 查看原文
+                                    </a>
+                                ` : ''}
+                                <button class="btn-action btn-edit w-100" onclick="openEdit(${item.id})">
+                                    <i class="fas fa-edit"></i> 编辑详情
+                                </button>
+                            </div>
+                        </div>
+
+                        ${item.bid_document_key_points ? `
+                        <div class="info-box">
+                            <i class="fas fa-key text-warning me-2"></i>
+                            <strong>标书重点:</strong> ${item.bid_document_key_points}
+                        </div>
+                        ` : ''}
+
+                        ${item.summary_reason ? `
+                        <div class="summary-box ${item.final_status === 'lost' ? 'lost' : ''}">
+                            <i class="fas fa-clipboard-check me-2"></i>
+                            <strong>${item.final_status === 'won' ? '中标分析' : '经验总结'}:</strong> ${item.summary_reason}
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                container.append(html);
+            });
+        }
+
+        function renderPagination(pg) {
+            const container = $('#pagination');
+            const navContainer = $('#pagination-container');
+
+            if (pg.total_pages <= 1) {
+                navContainer.hide();
+                return;
+            }
+
+            navContainer.show();
+            navContainer.css('display', 'flex');
+            container.empty();
+
+            container.append(`
+                <li class="page-item ${pg.page === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="return changePage(${pg.page - 1})">上一页</a>
+                </li>
+            `);
+
+            for (let i = 1; i <= pg.total_pages; i++) {
+                if (i === 1 || i === pg.total_pages || Math.abs(i - pg.page) <= 2) {
+                    container.append(`
+                        <li class="page-item ${i === pg.page ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="return changePage(${i})">${i}</a>
+                        </li>
+                    `);
+                } else if (i === pg.page - 3 || i === pg.page + 3) {
+                    container.append('<li class="page-item disabled"><span class="page-link">...</span></li>');
+                }
+            }
+
+            container.append(`
+                <li class="page-item ${pg.page === pg.total_pages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="return changePage(${pg.page + 1})">下一页</a>
+                </li>
+            `);
+        }
+
+        function changePage(page) {
+            if (page >= 1 && page !== currentPage) {
+                loadData(page);
+                $('html, body').animate({ scrollTop: 0 }, 300);
+            }
+            return false;
+        }
+
+        function openEdit(id) {
+            currentEditId = id;
+            if (verifiedCode && window.lastVerifyTime && (Date.now() - window.lastVerifyTime < 300000)) {
+                loadDetailAndShow();
+            } else {
+                $('#access-code').val('');
+                $('#code-error').hide();
+                $('#codeModal').modal('show');
+                setTimeout(() => $('#access-code').focus(), 500);
+            }
+        }
+
+        function verifyCode() {
+            const code = $('#access-code').val().trim();
+            if (!code) {
+                $('#code-error').show();
+                return;
+            }
+
+            $.ajax({
+                url: `${API_BASE}/verify`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ access_code: code }),
+                success: function(res) {
+                    if (res.success) {
+                        verifiedCode = code;
+                        window.lastVerifyTime = Date.now();
+                        $('#codeModal').modal('hide');
+                        $('#access-code').val('');
+                        loadDetailAndShow();
+                    } else {
+                        $('#code-error').show();
+                        $('#access-code').select();
+                    }
+                },
+                error: function() {
+                    $('#code-error').text('验证失败').show();
+                }
+            });
+        }
+
+        // 回车键提交验证
+        $('#access-code').on('keypress', function(e) {
+            if (e.which === 13) {
+                verifyCode();
+            }
+        });
+
+        function loadDetailAndShow() {
+            $.ajax({
+                url: `${API_BASE}/detail/${currentEditId}`,
+                headers: { 'X-Access-Code': verifiedCode },
+                success: function(res) {
+                    if (res.success) {
+                        const d = res.data;
+                        $('#edit-id').val(d.id);
+                        $('#view-project-name').text(d.project_name);
+                        $('#view-control-price').text(d.control_price ? `¥${parseFloat(d.control_price).toFixed(2)}万` : '-');
+                        $('#edit-creator').val(d.bid_document_creator);
+                        $('#edit-key-points').val(d.bid_document_key_points);
+                        $('#edit-final-status').val(d.final_status);
+                        $('#edit-summary').val(d.summary_reason);
+                        $('#edit-operator').val(d.operator);
+
+                        renderBidPrices(d.bid_prices || []);
+                        toggleSummaryField();
+                        $('#editModal').modal('show');
+                    } else {
+                        showToast(res.message || '加载失败', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 403) {
+                        showToast('口令已过期，请重新验证', 'error');
+                        verifiedCode = null;
+                    }
+                }
+            });
+        }
+
+        function renderBidPrices(prices) {
+            const container = $('#bid-prices-container');
+            container.empty();
+            if (prices.length === 0) {
+                addBidPriceRow();
+            } else {
+                prices.forEach((p) => addBidPriceRow(p.name, p.price, p.is_our));
+            }
+        }
+
+        function addBidPriceRow(name='', price='', isOur=false) {
+            const container = $('#bid-prices-container');
+            const idx = container.children().length;
+            const isOurClass = isOur ? 'our-company' : '';
+
+            const html = `
+                <div class="bid-price-row ${isOurClass}" data-index="${idx}">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-5">
+                            <input type="text" class="form-control bid-company-name" placeholder="公司名称" value="${name}">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text">¥</span>
+                                <input type="number" class="form-control bid-company-price" placeholder="报价(万元)" value="${price}" step="0.01">
+                                <span class="input-group-text">万</span>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-check mt-2">
+                                <input class="form-check-input bid-is-our" type="checkbox" ${isOur ? 'checked' : ''}
+                                    onchange="toggleOurCompany(this)" id="bid-check-${idx}">
+                                <label class="form-check-label small fw-bold text-success" for="bid-check-${idx}">
+                                    我方报价
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-1 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger rounded-circle"
+                                onclick="$(this).closest('.bid-price-row').remove()" style="width: 32px; height: 32px; padding: 0;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.append(html);
+        }
+
+        function toggleOurCompany(checkbox) {
+            const row = $(checkbox).closest('.bid-price-row');
+            if (checkbox.checked) {
+                row.addClass('our-company');
+                // 取消其他行的勾选（确保只有一个"我方"）
+                $('.bid-is-our').not(checkbox).prop('checked', false);
+                $('.bid-price-row').not(row).removeClass('our-company');
+            } else {
+                row.removeClass('our-company');
+            }
+        }
+
+        function toggleSummaryField() {
+            const status = $('#edit-final-status').val();
+            const field = $('#summary-field');
+            const label = $('#summary-label');
+
+            if (status === 'won') {
+                label.text('🎉 中标原因分析（中标的关键因素）');
+                field.slideDown(300);
+            } else if (status === 'lost') {
+                label.text('📋 未中标经验总结（改进方向与教训）');
+                field.slideDown(300);
+            } else {
+                field.slideUp(300);
+            }
+        }
+
+        function collectBidPrices() {
+            const prices = [];
+            $('#bid-prices-container .bid-price-row').each(function() {
+                const name = $(this).find('.bid-company-name').val().trim();
+                const price = $(this).find('.bid-company-price').val();
+                const isOur = $(this).find('.bid-is-our').is(':checked');
+                if (name) {
+                    prices.push({
+                        name: name,
+                        price: price ? parseFloat(price) : null,
+                        is_our: isOur
+                    });
+                }
+            });
+            return prices;
+        }
+
+        function saveEdit() {
+            const data = {
+                bid_document_creator: $('#edit-creator').val(),
+                bid_document_key_points: $('#edit-key-points').val(),
+                bid_prices: collectBidPrices(),
+                final_status: $('#edit-final-status').val(),
+                summary_reason: $('#edit-summary').val(),
+                operator: $('#edit-operator').val()
+            };
+
+            if (!data.operator) {
+                showToast('请输入操作人姓名', 'warning');
+                $('#edit-operator').focus();
+                return;
+            }
+
+            $.ajax({
+                url: `${API_BASE}/update/${currentEditId}`,
+                method: 'PUT',
+                headers: { 'X-Access-Code': verifiedCode },
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(res) {
+                    if (res.success) {
+                        $('#editModal').modal('hide');
+                        loadData(currentPage);
+                        showToast('保存成功', 'success');
+                    } else {
+                        showToast(res.message || '保存失败', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 403) {
+                        showToast('口令验证失败，请重新验证', 'error');
+                        $('#editModal').modal('hide');
+                        verifiedCode = null;
+                    } else {
+                        showToast('保存失败', 'error');
+                    }
+                }
+            });
+        }
+
+        function showToast(msg, type = 'info') {
+            const bgClass = type === 'success' ? 'bg-success' :
+                          type === 'error' ? 'bg-danger' :
+                          type === 'warning' ? 'bg-warning text-dark' : 'bg-primary';
+            const icon = type === 'success' ? 'fa-check-circle' :
+                        type === 'error' ? 'fa-exclamation-circle' :
+                        type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+
+            const toast = $(`
+                <div class="toast align-items-center ${bgClass} text-white border-0 position-fixed"
+                     style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas ${icon} me-2"></i>${msg}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `);
+
+            $('body').append(toast);
+            const toastEl = $('.toast').last();
+            const bsToast = new bootstrap.Toast(toastEl, { delay: 3000 });
+            bsToast.show();
+
+            toastEl.on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        }
+    </script>
+</body>
+</html>

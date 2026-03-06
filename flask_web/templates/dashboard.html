@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据看板 - 招标信息展示系统</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <!-- Bootstrap 5 CSS -->
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="{{ url_for('static', filename='js/chart.min.js') }}"></script>
+
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            --dark-gradient: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            --jining-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #4facfe;
+            --warning-color: #fa709a;
+
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 3px 4px -1px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 6px 10px -2px rgba(0, 0, 0, 0.08);
+            --shadow-xl: 0 12px 18px -4px rgba(0, 0, 0, 0.08);
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        /* 头部样式 - 与index一致 */
+        .header-container {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* 看板专用统计卡片 - 大型 */
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: var(--radius-lg);
+            border: none;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            position: relative;
+            height: 100%;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+        }
+
+        .dashboard-card.success::before { background: var(--success-gradient); }
+        .dashboard-card.warning::before { background: var(--warning-gradient); }
+        .dashboard-card.info::before { background: var(--info-gradient); }
+        .dashboard-card.jining::before { background: var(--jining-gradient); }
+
+        .stat-icon-large {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+            background: var(--primary-gradient);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            flex-shrink: 0;
+        }
+
+        .dashboard-card.success .stat-icon-large { background: var(--success-gradient); }
+        .dashboard-card.warning .stat-icon-large { background: var(--warning-gradient); }
+        .dashboard-card.info .stat-icon-large { background: var(--info-gradient); }
+        .dashboard-card.jining .stat-icon-large { background: var(--jining-gradient); }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .stat-change {
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-change.positive {
+            background: rgba(79, 172, 254, 0.1);
+            color: #4facfe;
+        }
+
+        .stat-change.negative {
+            background: rgba(245, 87, 108, 0.1);
+            color: #f5576c;
+        }
+
+        /* 图表卡片 - 修复高度问题 */
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: var(--radius-lg);
+            border: none;
+            box-shadow: var(--shadow-lg);
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            max-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, transparent 100%);
+            border-radius: 0 0 0 100%;
+            pointer-events: none;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            max-height: 300px;
+            width: 100%;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f5f9;
+            flex-shrink: 0;
+        }
+
+        .chart-title {
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 时间筛选器 */
+        .time-filter {
+            display: flex;
+            gap: 8px;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: var(--radius-sm);
+        }
+
+        .time-filter button {
+            border: none;
+            background: transparent;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .time-filter button.active {
+            background: white;
+            color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* 数据表格 - 简化版 */
+        .activity-table {
+            width: 100%;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .activity-table th {
+            background: #f8fafc;
+            padding: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .activity-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        .activity-table tr:hover {
+            background: rgba(102, 126, 234, 0.03);
+        }
+
+        /* 关键修复：等高行布局 */
+        .equal-height-row {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .equal-height-row > [class*='col-'] {
+            display: flex;
+            margin-bottom: 1.5rem;
+        }
+
+        /* 关键修复：卡片内容区域自适应高度 */
+        .card-flex {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        /* 关键修复：可滚动内容区域填充剩余空间 */
+        .scrollable-content {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            max-height: 280px;
+        }
+
+        /* 济宁详情专用样式 */
+        .jining-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f1f5f9;
+            flex-shrink: 0;
+        }
+
+        .jining-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--jining-gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.3rem;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            flex-shrink: 0;
+        }
+
+        .jining-title {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .jining-title h5 {
+            margin: 0;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .jining-title small {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #92400e;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        .jining-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-shrink: 0;
+        }
+
+        .jining-stat-item {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .jining-stat-item.warning {
+            background: linear-gradient(135deg, rgba(250, 112, 154, 0.05) 0%, rgba(254, 225, 64, 0.05) 100%);
+            border-left-color: var(--warning-color);
+        }
+
+        .jining-stat-item.success {
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.05) 0%, rgba(0, 242, 254, 0.05) 100%);
+            border-left-color: var(--success-color);
+        }
+
+        .jining-stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .jining-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* 列表项样式 */
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+
+        .list-title {
+            font-weight: 700;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .jining-project-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            background: #f8fafc;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+        }
+
+        .jining-project-item:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+            border-left-color: var(--primary-color);
+            transform: translateX(4px);
+        }
+
+        .jining-project-rank {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.75rem;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .jining-project-rank.top3 {
+            background: var(--warning-gradient);
+        }
+
+        .jining-project-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .jining-project-name {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 2px;
+        }
+
+        .jining-project-meta {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .jining-project-amount {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+
+        /* 进度条样式 */
+        .progress-custom {
+            height: 6px;
+            border-radius: 10px;
+            background: #e2e8f0;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .progress-bar-custom {
+            height: 100%;
+            border-radius: 10px;
+            background: var(--primary-gradient);
+            transition: width 0.6s ease;
+        }
+
+        .source-item {
+            margin-bottom: 12px;
+        }
+
+        .source-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .source-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .source-badge {
+            min-width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .source-badge.gold {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #92400e;
+        }
+
+        .source-badge.silver {
+            background: linear-gradient(135deg, #c0c0c0 0%, #e0e0e0 100%);
+            color: #374151;
+        }
+
+        .source-badge.bronze {
+            background: linear-gradient(135deg, #cd7f32 0%, #e6a45c 100%);
+            color: #78350f;
+        }
+
+        .source-count {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* 加载动画 */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* 动画 */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+
+        /* 返回按钮 */
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 20px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateX(-3px);
+            color: white;
+        }
+
+        /* 快速链接按钮 */
+        .quick-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            background: rgba(102, 126, 234, 0.1);
+            color: var(--primary-color);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .quick-link:hover {
+            background: var(--primary-gradient);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        /* 响应式 */
+        @media (max-width: 992px) {
+            .equal-height-row > [class*='col-'] {
+                margin-bottom: 1.5rem;
+            }
+            .chart-card {
+                max-height: none;
+            }
+            .scrollable-content {
+                max-height: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stat-value { font-size: 1.8rem; }
+            .chart-card {
+                max-height: none;
+            }
+            .chart-container {
+                height: 250px;
+                max-height: 250px;
+            }
+            .time-filter { flex-wrap: wrap; }
+            .stat-icon-large {
+                width: 48px;
+                height: 48px;
+                font-size: 1.4rem;
+            }
+            .jining-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* 修复图表canvas样式 */
+        canvas {
+            max-height: 100% !important;
+        }
+                /* 可点击项目的悬停效果 */
+        .jining-project-item[href] {
+            transition: all 0.3s ease;
+        }
+
+        .jining-project-item[href]:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
+            border-left-color: var(--primary-color);
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+        }
+
+        .jining-project-item[href]:hover .jining-project-name {
+            color: var(--primary-color);
+        }
+
+        .jining-project-item[href]:hover .fa-external-link-alt {
+            color: var(--primary-color) !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部 -->
+    <div class="header-container">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="h3 fw-bold mb-1">
+                        <i class="fas fa-chart-pie me-2"></i>数据看板
+                    </h1>
+                    <p class="small mb-0">招标业务数据监控中心</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="/" class="back-btn">
+                        <i class="fas fa-arrow-left"></i>返回列表
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 时间筛选 -->
+        <div class="row mb-4 animate-fade-in">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div class="time-filter">
+                        <button class="active" onclick="changeTimeRange(7, this)">近7天</button>
+                        <button onclick="changeTimeRange(30, this)">近30天</button>
+                        <button onclick="changeTimeRange(90, this)">近90天</button>
+                    </div>
+                    <div class="text-muted small">
+                        <i class="fas fa-sync-alt me-2"></i>数据更新时间: <span id="update-time">刚刚</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计卡片区域 - 修改为核心业务指标 -->
+        <div class="row mb-4">
+            <!-- 投标项目 -->
+            <div class="col-md-3 mb-3 animate-fade-in delay-1">
+                <div class="dashboard-card p-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1" style="min-width: 0;">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <div class="stat-label">投标项目</div>
+                                <a href="/bidding/" class="quick-link" title="进入投标项目管理">
+                                    <i class="fas fa-external-link-alt"></i>管理
+                                </a>
+                            </div>
+                            <div class="stat-value" id="bidding-count">0</div>
+                            <div class="stat-change positive" id="bidding-trend">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>进行中</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon-large ms-3">
+                            <i class="fas fa-file-signature"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分析标书 -->
+            <div class="col-md-3 mb-3 animate-fade-in delay-2">
+                <div class="dashboard-card success p-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1" style="min-width: 0;">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <div class="stat-label">分析标书</div>
+                                <a href="/analysis/" class="quick-link" style="background: rgba(79, 172, 254, 0.1); color: #4facfe; border-color: rgba(79, 172, 254, 0.2);" title="进入分析标书管理">
+                                    <i class="fas fa-external-link-alt"></i>管理
+                                </a>
+                            </div>
+                            <div class="stat-value" id="analysis-count">0</div>
+                            <div class="stat-change positive" id="analysis-trend">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>待分析</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon-large ms-3">
+                            <i class="fas fa-search-dollar"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 重点关注 -->
+            <div class="col-md-3 mb-3 animate-fade-in delay-3">
+                <div class="dashboard-card warning p-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1" style="min-width: 0;">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <div class="stat-label">重点关注</div>
+                                <a href="/focus/" class="quick-link" style="background: rgba(250, 112, 154, 0.1); color: #fa709a; border-color: rgba(250, 112, 154, 0.2);" title="进入重点关注管理">
+                                    <i class="fas fa-external-link-alt"></i>管理
+                                </a>
+                            </div>
+                            <div class="stat-value" id="focus-count">0</div>
+                            <div class="stat-change" id="focus-trend-container">
+                                <i class="fas fa-star"></i>
+                                <span>活跃关注</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon-large ms-3">
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 济宁公共资源 - 保留 -->
+            <div class="col-md-3 mb-3 animate-fade-in delay-4">
+                <div class="dashboard-card jining p-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1" style="min-width: 0;">
+                            <div class="stat-label">济宁公共资源</div>
+                            <div class="stat-value" id="jining-count">0</div>
+                            <div class="stat-change positive">
+                                <i class="fas fa-arrow-up"></i>
+                                <span id="jining-percent">占比 0%</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon-large ms-3">
+                            <i class="fas fa-building"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图表区域 - 修改为展示业务趋势 -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mb-4 animate-fade-in delay-2">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">
+                            <i class="fas fa-chart-line text-primary"></i>
+                            业务流程趋势
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                按日期
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">按日期</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 mb-4 animate-fade-in delay-3">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">
+                            <i class="fas fa-chart-pie text-warning"></i>
+                            业务分布占比
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 详细数据区域 - 等高布局 -->
+        <div class="row equal-height-row">
+            <!-- 数据来源分布 -->
+            <div class="col-lg-4 animate-fade-in delay-3">
+                <div class="card-flex">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">
+                                <i class="fas fa-server text-info"></i>
+                                数据来源分布
+                            </div>
+                        </div>
+                        <div class="scrollable-content" id="source-list">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 济宁公共资源详情 - 保留 -->
+            <div class="col-lg-4 animate-fade-in delay-4">
+                <div class="card-flex">
+                    <div class="chart-card jining-detail-card">
+                        <!-- 头部信息 -->
+                        <div class="jining-header">
+                            <div class="jining-icon">
+                                <i class="fas fa-landmark"></i>
+                            </div>
+                            <div class="jining-title">
+                                <h5>济宁公共资源交易中心</h5>
+                                <small><i class="fas fa-link me-1"></i>jnsggzy.cn</small>
+                            </div>
+                            <div class="rank-badge">
+                                <i class="fas fa-trophy"></i>
+                                <span id="jining-rank">No.1</span>
+                            </div>
+                        </div>
+
+                        <!-- 统计网格 -->
+                        <div class="jining-stats">
+                            <div class="jining-stat-item">
+                                <div class="jining-stat-value" id="jining-total">0</div>
+                                <div class="jining-stat-label">总项目数</div>
+                            </div>
+                            <div class="jining-stat-item success">
+                                <div class="jining-stat-value" id="jining-today">0</div>
+                                <div class="jining-stat-label">今日新增</div>
+                            </div>
+                            <div class="jining-stat-item warning">
+                                <div class="jining-stat-value" id="jining-highlight">0</div>
+                                <div class="jining-stat-label">含关键词项目</div>
+                            </div>
+                            <div class="jining-stat-item">
+                                <div class="jining-stat-value" id="jining-avg">0</div>
+                                <div class="jining-stat-label">日均项目</div>
+                            </div>
+                        </div>
+
+                        <!-- 项目排名列表 -->
+                        <div class="list-header">
+                            <span class="list-title">热门项目 TOP5</span>
+                            <a href="https://www.jnsggzy.cn/" target="_blank" class="text-decoration-none small fw-bold">
+                                访问官网 <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                        <div class="scrollable-content" id="jining-projects">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最新抓取动态 -->
+            <div class="col-lg-4 animate-fade-in delay-4">
+                <div class="card-flex">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">
+                                <i class="fas fa-clock text-success"></i>
+                                最新业务动态
+                            </div>
+                        </div>
+                        <div class="scrollable-content">
+                            <table class="activity-table">
+                                <thead>
+                                    <tr>
+                                        <th>项目名称</th>
+                                        <th>来源</th>
+                                        <th>时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activity-body">
+                                    <!-- 动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部说明 -->
+        <div class="alert alert-light border-0 mt-4" style="
+            background: rgba(255,255,255,0.7);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(10px);
+        ">
+            <h6 class="mb-2"><i class="fas fa-info-circle me-2 text-primary"></i>看板说明</h6>
+            <p class="small text-muted mb-0">
+                数据看板实时展示核心业务数据统计。<strong>投标项目</strong>、<strong>分析标书</strong>、<strong>重点关注</strong>为三大业务模块，
+                同时保留<strong>济宁公共资源交易中心</strong>（jnsggzy.cn）作为重点监控来源。数据每5分钟自动刷新一次。
+            </p>
+        </div>
+    </div>
+
+    <!-- 脚本 -->
+    <script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chart.min.js') }}"></script>
+    <script>
+        // 全局变量
+        let trendChart, categoryChart;
+        let currentRange = 7;
+
+        // 初始化
+        $(document).ready(function() {
+            loadDashboardData();
+            // 每5分钟刷新
+            setInterval(loadDashboardData, 300000);
+        });
+
+        // 切换时间范围
+        function changeTimeRange(days, btn) {
+            $('.time-filter button').removeClass('active');
+            $(btn).addClass('active');
+            currentRange = days;
+            loadDashboardData();
+        }
+
+        // 加载看板数据
+        function loadDashboardData() {
+            $.ajax({
+                url: '/api/dashboard',
+                method: 'GET',
+                data: { range: currentRange },
+                success: function(response) {
+                    if(response.success) {
+                        updateStatistics(response.data);
+                        renderCharts(response.data);
+                        renderSourceList(response.data.sources);
+                        renderJiningDetail(response.data.jining_detail);
+                        renderActivity(response.data.recent);
+                        $('#update-time').text(new Date().toLocaleTimeString());
+                    } else {
+                        console.error("API返回错误:", response.message);
+                        showError("数据加载失败: " + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX请求失败:", status, error);
+                    showError("网络请求失败，请检查连接");
+                }
+            });
+        }
+
+        // 新增错误显示函数
+        function showError(message) {
+            const errorHtml = `
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <div>${message}，请稍后重试</div>
+                </div>
+            `;
+            // 在顶部显示错误
+            $('.container').prepend(errorHtml);
+            // 5秒后自动移除
+            setTimeout(() => {
+                $('.alert').fadeOut(300, function() {
+                    $(this).remove();
+                });
+            }, 5000);
+        }
+
+        // 更新统计数据函数 - 适配新的业务指标
+        function updateStatistics(data) {
+            // 投标项目
+            if(data.bidding) {
+                animateNumber('bidding-count', data.bidding.count);
+                const biddingTrend = $('#bidding-trend');
+                const pendingCount = data.bidding.pending || 0;
+                biddingTrend.html(`<i class="fas fa-hourglass-half"></i><span>${pendingCount}个进行中</span>`);
+                biddingTrend.addClass('positive');
+            }
+
+            // 分析标书
+            if(data.analysis) {
+                animateNumber('analysis-count', data.analysis.count);
+                const analysisTrend = $('#analysis-trend');
+                const pendingAnalysis = data.analysis.pending || 0;
+                analysisTrend.html(`<i class="fas fa-clipboard-check"></i><span>${pendingAnalysis}个待分析</span>`);
+                analysisTrend.addClass('positive');
+            }
+
+            // 重点关注
+            if(data.focus) {
+                animateNumber('focus-count', data.focus.count);
+                const focusTrend = $('#focus-trend-container');
+                const activeCount = data.focus.active || 0;
+                focusTrend.removeClass('positive negative');
+                focusTrend.addClass('positive');
+                focusTrend.html(`<i class="fas fa-bell"></i><span>${activeCount}个活跃关注</span>`);
+            }
+
+            // 济宁数据
+            if(data.jining_detail) {
+                animateNumber('jining-count', data.jining_detail.total);
+                $('#jining-percent').text(`占比 ${data.jining_detail.percent}%`);
+            }
+        }
+
+        // 数字动画
+        function animateNumber(id, target) {
+            const element = document.getElementById(id);
+            const start = parseInt(element.textContent.replace(/,/g, '')) || 0;
+            const duration = 1000;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+                const current = Math.floor(start + (target - start) * easeOutQuart);
+                element.textContent = current.toLocaleString();
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+            requestAnimationFrame(update);
+        }
+
+        // 渲染图表 - 展示业务趋势
+        function renderCharts(data) {
+            // 业务流程趋势图 - 展示三类业务的数据趋势
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            if(trendChart) trendChart.destroy();
+
+            // 准备数据集
+            const datasets = [];
+            if(data.trend && data.trend.labels) {
+                datasets.push({
+                    label: '投标项目',
+                    data: data.trend.bidding || [],
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: '#667eea',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                });
+
+                datasets.push({
+                    label: '分析标书',
+                    data: data.trend.analysis || [],
+                    borderColor: '#4facfe',
+                    backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: '#4facfe',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                });
+
+                datasets.push({
+                    label: '重点关注',
+                    data: data.trend.focus || [],
+                    borderColor: '#fa709a',
+                    backgroundColor: 'rgba(250, 112, 154, 0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: '#fa709a',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                });
+            }
+
+            trendChart = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: data.trend ? data.trend.labels : [],
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(0,0,0,0.05)' },
+                            ticks: { font: { size: 11 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+
+            // 业务分布饼图 - 三类业务占比
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            if(categoryChart) categoryChart.destroy();
+
+            // 计算总数用于占比
+            const biddingCount = data.bidding ? data.bidding.count : 0;
+            const analysisCount = data.analysis ? data.analysis.count : 0;
+            const focusCount = data.focus ? data.focus.count : 0;
+
+            categoryChart = new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['投标项目', '分析标书', '重点关注'],
+                    datasets: [{
+                        data: [biddingCount, analysisCount, focusCount],
+                        backgroundColor: ['#667eea', '#4facfe', '#fa709a'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    aspectRatio: 1,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 渲染来源列表
+        function renderSourceList(sources) {
+            if (!sources || sources.length === 0) {
+                $('#source-list').html(`
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-database fa-2x mb-3"></i>
+                        <p>暂无数据来源信息</p>
+                    </div>
+                `);
+                return;
+            }
+
+            const html = sources.map((source, index) => {
+                // 为前3名设置不同的背景色
+                let badgeClass = '';
+                if (index === 0) {
+                    badgeClass = 'gold';
+                } else if (index === 1) {
+                    badgeClass = 'silver';
+                } else if (index === 2) {
+                    badgeClass = 'bronze';
+                }
+
+                // 为前3名设置不同的进度条颜色
+                let progressStyle = '';
+                if (index === 0) {
+                    progressStyle = 'background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);';
+                } else if (index === 1) {
+                    progressStyle = 'background: linear-gradient(135deg, #c0c0c0 0%, #e0e0e0 100%);';
+                } else if (index === 2) {
+                    progressStyle = 'background: linear-gradient(135deg, #cd7f32 0%, #e6a45c 100%);';
+                } else {
+                    progressStyle = 'background: var(--primary-gradient);';
+                }
+
+                // 确保百分比是数字
+                const percent = typeof source.percent === 'number' ? source.percent : 0;
+
+                return `
+                <div class="source-item">
+                    <div class="source-header">
+                        <div class="source-name">
+                            <span class="source-badge ${badgeClass}" title="第${index + 1}名">${index + 1}</span>
+                            <span class="text-truncate" style="max-width: 140px;" title="${source.name}">${source.name}</span>
+                        </div>
+                        <span class="source-count">${source.count.toLocaleString()} (${percent}%)</span>
+                    </div>
+                    <div class="progress-custom">
+                        <div class="progress-bar-custom" style="width: ${percent}%; ${progressStyle}"></div>
+                    </div>
+                </div>
+            `}).join('');
+            $('#source-list').html(html);
+        }
+
+        // 渲染济宁详情
+        function renderJiningDetail(data) {
+            if(!data) return;
+
+            $('#jining-total').text(data.total.toLocaleString());
+            $('#jining-today').text(data.today);
+            $('#jining-highlight').text(data.highlight);
+            $('#jining-avg').text(data.avg);
+            $('#jining-rank').text(`No.${data.rank}`);
+
+            if(data.top_projects && data.top_projects.length > 0) {
+                const html = data.top_projects.map((project, index) => {
+                    // 生成关键词标签
+                    const keywordTags = project.keywords && project.keywords.length > 0
+                        ? project.keywords.map(kw => `<span class="badge bg-danger bg-opacity-10 text-danger me-1" style="font-size:0.7rem;">${kw}</span>`).join('')
+                        : '';
+
+                    // 判断是否有链接，有则渲染为a标签，无则保持div
+                    const hasUrl = project.url && project.url.trim() !== '';
+                    const tag = hasUrl ? 'a' : 'div';
+                    const hrefAttr = hasUrl ? `href="${project.url}" target="_blank"` : '';
+                    const cursorStyle = hasUrl ? 'cursor: pointer;' : 'cursor: default;';
+
+                    return `
+                    <${tag} ${hrefAttr} class="jining-project-item" title="${project.full_name || project.name}" style="${cursorStyle} text-decoration: none; color: inherit;">
+                        <div class="jining-project-rank ${index < 3 ? 'top3' : ''}">${index + 1}</div>
+                        <div class="jining-project-info">
+                            <div class="jining-project-name">${project.name}</div>
+                            <div class="d-flex align-items-center mt-1">
+                                <span class="jining-project-meta me-2">
+                                    <i class="far fa-calendar-alt me-1"></i>${project.date}
+                                </span>
+                                ${keywordTags}
+                            </div>
+                        </div>
+                        ${hasUrl ? '<i class="fas fa-external-link-alt text-muted ms-2" style="font-size:0.75rem;"></i>' : ''}
+                    </${tag}>
+                `}).join('');
+                $('#jining-projects').html(html);
+            } else {
+                $('#jining-projects').html('<div class="text-center text-muted py-3">暂无项目数据</div>');
+            }
+        }
+        // 渲染最新动态
+        function renderActivity(activities) {
+            if (!activities || activities.length === 0) {
+                $('#activity-body').html('<tr><td colspan="3" class="text-center text-muted py-3">暂无动态</td></tr>');
+                return;
+            }
+
+            const html = activities.map(item => `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width:28px;height:28px;flex-shrink:0;">
+                                <i class="fas fa-file-alt small"></i>
+                            </div>
+                            <div class="text-truncate" style="max-width:110px;" title="${item.name}">${item.name}</div>
+                        </div>
+                    </td>
+                    <td><span class="badge bg-light text-dark text-truncate" style="max-width: 70px; display: inline-block;">${item.source}</span></td>
+                    <td class="text-muted small">${item.time}</td>
+                </tr>
+            `).join('');
+            $('#activity-body').html(html);
+        }
+    </script>
+</body>
+</html>

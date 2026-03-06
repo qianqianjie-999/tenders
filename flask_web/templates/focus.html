@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重点关注项目 - 招投标信息展示系统</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <!-- Bootstrap 5 CSS -->
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css ">
+
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+
+            --primary-color: #667eea;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+
+            --shadow-md: 0 3px 4px -1px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 6px 10px -2px rgba(0, 0, 0, 0.08);
+            --shadow-xl: 0 12px 18px -4px rgba(0, 0, 0, 0.08);
+
+            --radius-lg: 16px;
+            --radius-md: 12px;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        /* 头部样式 */
+        .header-container {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(10px);
+        }
+
+        .back-btn {
+            color: white;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border-radius: var(--radius-md);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        /* 统计卡片 */
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: all 0.3s ease;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-gradient);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* 筛选栏 */
+        .filter-bar {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .form-control, .form-select {
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+        }
+
+        .btn-primary-gradient {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        /* ⭐ FIXED: 项目卡片 - 降低整体内边距，使信息行更紧凑 */
+        .project-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem 1.25rem 1rem;  /* 上下内边距减小 */
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .project-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+        }
+
+        .project-card.status-active::before { background: linear-gradient(to bottom, #52c41a, #73d13d); }
+        .project-card.status-contacted::before { background: linear-gradient(to bottom, #1890ff, #40a9ff); }
+        .project-card.status-bid::before { background: linear-gradient(to bottom, #fa8c16, #ffa940); }
+
+        .project-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-right: 1rem;
+            line-height: 1.4;
+        }
+
+        .status-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .status-badge.status-active { background: rgba(82, 196, 26, 0.1); color: #52c41a; border-color: rgba(82, 196, 26, 0.2); }
+        .status-badge.status-contacted { background: rgba(24, 144, 255, 0.1); color: #1890ff; border-color: rgba(24, 144, 255, 0.2); }
+        .status-badge.status-bid { background: rgba(250, 140, 22, 0.1); color: #fa8c16; border-color: rgba(250, 140, 22, 0.2); }
+
+        /* ⭐ FIXED: 项目信息行 - 降低高度，缩小间距 */
+        .meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;          /* 图标与文字间距减小 */
+            margin-right: 1rem;    /* 右侧间距从1.5rem降至1rem */
+            margin-bottom: 0.25rem; /* 增加下边距控制，但整体行高降低 */
+            color: var(--text-secondary);
+            font-size: 0.85rem;    /* 字体稍小 */
+            line-height: 1.2;      /* 行高压缩 */
+        }
+
+        .meta-item i {
+            color: var(--primary-color);
+            font-size: 0.8rem;     /* 图标缩小一点 */
+        }
+
+        /* 按钮组 - 微调上边距 */
+        .project-card .btn-action {
+            margin-top: 0.15rem;
+            margin-bottom: 0.15rem;
+        }
+
+        .btn-action {
+            padding: 0.3rem 0.9rem;  /* 按钮内边距略减 */
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-right: 0.4rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .btn-track {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .btn-track:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .btn-success-custom {
+            background: var(--success-gradient);
+            color: white;
+        }
+
+        .btn-info-custom {
+            background: var(--info-gradient);
+            color: var(--text-primary);
+            border: 2px solid transparent;
+        }
+
+        .btn-info-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        /* 时间线 */
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+            margin-top: 1rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--primary-color), transparent);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.35rem;
+            top: 0.25rem;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+
+        .timeline-time {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-content {
+            background: rgba(102, 126, 234, 0.05);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        /* 模态框 */
+        .modal-content {
+            border: none;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .modal-header {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+        }
+
+        .btn-close-white {
+            filter: invert(1);
+        }
+
+        /* ⭐ FIXED: 分页容器移除 !important，通过类控制显隐 */
+        #pagination-container {
+            display: none;  /* 默认隐藏 */
+        }
+        #pagination-container.d-block {
+            display: flex !important;  /* 显示时使用flex */
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部 -->
+    <div class="header-container">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1 class="h3 fw-bold mb-0">
+                        <i class="fas fa-star me-2"></i>重点关注项目
+                    </h1>
+                    <p class="mb-0 mt-2 opacity-75">跟踪管理重点招投标项目</p>
+                </div>
+                <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                    <a href="/" class="back-btn">
+                        <i class="fas fa-arrow-left"></i> 返回首页
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="row mb-4">
+            <!-- 第1个：总数 -->
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value" id="stat-total">0</div>
+                            <div class="stat-label">关注项目总数</div>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第2个：新关注 -->
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value" id="stat-active">0</div>
+                            <div class="stat-label">新关注</div>
+                        </div>
+                        <div class="stat-icon" style="background: var(--success-gradient);">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第3个：已跟踪 -->
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value" id="stat-contacted">0</div>
+                            <div class="stat-label">已跟踪</div>
+                        </div>
+                        <div class="stat-icon" style="background: var(--warning-gradient);">
+                            <i class="fas fa-file-signature"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 第4个：持续关注 -->
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value" id="stat-bid">0</div>
+                            <div class="stat-label">持续关注</div>
+                        </div>
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 筛选栏 -->
+        <div class="filter-bar">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">状态筛选</label>
+                    <select class="form-select" id="status-filter" onchange="loadFocusData(1)">
+                        <option value="all">全部状态</option>
+                        <option value="active">新关注</option>
+                        <option value="contacted">已跟踪</option>
+                        <option value="bid">持续关注</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">关键词搜索</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="search-keyword" placeholder="搜索项目名称..." onkeyup="debounceSearch()">
+                        <button class="btn btn-outline-secondary" onclick="clearSearch()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary-gradient w-100" onclick="loadFocusData(1)">
+                        <i class="fas fa-search me-2"></i>查询
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 项目列表 -->
+        <div id="project-list">
+            <!-- 动态加载内容 -->
+        </div>
+
+        <!-- ⭐ FIXED: 分页容器移除内联 !important，使用默认隐藏类，JS动态添加 d-block -->
+        <div class="d-flex justify-content-center mt-4" id="pagination-container">
+            <nav aria-label="Page navigation">
+                <ul class="pagination" id="pagination">
+                    <!-- 动态生成分页 -->
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- 跟踪记录模态框 -->
+    <div class="modal fade" id="trackModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-history me-2"></i>项目跟踪记录</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6 class="fw-bold mb-3" id="track-project-name">项目名称</h6>
+
+                    <!-- 添加记录表单 -->
+                    <div class="card bg-light border-0 mb-3">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">记录类型</label>
+                                    <select class="form-select" id="track-type">
+                                        <option value="电话沟通">电话沟通</option>
+                                        <option value="现场勘查">现场勘查</option>
+                                        <option value="分析标书">分析标书</option>
+                                        <option value="其他">其他</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label">记录内容</label>
+                                    <input type="text" class="form-control" id="track-content" placeholder="输入跟踪记录...">
+                                </div>
+                            </div>
+                            <div class="mt-3 text-end">
+                                <button class="btn btn-primary-gradient" onclick="addTrack()">
+                                    <i class="fas fa-plus me-2"></i>添加记录
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 时间线 -->
+                    <div class="timeline" id="track-timeline">
+                        <!-- 动态加载 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改状态模态框 -->
+    <div class="modal fade" id="statusModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: var(--warning-gradient);">
+                    <h5 class="modal-title text-white"><i class="fas fa-edit me-2"></i>更新项目状态</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">新状态</label>
+                        <select class="form-select" id="new-status">
+                            <option value="active">新关注</option>
+                            <option value="contacted">已跟踪</option>
+                            <option value="bid">持续关注</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">备注</label>
+                        <textarea class="form-control" id="status-remark" rows="3" placeholder="可选：添加备注信息..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary-gradient" onclick="updateStatus()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框（新增） -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f85032 0%, #e73827 100%);">
+                <h5 class="modal-title text-white"><i class="fas fa-trash-alt me-2"></i>取消关注</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3"><strong id="delete-project-name"></strong> 将从关注列表中移除。</p>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">删除密码</label>
+                    <input type="password" class="form-control" id="delete-password" placeholder="请输入删除密码">
+                    <div class="form-text">请联系管理员获取删除口令</div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                    <i class="fas fa-trash me-1"></i>确认删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- 脚本 -->
+    <script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
+    <script>
+        // API基础路径
+        const FOCUS_API = '/focus/api';
+        // ⭐ FIXED: 移除未使用的 ANALYSIS_API
+
+        let currentPage = 1;
+        let currentFocusId = null;
+        let searchTimeout = null;
+
+        // ⭐ FIXED: 状态映射表，避免完全依赖后端
+        const STATUS_MAP = {
+            'active': '新关注',
+            'contacted': '已跟踪',
+            'bid': '持续关注'
+        };
+
+        $(document).ready(function() {
+            loadFocusData(1);
+        });
+
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadFocusData(1);
+            }, 500);
+        }
+
+        function clearSearch() {
+            $('#search-keyword').val('');
+            loadFocusData(1);
+        }
+
+        // 获取关注列表
+        function loadFocusData(page) {
+            currentPage = page;
+            const status = $('#status-filter').val();
+            const keyword = $('#search-keyword').val();
+
+            $.ajax({
+                url: `${FOCUS_API}/list`,
+                data: {
+                    status: status,
+                    keyword: keyword,
+                    page: page,
+                    page_size: 10
+                },
+                success: function(response) {
+                    if (response.success) {
+                        renderProjects(response.data);
+                        renderStatistics(response.statistics);
+                        renderPagination(response.pagination);
+                    } else {
+                        showToast('加载失败：' + response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('网络错误，请稍后重试', 'error');
+                }
+            });
+        }
+
+        function renderStatistics(stats) {
+            $('#stat-total').text(stats.total || 0);
+            $('#stat-active').text(stats.by_status?.active || 0);
+            $('#stat-contacted').text(stats.by_status?.contacted || 0);
+            $('#stat-bid').text(stats.by_status?.bid || 0);
+        }
+
+        function renderProjects(projects) {
+            const container = $('#project-list');
+            container.empty();
+
+            if (projects.length === 0) {
+                container.html(`
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h5>暂无关注项目</h5>
+                        <p>在首页项目列表中点击"关注"按钮添加项目</p>
+                    </div>
+                `);
+                return;
+            }
+
+            projects.forEach((project, index) => {
+                // ⭐ FIXED: 对所有动态文本进行 XSS 转义
+                const projectName = escapeHtml(project.project_name || '');
+                const publishDate = escapeHtml(project.publish_date || '');
+                const projectSource = escapeHtml(project.project_source || '');
+                const projectCategory = escapeHtml(project.project_category || '');
+                const focusTime = escapeHtml(project.focus_time || '');
+                const remark = project.remark ? escapeHtml(project.remark) : '';
+                const detailUrl = project.detail_url ? escapeHtml(project.detail_url) : '';
+                const statusText = STATUS_MAP[project.status] || escapeHtml(project.status_text || project.status);
+
+                const html = `
+                    <div class="project-card status-${escapeHtml(project.status)}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">  <!-- mb-3 改为 mb-2 -->
+                            <div class="project-title">${projectName}</div>
+                            <span class="status-badge status-${escapeHtml(project.status)}">${statusText}</span>
+                        </div>
+
+                        <div class="mb-2">  <!-- mb-3 改为 mb-2，降低高度 -->
+                            <div class="meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>发布：${publishDate}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-building"></i>
+                                <span>来源：${projectSource}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-folder"></i>
+                                <span>分类：${projectCategory}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-clock"></i>
+                                <span>关注：${focusTime}</span>
+                            </div>
+                        </div>
+
+                        ${remark ? `<div class="mb-2 p-2 bg-light rounded"><small class="text-muted"><i class="fas fa-comment me-1"></i>${remark}</small></div>` : ''}
+
+                        <div>
+                            ${detailUrl ? `
+                                <a href="${detailUrl}" target="_blank" class="btn-action btn-track">
+                                    <i class="fas fa-external-link-alt"></i> 查看详情
+                                </a>
+                            ` : ''}
+                            <button class="btn-action btn-track" onclick="openTrackModal(${project.id}, '${projectName.replace(/'/g, "\\'")}')">
+                                <i class="fas fa-history"></i> 跟踪记录
+                            </button>
+                            <button class="btn-action btn-success-custom" onclick="openStatusModal(${project.id})">
+                                <i class="fas fa-edit"></i> 更新状态
+                            </button>
+                            <!-- ⭐ FIXED: 传递 this 和 project.id，解决 event 未定义问题 -->
+                            <button class="btn-action btn-info-custom" onclick="moveToAnalysis(this, ${project.id})">
+                                <i class="fas fa-file-alt"></i> 加入分析标书列表
+                            </button>
+
+                            <button class="btn-action" style="background: linear-gradient(135deg, #f85032 0%, #e73827 100%); color: white;"
+                                    onclick="openDeleteModal(${project.id}, '${projectName.replace(/'/g, "\\'")}')">
+                                <i class="fas fa-trash"></i> 删除
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.append(html);
+            });
+        }
+
+        function renderPagination(pagination) {
+            const container = $('#pagination');
+            const navContainer = $('#pagination-container');
+
+            if (pagination.total_pages <= 1) {
+                navContainer.removeClass('d-block').hide(); // 完全隐藏
+                return;
+            }
+
+            navContainer.show().addClass('d-block'); // ⭐ 使用 d-block 控制显示
+            container.empty();
+
+            // 上一页
+            container.append(`
+                <li class="page-item ${pagination.page === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="return changePage(${pagination.page - 1})">上一页</a>
+                </li>
+            `);
+
+            // 页码
+            for (let i = 1; i <= pagination.total_pages; i++) {
+                if (i === 1 || i === pagination.total_pages || (i >= pagination.page - 2 && i <= pagination.page + 2)) {
+                    container.append(`
+                        <li class="page-item ${i === pagination.page ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="return changePage(${i})">${i}</a>
+                        </li>
+                    `);
+                }
+            }
+
+            // 下一页
+            container.append(`
+                <li class="page-item ${pagination.page === pagination.total_pages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="return changePage(${pagination.page + 1})">下一页</a>
+                </li>
+            `);
+        }
+
+        function changePage(page) {
+            if (page >= 1 && page !== currentPage) {
+                loadFocusData(page);
+                $('html, body').animate({ scrollTop: 0 }, 300);
+            }
+            return false;
+        }
+
+        // 打开跟踪记录模态框
+        function openTrackModal(projectId, projectName) {
+            currentFocusId = projectId;
+            $('#track-project-name').text(projectName);
+            $('#trackModal').modal('show');
+            $('#track-content').val('');
+            loadTracks(projectId);
+        }
+// 打开删除模态框
+function openDeleteModal(projectId, projectName) {
+    currentFocusId = projectId;
+    $('#delete-project-name').text(projectName);
+    $('#delete-password').val('');
+    $('#deleteModal').modal('show');
+}
+
+// 确认删除（密码验证由后端完成）
+function confirmDelete() {
+    const password = $('#delete-password').val().trim();
+    if (!password) {
+        showToast('请输入删除密码', 'warning');
+        return;
+    }
+
+    const btn = document.querySelector('#deleteModal .btn-danger');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
+    btn.disabled = true;
+
+    $.ajax({
+        url: `${FOCUS_API}/delete`,
+        method: 'DELETE',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            id: currentFocusId,
+            password: password   // 将密码传给后端验证
+        }),
+        success: function(response) {
+            if (response.success) {
+                $('#deleteModal').modal('hide');
+                loadFocusData(currentPage);
+                showToast('已取消关注', 'success');
+            } else {
+                showToast(response.message || '删除失败', 'error');
+            }
+        },
+        error: function(xhr) {
+            try {
+                const res = JSON.parse(xhr.responseText);
+                showToast(res.message || '删除失败', 'error');
+            } catch {
+                showToast('网络错误，请稍后重试', 'error');
+            }
+        },
+        complete: function() {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    });
+}
+        // 获取跟踪记录
+        function loadTracks(projectId) {
+            $.get(`${FOCUS_API}/tracks/${projectId}`, function(response) {
+                const container = $('#track-timeline');
+                container.empty();
+
+                if (response.success && response.data.length > 0) {
+                    response.data.forEach(track => {
+                        // ⭐ FIXED: 转义跟踪记录内容
+                        const time = escapeHtml(track.time || '');
+                        const type = escapeHtml(track.type || '');
+                        const content = escapeHtml(track.content || '');
+                        container.append(`
+                            <div class="timeline-item">
+                                <div class="timeline-time">${time} · ${type}</div>
+                                <div class="timeline-content">${content}</div>
+                            </div>
+                        `);
+                    });
+                } else {
+                    container.html('<div class="text-muted text-center py-3">暂无跟踪记录，请添加第一条记录</div>');
+                }
+            }).fail(function() {
+                $('#track-timeline').html('<div class="text-muted text-center py-3">加载失败</div>');
+            });
+        }
+
+        // 添加跟踪记录
+        function addTrack() {
+            const content = $('#track-content').val().trim();
+            const type = $('#track-type').val();
+
+            if (!content) {
+                showToast('请输入记录内容', 'warning');
+                return;
+            }
+
+            $.ajax({
+                url: `${FOCUS_API}/tracks/${currentFocusId}`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    content: content,
+                    type: type
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        $('#track-content').val('');
+                        loadTracks(currentFocusId);
+                        showToast('记录添加成功', 'success');
+                    } else {
+                        showToast(response.message || '添加失败', 'error');
+                    }
+                },
+                error: function() {
+                    showToast('网络错误', 'error');
+                }
+            });
+        }
+
+        // 打开状态修改模态框
+        function openStatusModal(projectId) {
+            currentFocusId = projectId;
+            $('#statusModal').modal('show');
+            $('#status-remark').val('');
+        }
+
+        // 更新状态
+        function updateStatus() {
+            const status = $('#new-status').val();
+            const remark = $('#status-remark').val();
+
+            $.ajax({
+                url: `${FOCUS_API}/update/${currentFocusId}`,
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    status: status,
+                    remark: remark
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        $('#statusModal').modal('hide');
+                        loadFocusData(currentPage);
+                        showToast('状态更新成功', 'success');
+                    } else {
+                        showToast(response.message || '更新失败', 'error');
+                    }
+                },
+                error: function() {
+                    showToast('网络错误', 'error');
+                }
+            });
+        }
+
+        // ⭐ FIXED: 修复 event 未定义 + 按钮状态未恢复 + XSS 转义
+        function moveToAnalysis(btn, projectId) {
+            if (!confirm('确定要将该项目转入"分析标书"模块吗？\n\n转入后：\n1. 项目将存入分析标书列表\n2. 可在分析标书页面继续处理')) return;
+
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
+            btn.disabled = true;
+
+            $.ajax({
+                url: `${FOCUS_API}/move-to-analysis`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    focus_id: projectId,
+                    remove_from_focus: false
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        loadFocusData(currentPage);
+                        showToast('已成功转入分析标书模块', 'success');
+                    } else {
+                        // 如果项目已存在，显示友好提示
+                        if (response.message && (response.message.includes('已在分析标书列表中') || response.message.includes('已存在'))) {
+                            showToast('已经转入分析标书项了', 'warning');
+                        } else {
+                            showToast(response.message || '转入失败', 'error');
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 404) {
+                        showToast('分析标书模块接口尚未开发，请联系管理员', 'error');
+                    } else if (xhr.status === 400) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.message && (response.message.includes('已在分析标书列表中') || response.message.includes('已存在'))) {
+                                showToast('已经转入分析标书项了', 'warning');
+                            } else {
+                                showToast(response.message || '转入失败', 'error');
+                            }
+                        } catch (e) {
+                            showToast('已经转入分析标书项了', 'warning');
+                        }
+                    } else {
+                        showToast('网络错误，请稍后重试', 'error');
+                    }
+                },
+                // ⭐ FIXED: 无论成功或失败，都要恢复按钮状态
+                complete: function() {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        function showToast(message, type = 'info') {
+            const bgClass = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : type === 'warning' ? 'bg-warning text-dark' : 'bg-primary';
+            const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+
+            const toast = `
+                <div class="toast align-items-center ${bgClass} text-white border-0 position-fixed"
+                     style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas ${icon} me-2"></i>${escapeHtml(message)}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+
+            $('body').append(toast);
+            const toastEl = $('.toast').last();
+            const bsToast = new bootstrap.Toast(toastEl, { delay: 3000 });
+            bsToast.show();
+
+            toastEl.on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        }
+
+        // ⭐ FIXED: 强化转义函数，同时处理单引号
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML.replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+        }
+    </script>
+</body>
+</html>

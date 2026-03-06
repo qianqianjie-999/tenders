@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(source venv/bin/activate)",
+      "Bash(python -m flask_web --help)",
+      "Bash(python -m flask run --help)",
+      "Bash(FLASK_APP=flask_web source venv/bin/activate)",
+      "Bash(python -m flask run --host=0.0.0.0 --port=5000)",
+      "Bash(python flask_web/run.py)",
+      "Bash(set -a)",
+      "Bash(source /home/qianqianjie/tenders/.env)",
+      "Bash(set +a)",
+      "Bash(python3 -m scrapy list)",
+      "Bash(python3 -m py_compile bidding_spider/pipelines.py)",
+      "Bash(source /home/qianqianjie/tenders/venv/bin/activate)",
+      "Bash(python -m scrapy crawl jining_get -s LOG_LEVEL=INFO)",
+      "Bash(DB_PASSWORD='your_password' timeout 45 python -m scrapy crawl jining_get)",
+      "Bash(find /home/qianqianjie/tenders/scrapy_spider/bidding_spider -name \"*.pyc\" -delete)",
+      "Bash(find /home/qianqianjie/tenders/scrapy_spider/bidding_spider -name \"__pycache__\" -type d -exec rm -rf {} +)",
+      "Bash(python3:*)",
+      "Bash(DB_PASSWORD='your_password' timeout 30 python -m scrapy crawl jining_get -s CLOSESPIDER_TIMEOUT=20)",
+      "Bash(find /home/qianqianjie/tenders/scrapy_spider/bidding_spider -name \"__pycache__\" -exec rm -rf {} +)",
+      "Bash(DB_PASSWORD='your_password' timeout 40 python -m scrapy crawl sd_post -s CLOSESPIDER_ITEMCOUNT=5)",
+      "Bash(DB_PASSWORD='your_password' timeout 40 python -m scrapy crawl sd_post -s CLOSESPIDER_ITEMCOUNT=10)",
+      "Bash(DB_PASSWORD='your_password' timeout 45 python -m scrapy crawl sd_post -s CLOSESPIDER_ITEMCOUNT=10)",
+      "Bash(source ../venv/bin/activate)",
+      "Bash(python -c \":*)",
+      "Bash(python /home/qianqianjie/tenders/clear_old_data.py)",
+      "Bash(git init)"
+    ]
+  }
+}

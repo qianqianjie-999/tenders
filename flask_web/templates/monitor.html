@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>爬虫监控中心 - 招投标信息展示系统</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <!-- Bootstrap 5 CSS -->
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+            --bg-dark: #1e293b;
+        }
+        
+        body {
+            background: #f1f5f9;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        /* 头部样式 */
+        .monitor-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .monitor-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        /* 返回按钮 - 小尺寸 */
+        .back-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            padding: 0.35rem 0.6rem;
+            border-radius: 0.35rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: all 0.2s;
+            font-size: 0.75rem;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.25);
+            color: white;
+        }
+        
+        /* 失败状态卡片 */
+        .failed-alert {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 1px solid #f87171;
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .failed-alert-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #dc2626;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        
+        .failed-item {
+            background: white;
+            border-left: 4px solid #ef4444;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .failed-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .failed-item-title {
+            font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .failed-item-desc {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+        
+        .failed-item-error {
+            font-size: 0.8125rem;
+            color: #dc2626;
+            background: #fef2f2;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            margin-top: 0.5rem;
+            font-family: monospace;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* 卡片样式 */
+        .monitor-card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .monitor-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .monitor-card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* 资源卡片 */
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .resource-item {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .resource-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.75rem;
+            font-size: 1.5rem;
+        }
+        
+        .resource-icon.cpu { background: #dbeafe; color: #2563eb; }
+        .resource-icon.memory { background: #dcfce7; color: #16a34a; }
+        .resource-icon.disk { background: #fef3c7; color: #d97706; }
+        .resource-icon.network { background: #fce7f3; color: #db2777; }
+        
+        .resource-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        
+        .resource-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+        
+        .progress {
+            height: 6px;
+            border-radius: 3px;
+            margin-top: 0.5rem;
+        }
+        
+        /* 进程列表 */
+        .process-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 0.75rem;
+            margin-bottom: 0.75rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .process-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+        }
+        
+        .process-info {
+            flex: 1;
+        }
+        
+        .process-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .process-meta {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        
+        .process-stats {
+            display: flex;
+            gap: 1.5rem;
+            margin-right: 1rem;
+        }
+        
+        .process-stat {
+            text-align: center;
+        }
+        
+        .process-stat-value {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .process-stat-label {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        
+        /* 爬虫控制卡片 */
+        .spider-card {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+        
+        .spider-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        
+        .spider-card.running {
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .spider-card.stopped {
+            border-left: 4px solid #94a3b8;
+        }
+        .spider-card.failed {
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .spider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+        
+        .spider-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .spider-status {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 1rem;
+            font-weight: 500;
+        }
+        
+        .spider-status.running {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .spider-status.stopped {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        .spider-status.failed {
+            background: #fee2e2;
+            color: #9b1c1c;
+        }
+        
+        .spider-desc {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .spider-schedule {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .spider-actions {
+            margin-top: 0.75rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        /* 日志查看器 */
+        .log-viewer {
+            background: #0f172a;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.875rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .log-line {
+            color: #94a3b8;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .log-line.error {
+            color: #f87171;
+        }
+        
+        .log-line.warning {
+            color: #fbbf24;
+        }
+        
+        .log-line.success {
+            color: #34d399;
+        }
+        
+        .log-line.info {
+            color: #60a5fa;
+        }
+        
+        /* 统计卡片 */
+        .stat-card {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+        
+        /* 刷新按钮 */
+        .refresh-btn {
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        
+        .refresh-btn:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+        
+        .refresh-btn.spinning i {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 快捷导航 */
+        .monitor-nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: white;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+        .monitor-nav .nav-link {
+            color: #64748b;
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            text-decoration: none;
+        }
+        .monitor-nav .nav-link:hover { color: #1e293b; background: #f1f5f9; }
+        .monitor-nav .nav-link i { margin-right: 0.35rem; }
+        
+        /* 区块标题锚点 */
+        .section-anchor { scroll-margin-top: 1rem; }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .resource-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .process-stats {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 头部 -->
+    <div class="monitor-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1><i class="fas fa-heartbeat me-2"></i>爬虫监控中心</h1>
+                    <p class="mb-0 mt-1 opacity-75">实时监控爬虫运行状态、系统资源和日志信息</p>
+                </div>
+                <div class="text-end d-flex align-items-center gap-3">
+                    <!-- 返回主页按钮 -->
+                    <a href="/" class="back-btn">
+                        <i class="fas fa-arrow-left"></i> 返回主页
+                    </a>
+                    <div class="status-indicator">
+                        <span class="status-dot"></span>
+                        <span id="connection-status">监控中</span>
+                    </div>
+                    <div class="small opacity-75">
+                        下次刷新: <span id="next-refresh">5</span>秒
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 快捷导航 -->
+        <div class="monitor-nav d-flex flex-wrap gap-2 align-items-center">
+            <span class="text-muted small me-2">快速跳转:</span>
+            <a href="#section-overview" class="nav-link"><i class="fas fa-chart-line"></i>今日概览</a>
+            <a href="#section-chart" class="nav-link"><i class="fas fa-chart-bar"></i>统计图</a>
+            <a href="#section-spiders" class="nav-link"><i class="fas fa-spider"></i>爬虫状态</a>
+            <a href="#section-resources" class="nav-link"><i class="fas fa-server"></i>系统资源</a>
+            <a href="#section-timeout" class="nav-link"><i class="fas fa-clock"></i>超时日志</a>
+            <a href="#section-error" class="nav-link"><i class="fas fa-bug"></i>错误日志</a>
+            <a href="#section-logs" class="nav-link"><i class="fas fa-file-alt"></i>日志查看</a>
+        </div>
+
+        <!-- 今日概览 -->
+        <div id="section-overview" class="section-anchor monitor-card mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="monitor-card-header" style="border-bottom-color: rgba(255,255,255,0.2);">
+                <div class="monitor-card-title" style="color: white;">
+                    <i class="fas fa-chart-line"></i>
+                    今日概览
+                </div>
+                <button class="refresh-btn" style="color: white;" onclick="loadOverview()">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            <div class="row" id="overview-container">
+                <div class="col-lg col-md-4 col-6 mb-3 mb-lg-0">
+                    <div class="text-center">
+                        <div style="font-size: 2.5rem; font-weight: 700;" id="overview-runs">-</div>
+                        <div style="opacity: 0.9;">运行次数</div>
+                    </div>
+                </div>
+                <div class="col-lg col-md-4 col-6 mb-3 mb-lg-0">
+                    <div class="text-center">
+                        <div style="font-size: 2.5rem; font-weight: 700;" id="overview-crawled">-</div>
+                        <div style="opacity: 0.9;">爬取数据</div>
+                        <div style="opacity: 0.7; font-size: 0.75rem;">(含重复)</div>
+                    </div>
+                </div>
+                <div class="col-lg col-md-4 col-6 mb-3 mb-lg-0">
+                    <div class="text-center">
+                        <div style="font-size: 2.5rem; font-weight: 700;" id="overview-stored">-</div>
+                        <div style="opacity: 0.9;">入库数据</div>
+                        <div style="opacity: 0.7; font-size: 0.75rem;">(去重后)</div>
+                    </div>
+                </div>
+                <div class="col-lg col-md-4 col-6 mb-3 mb-lg-0">
+                    <div class="text-center">
+                        <div style="font-size: 2.5rem; font-weight: 700;" id="overview-timeouts">-</div>
+                        <div style="opacity: 0.9;">超时次数</div>
+                    </div>
+                </div>
+                <div class="col-lg col-md-4 col-6 mb-3 mb-lg-0">
+                    <div class="text-center">
+                        <div style="font-size: 2.5rem; font-weight: 700;" id="overview-running">-</div>
+                        <div style="opacity: 0.9;">运行中</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 顶部统计卡片已移除 -->
+
+        <!-- 统计图表 -->
+        <div id="section-chart" class="section-anchor monitor-card mb-4">
+            <div class="monitor-card-header">
+                <div class="monitor-card-title">
+                    <i class="fas fa-chart-bar text-primary"></i>
+                    爬虫统计图
+                </div>
+            </div>
+            <div style="padding: 1rem 0">
+                <canvas id="stats-chart" width="800" height="240"></canvas>
+            </div>
+        </div>
+
+        <!-- 失败爬虫警告区域 -->
+        <div id="failed-spiders-alert" style="display: none;">
+            <div class="failed-alert">
+                <div class="failed-alert-header">
+                    <i class="fas fa-exclamation-triangle fa-lg"></i>
+                    <span>以下爬虫运行异常或今日未运行</span>
+                </div>
+                <div id="failed-spiders-list"></div>
+            </div>
+        </div>
+
+        <!-- 爬虫状态与运行中进程 -->
+        <div id="section-spiders" class="section-anchor monitor-card mb-4">
+            <div class="monitor-card-header">
+                <div class="monitor-card-title">
+                    <i class="fas fa-spider text-primary"></i>
+                    爬虫状态
+                </div>
+                <button class="refresh-btn" onclick="loadSpiders(); loadProcesses();">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="row g-2" id="spiders-container">
+                        <div class="col-12 text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i> 加载中...</div>
+                    </div>
+                </div>
+                <div class="col-lg-4 mt-3 mt-lg-0">
+                    <div class="monitor-card-title mb-2"><i class="fas fa-play-circle text-success"></i> 运行中进程</div>
+                    <div id="processes-container">
+                        <div class="text-muted small">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统资源 -->
+        <div id="section-resources" class="section-anchor monitor-card">
+            <div class="monitor-card-header">
+                <div class="monitor-card-title">
+                    <i class="fas fa-server text-primary"></i>
+                    系统资源
+                </div>
+                <button class="refresh-btn" onclick="loadResources()" id="btn-refresh-resources">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            <div class="resource-grid" id="resources-container">
+                <div class="resource-item">
+                    <div class="resource-icon cpu">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <div class="resource-value">-</div>
+                    <div class="resource-label">CPU 使用率</div>
+                    <div class="progress">
+                        <div class="progress-bar bg-primary" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="resource-item">
+                    <div class="resource-icon memory">
+                        <i class="fas fa-memory"></i>
+                    </div>
+                    <div class="resource-value">-</div>
+                    <div class="resource-label">内存使用</div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="resource-item">
+                    <div class="resource-icon disk">
+                        <i class="fas fa-hdd"></i>
+                    </div>
+                    <div class="resource-value">-</div>
+                    <div class="resource-label">磁盘使用</div>
+                    <div class="progress">
+                        <div class="progress-bar bg-warning" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="resource-item">
+                    <div class="resource-icon network">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <div class="resource-value">-</div>
+                    <div class="resource-label">网络活动</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 超时日志 -->
+        <div id="section-timeout" class="section-anchor monitor-card mb-4">
+            <div class="monitor-card-header">
+                <div class="monitor-card-title">
+                    <i class="fas fa-clock text-danger"></i>
+                    超时日志
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <select class="form-select form-select-sm" id="timeout-spider-filter" style="width: auto;" onchange="loadTimeoutLogs()">
+                        <option value="">全部爬虫</option>
+                        <option value="jining_get">济宁</option>
+                        <option value="sd_post">山东采购</option>
+                        <option value="jinan_post">济南</option>
+                        <option value="taian_post">泰安</option>
+                        <option value="zibo_post">淄博</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadTimeoutLogs()" title="刷新">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover" id="timeout-logs-table">
+                    <thead>
+                        <tr>
+                            <th>发生时间</th>
+                            <th>爬虫</th>
+                            <th>URL</th>
+                            <th>超时设置</th>
+                            <th>重试次数</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timeout-logs-body">
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="fas fa-spinner fa-spin"></i> 加载中...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 错误日志 -->
+        <div id="section-error" class="section-anchor monitor-card mb-4">
+            <div class="monitor-card-header">
+                <div class="monitor-card-title">
+                    <i class="fas fa-bug text-danger"></i>
+                    错误日志（管理员）
+                    <span id="error-log-page-info" class="ms-2 text-muted small"></span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <select class="form-select form-select-sm" id="error-spider-filter" style="width: auto;">
+                        <option value="">全部爬虫</option>
+                        <option value="jining_get">济宁</option>
+                        <option value="sd_post">山东采购</option>
+                        <option value="jinan_post">济南</option>
+                        <option value="taian_post">泰安</option>
+                        <option value="zibo_post">淄博</option>
+                    </select>
+                    <input class="form-control form-control-sm" id="error-q" placeholder="关键词搜索" style="width: 160px;" />
+                    <input type="date" id="error-since" class="form-control form-control-sm" style="width: 140px;" />
+                    <input type="date" id="error-until" class="form-control form-control-sm" style="width: 140px;" />
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadErrorLogs(1)" title="刷新">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div class="log-viewer" id="error-logs-container">
+                <div class="log-line">仅限管理员查看 — 点击刷新加载错误日志</div>
+            </div>
+        </div>
+
+        <!-- 日志查看器 -->
+        <div id="section-logs" class="section-anchor monitor-card">
+            <div class="monitor-card-header">
+                <div class="monitor-card-title">
+                    <i class="fas fa-file-alt text-warning"></i>
+                    日志查看器
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="date" id="log-date" class="form-select form-select-sm" style="width: auto;" onchange="loadLogs()">
+                    <select class="form-select form-select-sm" id="log-lines" style="width: auto;">
+                        <option value="30">最近30行</option>
+                        <option value="50" selected>最近50行</option>
+                        <option value="100">最近100行</option>
+                        <option value="200">最近200行</option>
+                    </select>
+                    <button class="refresh-btn" onclick="loadLogs()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="logs-files" style="margin-top:0.75rem; margin-bottom:0.75rem"></div>
+            <div class="log-viewer" id="logs-container">
+                <div class="log-line">选择一个日志文件查看（在上方），或点击刷新以加载文件列表</div>
+            </div>
+            <div class="mt-2">
+                <button id="load-more-btn" class="btn btn-sm btn-outline-secondary" style="display:none;" onclick="loadMoreLog()">加载更多</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 启动爬虫模态框 -->
+    <div class="modal fade" id="startSpiderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">启动爬虫</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>确定要启动爬虫 <strong id="modal-spider-name"></strong> 吗？</p>
+                    <div class="mb-3">
+                        <label class="form-label">额外参数（可选）</label>
+                        <input type="text" class="form-control" id="spider-args" placeholder="例如: -a target_date=2024-01-01">
+                        <div class="form-text">高级选项，一般情况下留空即可</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmStartSpider()">启动</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        // 全局变量
+        let currentSpider = null;
+        let refreshInterval = null;
+        let countdownInterval = null;
+        let countdown = 5;
+        let statsChart = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 错误日志默认今日
+            const today = new Date().toISOString().slice(0, 10);
+            const errSince = document.getElementById('error-since');
+            const errUntil = document.getElementById('error-until');
+            if (errSince && !errSince.value) errSince.value = today;
+            if (errUntil && !errUntil.value) errUntil.value = today;
+            
+            // 日志日期选择器默认今天
+            const logDate = document.getElementById('log-date');
+            if (logDate && !logDate.value) logDate.value = today;
+            
+            // 为错误日志过滤器添加 change 事件，自动刷新
+            const errSpiderFilter = document.getElementById('error-spider-filter');
+            const errQ = document.getElementById('error-q');
+            const errSinceEl = document.getElementById('error-since');
+            const errUntilEl = document.getElementById('error-until');
+            
+            [errSpiderFilter, errQ, errSinceEl, errUntilEl].forEach(el => {
+                if (el) el.addEventListener('change', () => loadErrorLogs(1));
+            });
+            
+            loadAllData();
+            startAutoRefresh();
+        });
+        
+        // 自动刷新
+        function startAutoRefresh() {
+            // 自动刷新间隔 60 秒，减轻后端压力
+            const INTERVAL = 60000;
+            refreshInterval = setInterval(() => {
+                loadAllData();
+            }, INTERVAL);
+
+            countdown = INTERVAL / 1000;
+            countdownInterval = setInterval(() => {
+                countdown--;
+                if (countdown <= 0) countdown = INTERVAL / 1000;
+                document.getElementById('next-refresh').textContent = countdown;
+            }, 1000);
+        }
+        
+        // 加载所有数据
+        function loadAllData() {
+            loadOverview();
+            loadResources();
+            loadSpiders();
+            loadProcesses();
+            loadErrorLogs();
+            loadTimeoutLogs();
+            loadLogs();
+            loadStats();
+        }
+        
+        // 加载今日概览
+        async function loadOverview() {
+            const _el = id => document.getElementById(id);
+            try {
+                const response = await fetch('/monitor/api/overview');
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const data = await response.json();
+                
+                if (data.success && data.stats) {
+                    const s = data.stats;
+                    const runs = s.total_runs != null ? s.total_runs : 0;
+                    const crawled = s.crawled_count != null ? Number(s.crawled_count) : 0;
+                    const stored = s.stored_count != null ? Number(s.stored_count) : 0;
+                    const timeouts = s.total_timeouts != null ? s.total_timeouts : 0;
+                    const running = s.running_count != null ? s.running_count : 0;
+                    if (_el('overview-runs')) _el('overview-runs').textContent = runs;
+                    if (_el('overview-crawled')) _el('overview-crawled').textContent = crawled.toLocaleString();
+                    if (_el('overview-stored')) _el('overview-stored').textContent = stored.toLocaleString();
+                    if (_el('overview-timeouts')) _el('overview-timeouts').textContent = timeouts;
+                    if (_el('overview-running')) _el('overview-running').textContent = running;
+                } else {
+                    if (_el('overview-runs')) _el('overview-runs').textContent = '0';
+                    if (_el('overview-crawled')) _el('overview-crawled').textContent = '0';
+                    if (_el('overview-stored')) _el('overview-stored').textContent = '0';
+                    if (_el('overview-timeouts')) _el('overview-timeouts').textContent = '0';
+                    if (_el('overview-running')) _el('overview-running').textContent = '0';
+                }
+            } catch (error) {
+                console.error('加载概览失败:', error);
+                if (_el('overview-runs')) _el('overview-runs').innerHTML = '<span class="text-warning" title="' + (error.message || '') + '">?</span>';
+                if (_el('overview-crawled')) _el('overview-crawled').textContent = '-';
+                if (_el('overview-stored')) _el('overview-stored').textContent = '-';
+                if (_el('overview-timeouts')) _el('overview-timeouts').textContent = '-';
+                if (_el('overview-running')) _el('overview-running').textContent = '-';
+            }
+        }
+        
+        // 加载超时日志
+        async function loadTimeoutLogs() {
+            const spiderName = document.getElementById('timeout-spider-filter').value;
+            const url = spiderName ? `/monitor/api/timeout-logs?spider_name=${spiderName}` : '/monitor/api/timeout-logs';
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const tbody = document.getElementById('timeout-logs-body');
+
+                if (data.success && data.logs.length > 0) {
+                    tbody.innerHTML = data.logs.map(log => {
+                        const urlDisplay = (log.url || '').length > 60 ? (log.url.substring(0, 60) + '…') : (log.url || '-');
+                        const resolveBtn = !log.resolved ? 
+                            `<button class="btn btn-sm btn-success" onclick="resolveTimeout(${log.id})" title="标记为已解决"><i class="fas fa-check"></i></button>` : 
+                            '<span class="text-muted"><i class="fas fa-check-circle"></i></span>';
+                        return `
+                        <tr>
+                            <td><small>${log.occurred_at || '-'}</small></td>
+                            <td><span class="badge bg-secondary">${log.spider_name}</span></td>
+                            <td title="${escapeHtml(log.url || '')}" style="max-width:280px;"><small class="text-break">${escapeHtml(urlDisplay)}</small></td>
+                            <td>${log.timeout_seconds || '-'} 秒</td>
+                            <td>${log.retry_count}</td>
+                            <td>
+                                ${log.resolved ?
+                                    '<span class="badge bg-success">已解决</span>' :
+                                    '<span class="badge bg-warning">未解决</span>'}
+                                ${resolveBtn}
+                            </td>
+                        </tr>
+                    `; }).join('');
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
+                                <p>暂无超时记录</p>
+                            </td>
+                        </tr>
+                    `;
+                }
+            } catch (error) {
+                console.error('加载超时日志失败:', error);
+                document.getElementById('timeout-logs-body').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-danger py-4">
+                            <i class="fas fa-exclamation-circle"></i> 加载失败
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // 标记超时日志为已解决
+        async function resolveTimeout(logId) {
+            try {
+                const response = await fetch(`/monitor/api/timeout-logs/${logId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await response.json();
+                if (data.success) {
+                    loadTimeoutLogs(); // 刷新列表
+                } else {
+                    alert('操作失败：' + (data.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error('标记超时日志失败:', error);
+                alert('操作失败：' + error.message);
+            }
+        }
+        
+        // 加载系统资源
+        async function loadResources() {
+            const btn = document.getElementById('btn-refresh-resources');
+            btn.classList.add('spinning');
+            
+            try {
+                const response = await fetch('/monitor/api/resources');
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderResources(data);
+                }
+            } catch (error) {
+                console.error('加载资源失败:', error);
+            } finally {
+                setTimeout(() => btn.classList.remove('spinning'), 500);
+            }
+        }
+        
+        // 渲染资源
+        function renderResources(data) {
+            const container = document.getElementById('resources-container');
+            
+            container.innerHTML = `
+                <div class="resource-item">
+                    <div class="resource-icon cpu">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <div class="resource-value">${data.cpu.percent.toFixed(1)}%</div>
+                    <div class="resource-label">CPU 使用率 (${data.cpu.core_count}核)</div>
+                    <div class="progress">
+                        <div class="progress-bar ${getProgressColor(data.cpu.percent)}" style="width: ${data.cpu.percent}%"></div>
+                    </div>
+                </div>
+                <div class="resource-item">
+                    <div class="resource-icon memory">
+                        <i class="fas fa-memory"></i>
+                    </div>
+                    <div class="resource-value">${data.memory.percent.toFixed(1)}%</div>
+                    <div class="resource-label">内存使用 (${data.memory.used_gb}/${data.memory.total_gb} GB)</div>
+                    <div class="progress">
+                        <div class="progress-bar ${getProgressColor(data.memory.percent)}" style="width: ${data.memory.percent}%"></div>
+                    </div>
+                </div>
+                <div class="resource-item">
+                    <div class="resource-icon disk">
+                        <i class="fas fa-hdd"></i>
+                    </div>
+                    <div class="resource-value">${data.disk.percent.toFixed(1)}%</div>
+                    <div class="resource-label">磁盘使用 (${data.disk.used_gb}/${data.disk.total_gb} GB)</div>
+                    <div class="progress">
+                        <div class="progress-bar ${getProgressColor(data.disk.percent)}" style="width: ${data.disk.percent}%"></div>
+                    </div>
+                </div>
+                <div class="resource-item">
+                    <div class="resource-icon network">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <div class="resource-value">${formatBytes(data.network.bytes_recv)}</div>
+                    <div class="resource-label">网络接收 / ${formatBytes(data.network.bytes_sent)} 发送</div>
+                </div>
+            `;
+        }
+        
+        // 加载进程
+        async function loadProcesses() {
+            try {
+                const response = await fetch('/monitor/api/processes');
+                const data = await response.json();
+                
+                const container = document.getElementById('processes-container');
+                
+                if (data.success && data.processes.length > 0) {
+                    const elRun = document.getElementById('stat-running');
+                    if (elRun) elRun.textContent = data.processes.length;
+                    
+                    container.innerHTML = data.processes.map(p => `
+                        <div class="process-item">
+                            <div class="process-icon">
+                                <i class="fas fa-bug"></i>
+                            </div>
+                            <div class="process-info">
+                                <div class="process-name">${p.spider_name || 'Unknown'}</div>
+                                <div class="process-meta">PID: ${p.pid} | 运行时长: ${p.runtime}</div>
+                            </div>
+                            <div class="process-stats">
+                                <div class="process-stat">
+                                    <div class="process-stat-value">${p.cpu_percent.toFixed(1)}%</div>
+                                    <div class="process-stat-label">CPU</div>
+                                </div>
+                                <div class="process-stat">
+                                    <div class="process-stat-value">${p.memory_mb} MB</div>
+                                    <div class="process-stat-label">内存</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-danger" onclick="stopSpider(${p.pid})">
+                                <i class="fas fa-stop"></i> 停止
+                            </button>
+                        </div>
+                    `).join('');
+                } else {
+                    const elRun = document.getElementById('stat-running');
+                    if (elRun) elRun.textContent = '0';
+                    container.innerHTML = `
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                            <p>暂无运行中的爬虫进程</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('加载进程失败:', error);
+            }
+        }
+        
+        // 加载爬虫列表
+        async function loadSpiders() {
+            try {
+                const response = await fetch('/monitor/api/spiders');
+                const data = await response.json();
+                
+                const container = document.getElementById('spiders-container');
+                
+                if (data.success) {
+                            container.innerHTML = data.spiders.map(s => {
+                                const displayName = s.description || s.name;
+                                const lastTime = s.last_time ? ` | 最后运行: ${s.last_time}` : '';
+                                let statusLabel = '已停止';
+                                if (s.status === 'running') statusLabel = '运行中';
+                                if (s.status === 'failed') statusLabel = '运行失败';
+                                if (s.status === 'not_run') statusLabel = '未运行';
+                                if (s.status === 'warning') statusLabel = '告警';
+
+                                const errorHtml = s.error_msg ? `<div class="text-danger small mt-2">错误: ${escapeHtml(s.error_msg)}</div>` : '';
+
+                                const actionHtml = s.status !== 'running' ? `
+                                        <button class="btn btn-sm btn-danger" onclick="showStartModal('${s.name}')">
+                                            <i class="fas fa-play me-1"></i> 立即启动
+                                        </button>
+                                    ` : `
+                                        <button class="btn btn-sm btn-secondary" disabled>
+                                            <i class="fas fa-play"></i> 运行中
+                                        </button>
+                                    `;
+
+                                return `
+                                    <div class="col-sm-6 col-lg-4">
+                                    <div class="spider-card ${s.status}">
+                                        <div class="spider-header">
+                                            <div>
+                                                <div class="spider-name">${displayName}</div>
+                                                <div class="text-muted small">${s.name}${lastTime}</div>
+                                            </div>
+                                            <span class="spider-status ${s.status}">
+                                                ${statusLabel}
+                                            </span>
+                                        </div>
+                                        <div class="spider-desc">${s.source || ''}</div>
+                                        <div class="spider-schedule">
+                                            <i class="fas fa-clock"></i> ${s.schedule || ''}
+                                        </div>
+                                        ${errorHtml}
+                                        <div class="spider-actions mt-2">
+                                            ${actionHtml}
+                                        </div>
+                                    </div>
+                                    </div>
+                                `;
+                            }).join('');
+                }
+            } catch (error) {
+                console.error('加载爬虫列表失败:', error);
+            }
+        }
+        
+        // 加载日志
+        async function loadLogs() {
+            const lines = parseInt(document.getElementById('log-lines').value || '50', 10);
+            const dateFilter = document.getElementById('log-date') ? document.getElementById('log-date').value : 'today';
+
+            try {
+                // 拉取文件列表（不带 content）
+                const response = await fetch(`/monitor/api/logs?lines=0&date=${dateFilter}`);
+                const data = await response.json();
+
+                const filesContainer = document.getElementById('logs-files');
+                const container = document.getElementById('logs-container');
+
+                if (data.success && data.logs.length > 0) {
+                    filesContainer.innerHTML = '<div class="d-flex flex-wrap gap-2">' + data.logs.map(log => {
+                        const safeName = (log.name || '').replace(/"/g, '&quot;');
+                        return `<button class="btn btn-sm btn-outline-primary" data-name="${safeName}" onclick="viewLog(this.getAttribute('data-name'))" title="${escapeHtml(log.modified)} | ${log.size_mb} MB"><i class="fas fa-file-alt me-1"></i>${escapeHtml(log.name)}</button>`;
+                    }).join('') + '</div>';
+
+                    container.innerHTML = '<div class="log-line">请选择一个日志文件以查看内容</div>';
+                } else {
+                    filesContainer.innerHTML = '<div class="text-muted">暂无日志文件</div>';
+                    container.innerHTML = '<div class="log-line">暂无日志内容</div>';
+                }
+            } catch (error) {
+                console.error('加载日志失败:', error);
+            }
+        }
+
+        // 当前查看的文件及偏移量跟踪
+        const logOffsets = {};
+        let currentLogFile = null;
+
+        async function viewLog(name) {
+            const lines = parseInt(document.getElementById('log-lines').value || '50', 10);
+            currentLogFile = name;
+            logOffsets[name] = 0;
+            document.getElementById('load-more-btn').style.display = 'none';
+
+            try {
+                const resp = await fetch(`/monitor/api/logs?name=${encodeURIComponent(name)}&lines=${lines}&offset=0`);
+                const data = await resp.json();
+                const container = document.getElementById('logs-container');
+                if (data.success) {
+                    const content = data.lines.map(l => formatLogLine(l)).join('');
+                    container.innerHTML = `<div class="text-info small">=== ${escapeHtml(data.name)} ===</div>` + content;
+                    if (data.has_more) document.getElementById('load-more-btn').style.display = 'inline-block';
+                    else document.getElementById('load-more-btn').style.display = 'none';
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    container.innerHTML = `<div class="log-line text-danger">加载失败: ${escapeHtml(data.message || '未知错误')}</div>`;
+                }
+            } catch (e) {
+                console.error('viewLog 错误', e);
+            }
+        }
+
+        async function loadMoreLog() {
+            if (!currentLogFile) return;
+            const lines = parseInt(document.getElementById('log-lines').value || '50', 10);
+            logOffsets[currentLogFile] = (logOffsets[currentLogFile] || 0) + lines;
+
+            try {
+                const resp = await fetch(`/monitor/api/logs?name=${encodeURIComponent(currentLogFile)}&lines=${lines}&offset=${logOffsets[currentLogFile]}`);
+                const data = await resp.json();
+                const container = document.getElementById('logs-container');
+                if (data.success) {
+                    const content = data.lines.map(l => formatLogLine(l)).join('');
+                    // 将更早的内容追加到顶部
+                    container.innerHTML = `<div class="text-info small">=== ${escapeHtml(data.name)} ===</div>` + content + container.innerHTML;
+                    if (!data.has_more) document.getElementById('load-more-btn').style.display = 'none';
+                }
+            } catch (e) {
+                console.error('loadMoreLog 错误', e);
+            }
+        }
+        
+        // 加载统计
+        async function loadStats() {
+            try {
+                const response = await fetch('/monitor/api/stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const _el = id => document.getElementById(id);
+                    if (_el('stat-runs')) _el('stat-runs').textContent = data.stats.total_runs || 0;
+                    if (_el('stat-errors')) _el('stat-errors').textContent = data.stats.total_errors || 0;
+                    if (_el('stat-warnings')) _el('stat-warnings').textContent = data.stats.total_warnings || 0;
+                    if (_el('stat-timeouts')) _el('stat-timeouts').textContent = data.stats.total_timeouts || 0;
+                    const failedCount = (data.stats.failed_spiders || []).length;
+                    const failedEl = _el('stat-failed');
+                    if (failedEl) {
+                        failedEl.textContent = failedCount;
+                        failedEl.classList.toggle('text-danger', failedCount > 0);
+                        failedEl.classList.toggle('text-success', failedCount === 0);
+                    }
+                    // 显示失败爬虫
+                    renderFailedSpiders(data.stats.failed_spiders || []);
+
+                    // 更新图表：同时显示爬取数量和入库数量
+                    try {
+                        const lastRuns = data.stats.last_runs || {};
+                        const labels = Object.keys(lastRuns);
+                        const crawledValues = labels.map(k => lastRuns[k].items_crawled || 0);
+                        const storedValues = labels.map(k => lastRuns[k].items_stored || 0);
+
+                        const ctx = document.getElementById('stats-chart').getContext('2d');
+                        
+                        // 销毁旧图表再创建新的，避免缓存问题
+                        if (statsChart) {
+                            statsChart.destroy();
+                        }
+                        
+                        statsChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [
+                                    {
+                                        label: '爬取数量 (含重复)',
+                                        data: crawledValues,
+                                        backgroundColor: 'rgba(102, 126, 234, 0.7)'
+                                    },
+                                    {
+                                        label: '入库数量 (去重后)',
+                                        data: storedValues,
+                                        backgroundColor: 'rgba(16, 185, 129, 0.7)'
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: {
+                                    legend: { display: true, position: 'top' },
+                                    tooltip: { mode: 'index', intersect: false }
+                                },
+                                scales: {
+                                    x: { 
+                                        title: { display: true, text: '爬虫' },
+                                        ticks: { autoSkip: false }
+                                    },
+                                    y: { 
+                                        title: { display: true, text: '数量 (条)' }, 
+                                        beginAtZero: true,
+                                        ticks: { stepSize: 1 }
+                                    }
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.error('更新图表失败', e);
+                    }
+                }
+            } catch (error) {
+                console.error('加载统计失败:', error);
+            }
+        }
+        
+        // 渲染失败爬虫列表
+        function renderFailedSpiders(failedSpiders) {
+            const alertDiv = document.getElementById('failed-spiders-alert');
+            const listDiv = document.getElementById('failed-spiders-list');
+            
+            if (failedSpiders && failedSpiders.length > 0) {
+                listDiv.innerHTML = failedSpiders.map(s => {
+                    const statusIcon = s.status === 'not_run' ? 'fa-clock' : 'fa-times-circle';
+                    const statusText = s.status === 'not_run' ? '未运行' : '运行失败';
+                    const timeText = s.time ? `<span class="text-muted"> | 最后运行: ${s.time}</span>` : '';
+                    
+                    let errorHtml = '';
+                    if (s.error_msg) {
+                        errorHtml = `<div class="failed-item-error"><i class="fas fa-bug me-1"></i>${escapeHtml(s.error_msg)}</div>`;
+                    }
+                    
+                    let actionHtml = '';
+                    if (s.status !== 'running') {
+                        actionHtml = `<button class="btn btn-sm btn-danger mt-2" onclick="showStartModal('${s.spider}')">
+                            <i class="fas fa-play me-1"></i>立即启动
+                        </button>`;
+                    }
+                    
+                    return `
+                        <div class="failed-item">
+                            <div class="failed-item-title">
+                                <i class="fas ${statusIcon} text-danger"></i>
+                                ${s.name}
+                                <span class="badge bg-danger ms-2">${statusText}</span>
+                                ${timeText}
+                            </div>
+                            <div class="failed-item-desc">${s.desc || ''}</div>
+                            ${errorHtml}
+                            ${actionHtml}
+                        </div>
+                    `;
+                }).join('');
+                
+                alertDiv.style.display = 'block';
+            } else {
+                alertDiv.style.display = 'none';
+            }
+        }
+        
+        // 显示启动模态框
+        function showStartModal(spiderName) {
+            currentSpider = spiderName;
+            document.getElementById('modal-spider-name').textContent = spiderName;
+            document.getElementById('spider-args').value = '';
+            new bootstrap.Modal(document.getElementById('startSpiderModal')).show();
+        }
+        
+        // 确认启动爬虫
+        async function confirmStartSpider() {
+            const args = document.getElementById('spider-args').value.trim();
+            
+            try {
+                const response = await fetch('/monitor/api/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        spider_name: currentSpider,
+                        args: args ? args.split(' ') : []
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    bootstrap.Modal.getInstance(document.getElementById('startSpiderModal')).hide();
+                    setTimeout(loadAllData, 1000);
+                } else {
+                    alert('启动失败: ' + data.message);
+                }
+            } catch (error) {
+                alert('请求失败: ' + error.message);
+            }
+        }
+        
+        // 停止爬虫
+        async function stopSpider(pid) {
+            if (!confirm(`确定要停止进程 ${pid} 吗？`)) return;
+            
+            try {
+                const response = await fetch('/monitor/api/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pid: pid })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    setTimeout(loadAllData, 500);
+                } else {
+                    alert('停止失败: ' + data.message);
+                }
+            } catch (error) {
+                alert('请求失败: ' + error.message);
+            }
+        }
+        
+        // 辅助函数
+        function getProgressColor(percent) {
+            if (percent < 50) return 'bg-success';
+            if (percent < 80) return 'bg-warning';
+            return 'bg-danger';
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 错误日志分页状态
+        let errorLogPage = 1;
+        const ERROR_LOG_PAGE_SIZE = 50;
+
+        // 加载错误日志（管理员）
+        async function loadErrorLogs(page = 1) {
+            errorLogPage = page;
+            const spiderName = document.getElementById('error-spider-filter') ? document.getElementById('error-spider-filter').value : '';
+            const q = document.getElementById('error-q') ? document.getElementById('error-q').value.trim() : '';
+            const since = document.getElementById('error-since') ? document.getElementById('error-since').value : '';
+            const until = document.getElementById('error-until') ? document.getElementById('error-until').value : '';
+            const limit = ERROR_LOG_PAGE_SIZE;
+            const offset = (page - 1) * limit;
+
+            const params = new URLSearchParams();
+            if (spiderName) params.set('spider_name', spiderName);
+            if (q) params.set('q', q);
+            if (since) params.set('since', since);
+            if (until) params.set('until', until);
+            params.set('limit', limit);
+            params.set('offset', offset);
+
+            const url = `/monitor/api/error-logs?${params.toString()}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const container = document.getElementById('error-logs-container');
+                const pageInfo = document.getElementById('error-log-page-info');
+
+                if (data.success && data.logs && data.logs.length > 0) {
+                    // 按文件分组显示，同一文件的错误只显示一次文件名
+                    let html = '';
+                    let currentFile = null;
+                    
+                    data.logs.forEach(l => {
+                        const src = l.source || '';
+                        const m = l.line.match(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+                        const ts = m ? m[1] : '';
+                        const lineText = l.line.replace(ts, '').trim();
+                        
+                        // 如果文件 changed，显示新的文件头
+                        if (src !== currentFile) {
+                            html += `<div class="text-warning small my-2"><i class="fas fa-file-alt"></i> ${escapeHtml(src)}</div>`;
+                            currentFile = src;
+                        }
+                        
+                        html += `<div class="mb-1 ms-3"><div class="text-info small">${escapeHtml(ts)}</div><div class="log-line error">${escapeHtml(lineText)}</div></div>`;
+                    });
+                    
+                    // 添加分页控制
+                    let pagination = '<div class="d-flex justify-content-between align-items-center my-2">';
+                    if (page > 1) {
+                        pagination += `<button class="btn btn-sm btn-outline-primary" onclick="loadErrorLogs(${page - 1})"><i class="fas fa-arrow-left"></i> 上一页</button>`;
+                    } else {
+                        pagination += '<span></span>';
+                    }
+                    pagination += `<span class="text-muted small">第 ${page} 页</span>`;
+                    if (data.logs.length === limit) {
+                        pagination += `<button class="btn btn-sm btn-outline-primary" onclick="loadErrorLogs(${page + 1})">下一页 <i class="fas fa-arrow-right"></i></button>`;
+                    } else {
+                        pagination += '<span class="text-muted small">已是最后一页</span>';
+                    }
+                    pagination += '</div>';
+                    
+                    container.innerHTML = pagination + html + pagination;
+                    
+                    // 更新页码信息
+                    if (pageInfo) pageInfo.textContent = `(第 ${page} 页)`;
+                } else {
+                    container.innerHTML = page > 1 ? 
+                        '<div class="log-line">没有更多错误日志了</div>' :
+                        '<div class="log-line">暂无错误日志</div>';
+                    if (pageInfo) pageInfo.textContent = '';
+                }
+
+                container.scrollTop = 0;
+            } catch (error) {
+                console.error('加载错误日志失败:', error);
+            }
+        }
+        
+        function formatLogLine(line) {
+            let className = 'log-line';
+            const lower = line.toLowerCase();
+            
+            if (lower.includes('error') || lower.includes('错误')) {
+                className += ' error';
+            } else if (lower.includes('warning') || lower.includes('警告')) {
+                className += ' warning';
+            } else if (lower.includes('success') || lower.includes('成功')) {
+                className += ' success';
+            } else if (lower.includes('info') || lower.includes('信息')) {
+                className += ' info';
+            }
+            
+            return `<div class="${className}">${escapeHtml(line)}</div>`;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
