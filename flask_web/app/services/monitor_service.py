@@ -660,10 +660,14 @@ class MonitorService:
                 running_count = int(proc_result.get('count', 0)) if proc_result.get('success') else 0
             except Exception:
                 running_count = 0
+
+            # 如果实时检测没有运行中进程，检查数据库中是否有最近 5 分钟内的 running 记录
             if running_count == 0:
                 cursor.execute("""
-                    SELECT COUNT(*) as count FROM spider_run_logs 
-                    WHERE run_date = %s AND status = 'running'
+                    SELECT COUNT(*) as count FROM spider_run_logs
+                    WHERE run_date = %s
+                    AND status = 'running'
+                    AND start_time >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
                 """, (today,))
                 running_count = int(cursor.fetchone()['count'] or 0)
             

@@ -36,7 +36,8 @@
       "Bash(pip show pandas)",
       "Bash(git add README.md)",
       "Bash(git commit -m \"docs: 更新 Python 3.9 兼容性说明\")",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(curl -s http://127.0.0.1:5000/)"
     ]
   }
 }
