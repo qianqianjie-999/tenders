@@ -26,7 +26,9 @@
       "Bash(source ../venv/bin/activate)",
       "Bash(python -c \":*)",
       "Bash(python /home/qianqianjie/tenders/clear_old_data.py)",
-      "Bash(git init)"
+      "Bash(git init)",
+      "Bash(git config user.email \"qianqianjie@example.com\")",
+      "Bash(git config user.name \"qianqianjie\")"
     ]
   }
 }
