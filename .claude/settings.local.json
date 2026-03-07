@@ -28,7 +28,15 @@
       "Bash(python /home/qianqianjie/tenders/clear_old_data.py)",
       "Bash(git init)",
       "Bash(git config user.email \"qianqianjie@example.com\")",
-      "Bash(git config user.name \"qianqianjie\")"
+      "Bash(git config user.name \"qianqianjie\")",
+      "Bash(git remote set-url origin git@github.com:qianqianjie-999/tenders.git)",
+      "Bash(git push -u origin main)",
+      "Bash(git remote set-url origin https://github.com/qianqianjie-999/tenders.git)",
+      "Bash(pip index versions pandas)",
+      "Bash(pip show pandas)",
+      "Bash(git add README.md)",
+      "Bash(git commit -m \"docs: 更新 Python 3.9 兼容性说明\")",
+      "Bash(git push)"
     ]
   }
 }

@@ -83,41 +83,50 @@ class MonitorService:
         """获取运行的爬虫进程"""
         try:
             import psutil
-            
+
             running_spiders = []
-            spider_patterns = ['scrapy', 'crawl', 'spider']
-            
+            seen_spider_names = set()  # 避免重复识别同一爬虫
+
             for process in psutil.process_iter(['pid', 'name', 'cmdline', 'cpu_percent', 'memory_info', 'create_time']):
                 try:
                     cmdline = ' '.join(process.info['cmdline'] or [])
-                    
-                    # 检查是否是爬虫进程
-                    if any(pattern in cmdline.lower() for pattern in spider_patterns):
-                        # 提取爬虫名称
-                        spider_name = None
-                        for known_spider in ['jining_get', 'sd_post', 'jinan_post', 'taian_post', 'zibo_post']:
-                            if known_spider in cmdline:
-                                spider_name = known_spider
-                                break
-                        
-                        # 计算运行时间
-                        create_time = process.info['create_time']
-                        runtime_seconds = time.time() - create_time
-                        runtime_str = cls._format_runtime(runtime_seconds)
-                        
-                        running_spiders.append({
-                            'pid': process.info['pid'],
-                            'name': process.info['name'],
-                            'spider_name': spider_name or 'unknown',
-                            'cmdline': cmdline[:200] + '...' if len(cmdline) > 200 else cmdline,
-                            'cpu_percent': process.info['cpu_percent'] or 0,
-                            'memory_mb': round(process.info['memory_info'].rss / (1024**2), 2),
-                            'runtime': runtime_str,
-                            'runtime_seconds': int(runtime_seconds)
-                        })
+
+                    # 只检查包含 'scrapy crawl' 的主进程，避免识别 worker 子进程
+                    if 'scrapy' not in cmdline.lower() or 'crawl' not in cmdline.lower():
+                        continue
+
+                    # 提取爬虫名称
+                    spider_name = None
+                    for known_spider in ['jining_get', 'sd_post', 'jinan_post', 'taian_post', 'zibo_post']:
+                        if known_spider in cmdline:
+                            # 如果已经识别过该爬虫，跳过（避免重复）
+                            if known_spider in seen_spider_names:
+                                continue
+                            spider_name = known_spider
+                            seen_spider_names.add(known_spider)
+                            break
+
+                    if not spider_name:
+                        continue
+
+                    # 计算运行时间
+                    create_time = process.info['create_time']
+                    runtime_seconds = time.time() - create_time
+                    runtime_str = cls._format_runtime(runtime_seconds)
+
+                    running_spiders.append({
+                        'pid': process.info['pid'],
+                        'name': process.info['name'],
+                        'spider_name': spider_name,
+                        'cmdline': cmdline[:200] + '...' if len(cmdline) > 200 else cmdline,
+                        'cpu_percent': process.info['cpu_percent'] or 0,
+                        'memory_mb': round(process.info['memory_info'].rss / (1024**2), 2),
+                        'runtime': runtime_str,
+                        'runtime_seconds': int(runtime_seconds)
+                    })
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
-            
+
             return {
                 'success': True,
                 'processes': running_spiders,
