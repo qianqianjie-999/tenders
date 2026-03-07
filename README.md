@@ -61,9 +61,12 @@ tenders/
 
 ### 1. 环境要求
 
-- Python 3.8+
+- Python 3.8+（推荐 3.8，生产环境请保持一致）
 - MySQL 5.7+
 - Linux/macOS/Windows
+
+> **注意**：本项目生产环境使用 Python 3.8，开发环境如使用更高版本，请注意依赖兼容性。
+> pandas 1.5.3 + numpy 1.24.3 已针对 Python 3.8 优化。
 
 ### 2. 安装依赖
 
@@ -282,6 +285,70 @@ crontab -e
 
 # 每天凌晨 3 点清理 7 天前的日志
 0 3 * * * cd /path/to/tenders && python3 clean_logs.py --dir logs --days 7 >> logs/cleanup.log 2>&1
+```
+
+---
+
+## 内网环境部署
+
+### 方案一：离线包部署（推荐）
+
+#### 1. 在外网机器准备依赖包
+
+```bash
+# 1. 下载所有依赖包（含子依赖）
+mkdir packages
+pip download -r requirements.txt -d ./packages --python-version 3.8 --platform manylinux1_x86_64
+
+# 2. 打包项目代码
+tar -czf tenders-v1.tar.gz --exclude='venv' --exclude='packages' --exclude='.git' .
+```
+
+#### 2. 拷贝到内网服务器
+
+将以下文件拷贝到内网服务器：
+- `tenders-v1.tar.gz`
+- `packages/` 目录
+
+#### 3. 内网服务器安装
+
+```bash
+# 1. 解压代码
+tar -xzf tenders-v1.tar.gz -C /opt/tenders
+cd /opt/tenders
+
+# 2. 创建虚拟环境
+python3.8 -m venv venv
+source venv/bin/activate
+
+# 3. 离线安装依赖
+pip install --no-index --find-links=./packages -r requirements.txt
+```
+
+### 方案二：搭建内网 PyPI 镜像
+
+```bash
+# 1. 安装 pypiserver
+pip install pypiserver
+
+# 2. 启动服务
+pypi-server -p 8080 ./packages
+
+# 3. 配置 pip 使用内网源
+pip install -i http://内网 IP:8080/simple -r requirements.txt
+```
+
+### 方案三：从内网 Git 拉取
+
+在内网搭建 GitLab/Gitea，将代码推送到内网仓库：
+
+```bash
+# 外网机器
+git remote add intranet http://内网 IP/username/tenders.git
+git push intranet main
+
+# 内网机器
+git clone http://内网 IP/username/tenders.git
 ```
 
 ---
