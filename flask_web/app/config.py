@@ -53,5 +53,5 @@ class Config:
         '其他': []
     }
 
-    # 在 Config 类中添加
-    ANALYSIS_ACCESS_CODE = 'kwd12345'  # 修改为你的口令
+    # 访问控制口令（从环境变量读取，默认值仅用于本地开发）
+    ANALYSIS_ACCESS_CODE = os.environ.get('ANALYSIS_ACCESS_CODE', 'kwd12345')
