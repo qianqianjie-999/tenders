@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlencode
 from bidding_spider.items import BiddingItem
-from twisted.internet.error import TimeoutError, TCPTimedOutError
+from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError
 
 # 导入监控数据库模块
 try:
@@ -572,7 +572,7 @@ class TaianPostSpider(scrapy.Spider):
                     )
                 except Exception as e:
                     self.logger.warning(f"[Monitor] 记录超时日志失败: {e}")
-        elif failure.check(scrapy.exceptions.DNSLookupError):
+        elif failure.check(DNSLookupError):
             self.dns_errors += 1
             self.logger.error("DNS解析失败")
     
