@@ -65,6 +65,13 @@ class MariaDBPipeline:
                 AND (detail_url LIKE 'http://ggzyjy.zibo.gov.cn%' OR detail_url LIKE 'https://ggzyjy.zibo.gov.cn%')
                 """,
                 'description': "加载今日数据且域名符合'ggzyjy.zibo.gov.cn'"
+            },
+            'jiangsu_post': {
+                'condition': """
+                AND DATE(publish_date) = CURDATE()
+                AND detail_url LIKE 'http://jsggzy.jszwfw.gov.cn%'
+                """,
+                'description': "加载今日数据且域名符合'http://jsggzy.jszwfw.gov.cn'"
             }
         }
 
@@ -329,6 +336,10 @@ class MariaDBPipeline:
                 elif spider_name == 'jining_get':
                     if detail_url and 'https://www.jnsggzy.cn' not in detail_url:
                         logger.info(f"jining_get爬虫跳过非指定域名: {detail_url}")
+                        return item
+                elif spider_name == 'jiangsu_post':
+                    if detail_url and 'http://jsggzy.jszwfw.gov.cn' not in detail_url:
+                        logger.info(f"jiangsu_post 爬虫跳过非指定域名：{detail_url}")
                         return item
 
             # 生成组合键

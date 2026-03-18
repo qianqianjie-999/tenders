@@ -76,7 +76,9 @@ def api_spiders():
         {'name': 'taian_post', 'description': '泰安公共资源交易网', 'source': 'http://www.taggzyjy.com.cn',
          'schedule': '每天奇数点 15 分', 'category': '市级'},
         {'name': 'zibo_post', 'description': '淄博公共资源交易网', 'source': 'http://ggzyjy.zibo.gov.cn',
-         'schedule': '每天偶数点 30 分', 'category': '市级'}
+         'schedule': '每天偶数点 30 分', 'category': '市级'},
+        {'name': 'jiangsu_post', 'description': '江苏省公共资源交易中心', 'source': 'http://jsggzy.jszwfw.gov.cn',
+         'schedule': '每天奇数点 30 分', 'category': '省级'}
     ]
     # 获取运行状态与最近统计（包含失败检测）
     processes = MonitorService.get_spider_processes()
