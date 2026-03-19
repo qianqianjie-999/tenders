@@ -65,19 +65,30 @@ def cleanup_database(days_to_keep):
         conn = pymysql.connect(**db_config)
         cursor = conn.cursor()
 
-        # 1. 统计将要删除的数据量
+        # 1. 统计将要删除的数据量（山东 + 江苏）
         cursor.execute("SELECT COUNT(*) FROM bidding_info WHERE publish_date < %s", (cutoff_date,))
-        count_before_delete = cursor.fetchone()[0]
+        shandong_count = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM jiangsu_bidding_info WHERE publish_date < %s", (cutoff_date,))
+        jiangsu_count = cursor.fetchone()[0]
+
+        count_before_delete = shandong_count + jiangsu_count
 
         if count_before_delete == 0:
             print(f"ℹ️  没有需要清理的旧数据")
         else:
-            # 2. 删除指定日期前的数据
+            # 2. 删除山东数据
             delete_sql = "DELETE FROM bidding_info WHERE publish_date < %s"
             cursor.execute(delete_sql, (cutoff_date,))
-            deleted_count = cursor.rowcount
+            shandong_deleted = cursor.rowcount
+
+            # 3. 删除江苏数据
+            delete_sql = "DELETE FROM jiangsu_bidding_info WHERE publish_date < %s"
+            cursor.execute(delete_sql, (cutoff_date,))
+            jiangsu_deleted = cursor.rowcount
+
             conn.commit()
-            print(f"✅ 数据库清理完成：删除了 {deleted_count} 条记录")
+            print(f"✅ 数据库清理完成：删除山东 {shandong_deleted} 条，江苏 {jiangsu_deleted} 条，共 {shandong_deleted + jiangsu_deleted} 条记录")
 
         # 3. 清理过期的运行日志
         cursor.execute("""
@@ -99,7 +110,7 @@ def cleanup_database(days_to_keep):
         if run_logs_deleted > 0 or timeout_logs_deleted > 0:
             print(f"✅ 日志表清理完成：删除 {run_logs_deleted} 条运行日志，{timeout_logs_deleted} 条超时日志")
 
-        return count_before_delete + run_logs_deleted + timeout_logs_deleted
+        return shandong_count + jiangsu_count + run_logs_deleted + timeout_logs_deleted
 
     except Exception as e:
         print(f"❌ 数据库清理失败：{e}")

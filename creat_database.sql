@@ -190,3 +190,24 @@ CREATE TABLE IF NOT EXISTS spider_daily_stats (
     INDEX idx_stat_date (stat_date),
     INDEX idx_spider_name (spider_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='爬虫每日统计汇总表';
+
+
+-- ==================== 江苏省招标信息表 ====================
+
+-- 4. 江苏省招标信息表（独立于山东省数据）
+CREATE TABLE IF NOT EXISTS jiangsu_bidding_info (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    project_name VARCHAR(500) NOT NULL,
+    publish_date DATE NOT NULL,
+    detail_url VARCHAR(1000) DEFAULT NULL,
+    project_source VARCHAR(100) NOT NULL,
+    project_category VARCHAR(50) DEFAULT NULL,
+    crawl_time DATETIME NOT NULL,
+    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY idx_unique_project (project_name(200), publish_date, project_source(50)),
+    INDEX idx_publish_date (publish_date),
+    INDEX idx_project_source (project_source)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='江苏省招标信息表';

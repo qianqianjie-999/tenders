@@ -6,7 +6,7 @@
 
 ## 功能特性
 
-- 多地区招标信息自动采集（山东省各地市）
+- 多地区招标信息自动采集（山东省各地市、江苏省）
 - 数据可视化仪表盘
 - 重点关注项目管理
 - 标书分析（开标日期、控制价等）
@@ -131,6 +131,7 @@ python run.py
 | `jinan_post` | 济南市公共资源交易中心 | 当天 | POST |
 | `taian_post` | 泰安市公共资源交易中心 | 当天 | POST |
 | `zibo_post` | 淄博市公共资源交易中心 | 当天 | POST |
+| `jiangsu_post` | 江苏省公共资源交易中心 | 当天 | POST |
 
 ### 运行爬虫
 
@@ -159,6 +160,7 @@ crontab -e
 0 2 * * * cd /path/to/tenders/scrapy_spider/bidding_spider && /path/to/venv/bin/python -m scrapy crawl taian_post
 0 2 * * * cd /path/to/tenders/scrapy_spider/bidding_spider && /path/to/venv/bin/python -m scrapy crawl zibo_post
 0 2 * * * cd /path/to/tenders/scrapy_spider/bidding_spider && /path/to/venv/bin/python -m scrapy crawl jining_get
+0 2 * * * cd /path/to/tenders/scrapy_spider/bidding_spider && /path/to/venv/bin/python -m scrapy crawl jiangsu_post
 ```
 
 ---
@@ -167,11 +169,15 @@ crontab -e
 
 | 接口 | 方法 | 说明 |
 |------|------|------|
-| `/api/data` | GET | 获取招标数据（支持分页、筛选） |
-| `/api/categories` | GET | 获取项目分类列表 |
-| `/api/sources` | GET | 获取数据源列表 |
+| `/api/data` | GET | 获取山东招标数据（支持分页、筛选） |
+| `/jiangsu/api/data` | GET | 获取江苏招标数据（支持分页、筛选） |
+| `/api/categories` | GET | 获取山东项目分类列表 |
+| `/jiangsu/api/categories` | GET | 获取江苏项目分类列表 |
+| `/api/sources` | GET | 获取山东数据源列表 |
+| `/jiangsu/api/sources` | GET | 获取江苏数据源列表 |
 | `/api/keywords` | GET/POST/DELETE | 关键词管理 |
-| `/api/export` | GET | CSV 数据导出 |
+| `/api/export` | GET | 山东 CSV 数据导出 |
+| `/jiangsu/api/export` | GET | 江苏 CSV 数据导出 |
 | `/focus/api/list` | GET | 获取关注项目列表 |
 | `/analysis/api/list` | GET | 获取分析项目列表 |
 | `/bidding/api/list` | GET | 获取投标项目列表 |
@@ -199,7 +205,8 @@ curl "http://localhost:5000/api/data?keyword=学校&page=1&page_size=10"
 
 | 表名 | 说明 |
 |------|------|
-| `bidding_info` | 主招标信息表 |
+| `bidding_info` | 主招标信息表（山东省） |
+| `jiangsu_bidding_info` | 江苏省招标信息表 |
 | `focus_projects` | 重点关注项目表 |
 | `tracking_records` | 项目跟踪记录 |
 | `analysis_projects` | 标书分析表 |
@@ -214,7 +221,8 @@ curl "http://localhost:5000/api/data?keyword=学校&page=1&page_size=10"
 
 | 页面 | 路由 | 功能 |
 |------|------|------|
-| 主页 | `/` | 招标信息浏览，支持筛选 |
+| 主页（山东） | `/` | 山东省招标信息浏览，支持筛选 |
+| 江苏数据 | `/jiangsu/` | 江苏省招标信息浏览，支持筛选、统计、导出 |
 | 仪表盘 | `/dashboard` | 数据统计概览 |
 | 关注管理 | `/focus/` | 重点关注项目管理 |
 | 标书分析 | `/analysis/` | 标书分析功能（需访问码） |

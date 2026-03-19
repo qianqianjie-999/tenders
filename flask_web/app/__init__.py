@@ -18,6 +18,7 @@ def create_app():
     from app.routes.analysis import analysis_bp
     from app.routes.bidding import bidding_bp
     from app.routes.monitor import monitor_bp
+    from app.routes.jiangsu import jiangsu_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(focus_bp)
     app.register_blueprint(dashboard_bp)
@@ -26,6 +27,7 @@ def create_app():
     app.register_blueprint(design_bp)
     app.register_blueprint(audit_bp)
     app.register_blueprint(monitor_bp)
+    app.register_blueprint(jiangsu_bp)
 
     app.teardown_appcontext(close_db)
 

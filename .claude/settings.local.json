@@ -40,7 +40,23 @@
       "Bash(curl -s http://127.0.0.1:5000/)",
       "Bash(git add -A)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(scrapy crawl:*)",
+      "Bash(curl -X POST \"http://jsggzy.jszwfw.gov.cn/inteligentsearch/rest/esinteligentsearch/getFullTextDataNew\" -H \"Content-Type: application/x-www-form-urlencoded; charset=UTF-8\" -H \"Accept: application/json, text/javascript, */*; q=0.01\" -H \"X-Requested-With: XMLHttpRequest\" -H \"User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36 \\(KHTML, like Gecko\\) Chrome/120.0.0.0 Safari/537.36\" --data 'params={\"\"\"\"token\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"pn\"\"\"\":0,\"\"\"\"rn\"\"\"\":20,\"\"\"\"sdt\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"edt\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"wd\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"inc_wd\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"exc_wd\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"fields\"\"\"\":\"\"\"\"title\"\"\"\",\"\"\"\"cnum\"\"\"\":\"\"\"\"001\"\"\"\",\"\"\"\"sort\"\"\"\":\"\"\"\"{\\\\\"\"\"\"infodatepx\\\\\"\"\"\":\\\\\"\"\"\"0\\\\\"\"\"\"}\"\"\"\",\"\"\"\"ssort\"\"\"\":\"\"\"\"title\"\"\"\",\"\"\"\"cl\"\"\"\":200,\"\"\"\"terminal\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"condition\"\"\"\":[{\"\"\"\"fieldName\"\"\"\":\"\"\"\"categorynum\"\"\"\",\"\"\"\"isLike\"\"\"\":true,\"\"\"\"likeType\"\"\"\":2,\"\"\"\"equal\"\"\"\":\"\"\"\"003004002\"\"\"\"}],\"\"\"\"time\"\"\"\":[{\"\"\"\"fieldName\"\"\"\":\"\"\"\"infodatepx\"\"\"\",\"\"\"\"startTime\"\"\"\":\"\"\"\"2026-03-18 00:00:00\"\"\"\",\"\"\"\"endTime\"\"\"\":\"\"\"\"2026-03-18 23:59:59\"\"\"\"}],\"\"\"\"highlights\"\"\"\":\"\"\"\"title\"\"\"\",\"\"\"\"statistics\"\"\"\":null,\"\"\"\"unionCondition\"\"\"\":[],\"\"\"\"accuracy\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"noParticiple\"\"\"\":\"\"\"\"1\"\"\"\",\"\"\"\"searchRange\"\"\"\":null,\"\"\"\"isBusiness\"\"\"\":\"\"\"\"1\"\"\"\"}')",
+      "Bash(curl -X POST \"http://jsggzy.jszwfw.gov.cn/inteligentsearch/rest/esinteligentsearch/getFullTextDataNew\" -H \"Content-Type: application/x-www-form-urlencoded; charset=UTF-8\" -H \"Accept: application/json, text/javascript, */*; q=0.01\" -H \"X-Requested-With: XMLHttpRequest\" -H \"User-Agent: Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" -H \"Origin: http://jsggzy.jszwfw.gov.cn\" -H \"Referer: http://jsggzy.jszwfw.gov.cn/\" --data 'params={\"\"\"\"token\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"pn\"\"\"\":\"\"\"\"0\"\"\"\",\"\"\"\"rn\"\"\"\":\"\"\"\"20\"\"\"\",\"\"\"\"sdt\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"edt\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"wd\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"inc_wd\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"exc_wd\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"fields\"\"\"\":\"\"\"\"title\"\"\"\",\"\"\"\"cnum\"\"\"\":\"\"\"\"001\"\"\"\",\"\"\"\"sort\"\"\"\":\"\"\"\"{\\\\\"\"\"\"infodatepx\\\\\"\"\"\":\\\\\"\"\"\"0\\\\\"\"\"\"}\"\"\"\",\"\"\"\"ssort\"\"\"\":\"\"\"\"title\"\"\"\",\"\"\"\"cl\"\"\"\":\"\"\"\"200\"\"\"\",\"\"\"\"terminal\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"condition\"\"\"\":\"\"\"\"[{\\\\\"\"\"\"fieldName\\\\\"\"\"\":\\\\\"\"\"\"categorynum\\\\\"\"\"\",\\\\\"\"\"\"isLike\\\\\"\"\"\":true,\\\\\"\"\"\"likeType\\\\\"\"\"\":2,\\\\\"\"\"\"equal\\\\\"\"\"\":\\\\\"\"\"\"003004002\\\\\"\"\"\"}]\"\"\"\",\"\"\"\"time\"\"\"\":\"\"\"\"[{\\\\\"\"\"\"fieldName\\\\\"\"\"\":\\\\\"\"\"\"infodatepx\\\\\"\"\"\",\\\\\"\"\"\"startTime\\\\\"\"\"\":\\\\\"\"\"\"2026-03-18 00:00:00\\\\\"\"\"\",\\\\\"\"\"\"endTime\\\\\"\"\"\":\\\\\"\"\"\"2026-03-18 23:59:59\\\\\"\"\"\"}]\"\"\"\",\"\"\"\"highlights\"\"\"\":\"\"\"\"title\"\"\"\",\"\"\"\"statistics\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"unionCondition\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"accuracy\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"noParticiple\"\"\"\":\"\"\"\"1\"\"\"\",\"\"\"\"searchRange\"\"\"\":\"\"\"\"\"\"\"\",\"\"\"\"isBusiness\"\"\"\":\"\"\"\"1\"\"\"\"}')",
+      "Bash(cat /home/qianqianjie/tenders/scrapy_spider/bidding_spider/logs/bidding_spider_jiangsu_post_*.log)",
+      "Bash(pkill -f \"python3 run.py\")",
+      "Bash(pkill -f \"flask\")",
+      "Bash(curl -s http://127.0.0.1:5000/monitor/api/spiders)",
+      "Bash(source ../../venv/bin/activate)",
+      "Bash(curl -s http://127.0.0.1:5000/monitor/)",
+      "Bash(curl -s http://127.0.0.1:5000/monitor/api/dashboard)",
+      "Bash(curl -s http://127.0.0.1:5000/monitor/api/spider_stats)",
+      "Bash(curl -s http://127.0.0.1:5000/monitor/api/stats)",
+      "Bash(curl -s \"http://127.0.0.1:5000/monitor/api/logs?lines=5\")",
+      "Bash(curl -s \"http://127.0.0.1:5000/monitor/api/timeout-logs?page=1\")",
+      "Bash(curl -s \"http://127.0.0.1:5000/monitor/api/error-logs?page=1\")",
+      "Bash(python run.py)"
     ]
   }
 }

@@ -75,6 +75,16 @@ class MariaDBPipeline:
             }
         }
 
+        # 爬虫与数据表的映射关系
+        self.spider_table_mapping = {
+            'jiangsu_post': 'jiangsu_bidding_info',
+            'sd_post': 'bidding_info',
+            'jining_get': 'bidding_info',
+            'taian_post': 'bidding_info',
+            'jinan_post': 'bidding_info',
+            'zibo_post': 'bidding_info'
+        }
+
     @classmethod
     def from_crawler(cls, crawler):
         """
@@ -351,13 +361,13 @@ class MariaDBPipeline:
                 return item
 
             # 步骤2：数据库去重检查（双重验证）
-            if self.check_database_duplicate(project_name, publish_date, project_source):
+            if self.check_database_duplicate(project_name, publish_date, project_source, spider):
                 logger.info(f"项目已存在（数据库去重）: {project_name[:50]}...")
                 self.seen_keys.add(item_key)
                 return item
 
             # 步骤3：插入新数据
-            self.insert_new_item(adapter, project_name, publish_date, project_source, detail_url)
+            self.insert_new_item(adapter, project_name, publish_date, project_source, detail_url, spider)
             
             # 更新监控入库数量
             # 动态获取 monitor_run_id（因为它可能在 open_spider 之后才被设置）
@@ -436,27 +446,33 @@ class MariaDBPipeline:
 
         return True
 
-    def check_database_duplicate(self, project_name: str, publish_date, project_source: str) -> bool:
+    def check_database_duplicate(self, project_name: str, publish_date, project_source: str, spider=None) -> bool:
         """
         检查数据库中是否已存在相同项目
 
         Args:
             project_name: 项目名称
-            publish_date: 发布日期（字符串或datetime.date对象）
+            publish_date: 发布日期（字符串或 datetime.date 对象）
             project_source: 项目来源
+            spider: Scrapy 爬虫实例，用于选择目标表
 
         Returns:
             是否存在重复（True/False）
         """
         try:
-            check_sql = """
-            SELECT COUNT(*) FROM bidding_info 
+            # 根据爬虫类型选择目标表
+            table_name = 'bidding_info'
+            if spider and hasattr(spider, 'name'):
+                table_name = self.spider_table_mapping.get(spider.name, 'bidding_info')
+            
+            check_sql = f"""
+            SELECT COUNT(*) FROM {table_name} 
             WHERE project_name = %s 
             AND publish_date = %s 
             AND project_source = %s
             """
 
-            # 处理publish_date，如果是datetime.date对象则转换为字符串
+            # 处理 publish_date，如果是 datetime.date 对象则转换为字符串
             if isinstance(publish_date, datetime.date):
                 publish_date_str = publish_date.strftime('%Y-%m-%d')
             else:
@@ -472,23 +488,29 @@ class MariaDBPipeline:
             return result and result[0] > 0
 
         except Exception as e:
-            logger.error(f"数据库去重检查失败: {e}")
-            # 发生错误时，保守起见返回True（视为重复），避免插入重复数据
+            logger.error(f"数据库去重检查失败：{e}")
+            # 发生错误时，保守起见返回 True（视为重复），避免插入重复数据
             return True
 
-    def insert_new_item(self, adapter, project_name: str, publish_date: str, project_source: str, detail_url: str):
+    def insert_new_item(self, adapter, project_name: str, publish_date: str, project_source: str, detail_url: str, spider=None):
         """
         插入新项目到数据库
 
         Args:
-            adapter: ItemAdapter对象
+            adapter: ItemAdapter 对象
             project_name: 项目名称
             publish_date: 发布日期
             project_source: 项目来源
             detail_url: 详情链接
+            spider: Scrapy 爬虫实例，用于选择目标表
         """
-        sql = """
-        INSERT INTO bidding_info (
+        # 根据爬虫类型选择目标表
+        table_name = 'bidding_info'
+        if spider and hasattr(spider, 'name'):
+            table_name = self.spider_table_mapping.get(spider.name, 'bidding_info')
+        
+        sql = f"""
+        INSERT INTO {table_name} (
             project_name, 
             publish_date, 
             detail_url, 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>招投标信息展示系统</title>
+    <title>江苏省招标信息展示系统</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <!-- Bootstrap 5 CSS -->
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
@@ -123,7 +123,6 @@
         white-space: nowrap;
     }
 
-
     /* 链接样式重置 */
     a.header-function-block {
         color: white;
@@ -203,7 +202,6 @@
         line-height: 1.2;
         margin-top: 1px;
         letter-spacing: 0.3px;
-        white-space: nowrap;
     }
 
     /* 投标项目块特殊样式 */
@@ -1042,14 +1040,25 @@
             <div class="row mb-3">
                 <div class="col-12">
                     <h1 class="h3 fw-bold mb-0">
-                        <i class="fas fa-search-dollar me-2"></i>招投标信息展示系统
+                        <i class="fas fa-search-dollar me-2"></i>江苏省招标信息展示系统
                     </h1>
                 </div>
             </div>
-            <!-- 第二行：7个功能块 -->
+            <!-- 第二行：返回首页 + 功能块 -->
             <div class="row">
                 <div class="col-12">
                     <div class="header-blocks-container">
+                        <!-- 返回首页 -->
+                        <a href="/" class="header-function-block" id="home-block" style="background: rgba(255,255,255,0.3);">
+                            <div class="block-icon">
+                                <i class="fas fa-arrow-left"></i>
+                            </div>
+                            <div class="block-content">
+                                <div class="block-title">返回</div>
+                                <div class="block-subtitle">山东主页</div>
+                            </div>
+                        </a>
+
                         <!-- 投标项目 -->
                         <a href="/bidding" class="header-function-block" id="bid-projects-block">
                             <div class="block-icon">
@@ -1124,17 +1133,6 @@
                             <div class="block-content">
                                 <div class="block-title">监控中心</div>
                                 <div class="block-subtitle">爬虫监控</div>
-                            </div>
-                        </a>
-
-                        <!-- 江苏数据 -->
-                        <a href="/jiangsu" class="header-function-block" id="jiangsu-block">
-                            <div class="block-icon">
-                                <i class="fas fa-map-marked-alt"></i>
-                            </div>
-                            <div class="block-content">
-                                <div class="block-title">江苏数据</div>
-                                <div class="block-subtitle">江苏招标</div>
                             </div>
                         </a>
 
@@ -1671,7 +1669,7 @@ $(document).ready(function() {
     $('#date-picker').val(todayDate);
 
     // 初始化分类下拉框
-    $.get('/api/categories', function(response) {
+    $.get('/jiangsu/api/categories', function(response) {
         if (response.success) {
             const select = $('#category-filter');
             response.categories.forEach(category => {
@@ -1683,7 +1681,7 @@ $(document).ready(function() {
     });
 
     // 初始化来源下拉框
-    $.get('/api/sources', function(response) {
+    $.get('/jiangsu/api/sources', function(response) {
         if (response.success) {
             const select = $('#source-filter');
             response.sources.forEach(source => {
@@ -2067,7 +2065,7 @@ function loadData() {
     $('#no-data').hide();
 
     $.ajax({
-        url: '/api/data',
+        url: '/jiangsu/api/data',
         method: 'GET',
         data: requestData,
         success: function(response) {
@@ -2740,7 +2738,7 @@ function exportFilteredData() {
     const keyword = $('#keyword-search').val();
     const highlightOnly = $('#highlight-only-switch').is(':checked');
 
-    let exportUrl = `/api/export?date=${date}`;
+    let exportUrl = `/jiangsu/api/export?date=${date}`;
 
     if (category !== '全部') {
         exportUrl += `&category=${encodeURIComponent(category)}`;
