@@ -95,8 +95,13 @@
         justify-content: flex-start;
         align-items: center;
         gap: 8px;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         overflow-x: auto;
+    }
+
+    /* 江苏数据块 - 单独一行或放在最右侧 */
+    #jiangsu-block {
+        margin-left: auto;
     }
 
     /* 头部功能块 - 统一卡片样式 */
@@ -119,7 +124,7 @@
         text-decoration: none;
         color: white;
         flex: 1;
-        max-width: 140px;
+        max-width: none;
         white-space: nowrap;
     }
 
@@ -667,12 +672,16 @@
 
     /* 高亮行 */
     .highlight-row {
-        background: linear-gradient(135deg, rgba(250, 112, 154, 0.08) 0%, rgba(254, 225, 64, 0.08) 100%) !important;
+        background: #fff5f5 !important;
         border-left: 4px solid var(--warning-color);
     }
 
     .highlight-row:hover {
-        background: linear-gradient(135deg, rgba(250, 112, 154, 0.15) 0%, rgba(254, 225, 64, 0.15) 100%) !important;
+        background: #ffefef !important;
+    }
+
+    .highlight-row td {
+        background: transparent !important;
     }
 
     /* 类别徽章 */
@@ -1038,12 +1047,23 @@
      <!-- 头部 - 移出container，使其全宽 -->
     <div class="header-container">
         <div class="container">
-            <!-- 第一行：主标题 -->
-            <div class="row mb-3">
-                <div class="col-12">
+            <!-- 第一行：主标题 + 江苏数据 -->
+            <div class="row mb-3 align-items-center">
+                <div class="col-md-8">
                     <h1 class="h3 fw-bold mb-0">
                         <i class="fas fa-search-dollar me-2"></i>招投标信息展示系统
                     </h1>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="/jiangsu" class="header-function-block d-inline-flex" id="jiangsu-block" style="flex: 0 0 auto; max-width: 140px; height: 48px;">
+                        <div class="block-icon">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                        <div class="block-content">
+                            <div class="block-title">江苏数据</div>
+                            <div class="block-subtitle">江苏招标</div>
+                        </div>
+                    </a>
                 </div>
             </div>
             <!-- 第二行：7个功能块 -->
@@ -1124,17 +1144,6 @@
                             <div class="block-content">
                                 <div class="block-title">监控中心</div>
                                 <div class="block-subtitle">爬虫监控</div>
-                            </div>
-                        </a>
-
-                        <!-- 江苏数据 -->
-                        <a href="/jiangsu" class="header-function-block" id="jiangsu-block">
-                            <div class="block-icon">
-                                <i class="fas fa-map-marked-alt"></i>
-                            </div>
-                            <div class="block-content">
-                                <div class="block-title">江苏数据</div>
-                                <div class="block-subtitle">江苏招标</div>
                             </div>
                         </a>
 

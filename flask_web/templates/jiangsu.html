@@ -95,7 +95,7 @@
         justify-content: flex-start;
         align-items: center;
         gap: 8px;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         overflow-x: auto;
     }
 
@@ -119,7 +119,7 @@
         text-decoration: none;
         color: white;
         flex: 1;
-        max-width: 140px;
+        max-width: none;
         white-space: nowrap;
     }
 
@@ -665,12 +665,16 @@
 
     /* 高亮行 */
     .highlight-row {
-        background: linear-gradient(135deg, rgba(250, 112, 154, 0.08) 0%, rgba(254, 225, 64, 0.08) 100%) !important;
+        background: #fff5f5 !important;
         border-left: 4px solid var(--warning-color);
     }
 
     .highlight-row:hover {
-        background: linear-gradient(135deg, rgba(250, 112, 154, 0.15) 0%, rgba(254, 225, 64, 0.15) 100%) !important;
+        background: #ffefef !important;
+    }
+
+    .highlight-row td {
+        background: transparent !important;
     }
 
     /* 类别徽章 */
@@ -1036,29 +1040,29 @@
      <!-- 头部 - 移出container，使其全宽 -->
     <div class="header-container">
         <div class="container">
-            <!-- 第一行：主标题 -->
-            <div class="row mb-3">
-                <div class="col-12">
+            <!-- 第一行：主标题 + 返回山东主页 -->
+            <div class="row mb-3 align-items-center">
+                <div class="col-md-8">
                     <h1 class="h3 fw-bold mb-0">
                         <i class="fas fa-search-dollar me-2"></i>江苏省招标信息展示系统
                     </h1>
                 </div>
+                <div class="col-md-4 text-end">
+                    <a href="/" class="header-function-block d-inline-flex" id="home-block" style="flex: 0 0 auto; max-width: 140px; height: 48px; background: rgba(255,255,255,0.3);">
+                        <div class="block-icon">
+                            <i class="fas fa-arrow-left"></i>
+                        </div>
+                        <div class="block-content">
+                            <div class="block-title">返回</div>
+                            <div class="block-subtitle">山东主页</div>
+                        </div>
+                    </a>
+                </div>
             </div>
-            <!-- 第二行：返回首页 + 功能块 -->
+            <!-- 第二行：8 个功能块 -->
             <div class="row">
                 <div class="col-12">
                     <div class="header-blocks-container">
-                        <!-- 返回首页 -->
-                        <a href="/" class="header-function-block" id="home-block" style="background: rgba(255,255,255,0.3);">
-                            <div class="block-icon">
-                                <i class="fas fa-arrow-left"></i>
-                            </div>
-                            <div class="block-content">
-                                <div class="block-title">返回</div>
-                                <div class="block-subtitle">山东主页</div>
-                            </div>
-                        </a>
-
                         <!-- 投标项目 -->
                         <a href="/bidding" class="header-function-block" id="bid-projects-block">
                             <div class="block-icon">
