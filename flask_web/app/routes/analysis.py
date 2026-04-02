@@ -59,9 +59,9 @@ def api_list():
         # 查询数据
         cursor.execute(f"""
             SELECT id, project_name, publish_date, project_source, project_category,
-                   detail_url, bid_open_date, tenderer, control_price, decision, 
-                   decision_reason, import_time, operator
-            FROM analysis_projects 
+                   detail_url, bid_open_date, tenderer, control_price, decision,
+                   decision_reason, analysis_content, import_time, operator
+            FROM analysis_projects
             WHERE {where_clause}
             ORDER BY import_time DESC
             LIMIT %s OFFSET %s
@@ -93,6 +93,7 @@ def api_list():
                 'decision': row['decision'] or 'pending',
                 'decision_text': get_decision_text(row['decision']),
                 'decision_reason': row['decision_reason'] or '',
+                'analysis_content': row['analysis_content'] or '',
                 'import_time': row['import_time'].strftime('%Y-%m-%d %H:%M') if row['import_time'] else '',
                 'operator': row['operator'] or '系统'
             })
@@ -145,6 +146,7 @@ def api_detail(analysis_id):
                 'control_price': float(row['control_price']) if row['control_price'] else '',
                 'decision': row['decision'] or 'pending',
                 'decision_reason': row['decision_reason'] or '',
+                'analysis_content': row['analysis_content'] or '',
                 'operator': row['operator'] or ''
             }
         })
@@ -189,6 +191,7 @@ def api_update(analysis_id):
             'control_price': 'control_price',
             'decision': 'decision',
             'decision_reason': 'decision_reason',
+            'analysis_content': 'analysis_content',
             'operator': 'operator'
         }
 

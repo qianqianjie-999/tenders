@@ -366,13 +366,64 @@
 
         /* 备注区域 */
         .remark-box {
-            background: rgba(102, 126, 234, 0.05);
-            border-left: 3px solid var(--primary-color);
-            padding: 0.75rem;
-            border-radius: 0 8px 8px 0;
-            margin-top: 0.75rem;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(102, 126, 234, 0.04) 100%);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #475569;
+            line-height: 1.5;
+            width: 100%;
+        }
+
+        /* 标书分析情况区域 */
+        .analysis-box {
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.12) 0%, rgba(79, 172, 254, 0.04) 100%);
+            border-top: 3px solid #4facfe;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #475569;
+            line-height: 1.5;
+            max-height: 60px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            width: 100%;
+            text-align: left !important;
+            display: flex !important;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        .analysis-box .analysis-label {
+            font-weight: 600;
+            color: #1e40af;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            margin-right: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        /* 滚动条美化 */
+        .analysis-box::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .analysis-box::-webkit-scrollbar-track {
+            background: rgba(79, 172, 254, 0.05);
+            border-radius: 3px;
+        }
+
+        .analysis-box::-webkit-scrollbar-thumb {
+            background: rgba(79, 172, 254, 0.3);
+            border-radius: 3px;
+        }
+
+        .analysis-box::-webkit-scrollbar-thumb:hover {
+            background: rgba(79, 172, 254, 0.5);
         }
 
         /* 响应式调整 */
@@ -388,7 +439,7 @@
     <!-- 头部 -->
     <div class="header-container">
         <div class="container">
-            <div class="row align-items-center">
+            <div class="row align-items-start">
                 <div class="col-md-6">
                     <h1 class="h3 fw-bold mb-0">
                         <i class="fas fa-chart-pie me-2"></i>分析标书
@@ -573,6 +624,10 @@
                             <textarea class="form-control" id="edit-decision-reason" rows="3" placeholder="请输入不投标的具体原因或其他备注..."></textarea>
                         </div>
                         <div class="col-12">
+                            <label class="form-label fw-bold">标书分析情况</label>
+                            <textarea class="form-control" id="edit-analysis-content" rows="4" placeholder="请输入标书分析详情，如评分标准、资质要求、技术参数、商务条款、竞争对手分析等..."></textarea>
+                        </div>
+                        <div class="col-12">
                             <label class="form-label fw-bold">操作人</label>
                             <input type="text" class="form-control" id="edit-operator" placeholder="您的姓名">
                         </div>
@@ -686,10 +741,10 @@
 
                 const html = `
                     <div class="project-card decision-${decisionClass}">
-                        <div class="row align-items-center">
-                            <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="row align-items-start">
+                            <div class="col-lg-8 mb-3 mb-lg-0">
                                 <div class="project-title">${item.project_name}</div>
-                                <div class="mb-2">
+                                <div class="mb-2 mt-2">
                                     <div class="meta-item">
                                         <i class="fas fa-building"></i>
                                         <span>${item.project_source}</span>
@@ -706,6 +761,7 @@
                                 <div class="d-flex align-items-center flex-wrap gap-2">
                                     <span class="decision-badge decision-${decisionClass}">${decisionText}</span>
                                     ${item.tenderer ? `<span class="badge bg-light text-dark border"><i class="fas fa-user me-1"></i>${item.tenderer}</span>` : ''}
+                                    ${item.operator ? `<span class="badge bg-light text-dark border"><i class="fas fa-user-edit me-1"></i>${item.operator}</span>` : ''}
                                 </div>
                                 ${item.decision_reason ? `
                                     <div class="remark-box">
@@ -713,13 +769,18 @@
                                         ${item.decision_reason}
                                     </div>
                                 ` : ''}
+                                ${item.analysis_content ? `
+                                    <div class="analysis-box">
+                                        <span class="analysis-label">标书分析情况：</span>${item.analysis_content}
+                                    </div>
+                                ` : ''}
                             </div>
-                            <div class="col-md-3 text-center border-start border-end mb-3 mb-md-0">
+                            <div class="col-lg-2 text-center mb-3 mb-lg-0">
                                 <div class="mb-2 text-muted small fw-bold">招标控制价</div>
                                 <div class="mb-2">${priceDisplay}</div>
                                 ${item.operator ? `<div class="small text-muted"><i class="fas fa-user-edit me-1"></i>操作人: ${item.operator}</div>` : ''}
                             </div>
-                            <div class="col-md-3 ps-md-4">
+                            <div class="col-lg-2 ps-lg-3">
                                 ${item.detail_url ? `
                                     <a href="${item.detail_url}" target="_blank" class="btn-action btn-outline-custom w-100 mb-2 justify-content-center">
                                         <i class="fas fa-external-link-alt"></i> 查看原文
@@ -908,6 +969,7 @@
                         $('#edit-control-price').val(d.control_price);
                         $('#edit-decision').val(d.decision);
                         $('#edit-decision-reason').val(d.decision_reason);
+                        $('#edit-analysis-content').val(d.analysis_content);
                         $('#edit-operator').val(d.operator);
 
                         toggleReasonField();
@@ -941,6 +1003,7 @@
                 control_price: $('#edit-control-price').val() || null,
                 decision: $('#edit-decision').val(),
                 decision_reason: $('#edit-decision').val() === 'nobid' ? $('#edit-decision-reason').val() : '',
+                analysis_content: $('#edit-analysis-content').val(),
                 operator: $('#edit-operator').val()
             };
 
