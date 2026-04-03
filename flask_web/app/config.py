@@ -55,3 +55,7 @@ class Config:
 
     # 访问控制口令（从环境变量读取，默认值仅用于本地开发）
     ANALYSIS_ACCESS_CODE = os.environ.get('ANALYSIS_ACCESS_CODE', 'kwd12345')
+
+    # 用户配置（从环境变量读取，用于登录认证）
+    # 格式：USERNAME1:PASSWORD_HASH1;USERNAME2:PASSWORD_HASH2
+    USERS_CONFIG = os.environ.get('USERS_CONFIG', '')

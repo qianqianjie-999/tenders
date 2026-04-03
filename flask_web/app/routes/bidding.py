@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
+from flask_login import login_required, current_user
 from app.extensions import get_db_connection
 from app.utils.helpers import format_date_for_display
 from datetime import datetime
@@ -16,15 +17,8 @@ def get_status_text(status):
     return mapping.get(status, '进行中')
 
 
-def verify_access_code(code):
-    """验证访问口令（复用分析标书的口令）"""
-    if not code:
-        return False
-    expected_code = current_app.config.get('ANALYSIS_ACCESS_CODE', 'bid2024')
-    return code == expected_code
-
-
 @bidding_bp.route('/')
+@login_required
 def index():
     """投标项目页面"""
     return render_template('bidding.html')
@@ -121,10 +115,6 @@ def api_list():
 def convert_from_analysis(analysis_id):
     """从分析标书转为投标项目"""
     try:
-        access_code = request.headers.get('X-Access-Code')
-        if not verify_access_code(access_code):
-            return jsonify({'success': False, 'message': '访问口令错误'}), 403
-
         conn = get_db_connection()
         cursor = conn.cursor()
 
@@ -138,7 +128,7 @@ def convert_from_analysis(analysis_id):
         cursor.execute("""
             SELECT project_name, project_source, project_category, publish_date,
                    detail_url, tenderer, control_price, bid_open_date
-            FROM analysis_projects 
+            FROM analysis_projects
             WHERE id = %s
         """, (analysis_id,))
         row = cursor.fetchone()
@@ -150,7 +140,7 @@ def convert_from_analysis(analysis_id):
         # 插入投标项目
         cursor.execute("""
             INSERT INTO bidding_projects (
-                analysis_project_id, project_name, project_source, 
+                analysis_project_id, project_name, project_source,
                 project_category, publish_date, detail_url, tenderer,
                 control_price, created_at
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
@@ -177,10 +167,6 @@ def convert_from_analysis(analysis_id):
 def api_detail(bidding_id):
     """获取投标项目详情"""
     try:
-        access_code = request.headers.get('X-Access-Code')
-        if not verify_access_code(access_code):
-            return jsonify({'success': False, 'message': '访问口令错误'}), 403
-
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM bidding_projects WHERE id = %s", (bidding_id,))
@@ -218,10 +204,6 @@ def api_detail(bidding_id):
 def api_update(bidding_id):
     """更新投标项目"""
     try:
-        access_code = request.headers.get('X-Access-Code')
-        if not verify_access_code(access_code):
-            return jsonify({'success': False, 'message': '访问口令错误'}), 403
-
         data = request.get_json()
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -250,13 +232,18 @@ def api_update(bidding_id):
                 fields.append(f"{db_field} = %s")
                 params.append(value)
 
+        # 如果没有指定 operator，使用当前登录用户
+        if 'operator' not in data and current_user.is_authenticated:
+            fields.append("operator = %s")
+            params.append(current_user.username)
+
         if not fields:
             return jsonify({'success': False, 'message': '无更新内容'}), 400
 
         params.append(bidding_id)
 
         cursor.execute(f"""
-            UPDATE bidding_projects 
+            UPDATE bidding_projects
             SET {', '.join(fields)}, updated_at = NOW()
             WHERE id = %s
         """, params)
@@ -268,22 +255,6 @@ def api_update(bidding_id):
             return jsonify({'success': True, 'message': '更新成功'})
         else:
             return jsonify({'success': False, 'message': '记录不存在'}), 404
-
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@bidding_bp.route('/api/verify', methods=['POST'])
-def api_verify():
-    """验证访问口令"""
-    try:
-        data = request.get_json()
-        code = data.get('access_code')
-
-        if verify_access_code(code):
-            return jsonify({'success': True, 'message': '验证通过'})
-        else:
-            return jsonify({'success': False, 'message': '口令错误'}), 403
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500

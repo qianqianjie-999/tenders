@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
+from flask_login import login_required
 from datetime import date
 from app.services.bidding_service import BiddingService
 from app.services.keyword_service import KeywordService  # 新增导入
@@ -8,6 +9,7 @@ main_bp = Blueprint('main', __name__)
 
 
 @main_bp.route('/')
+@login_required
 def index():
     today = date.today().strftime('%Y-%m-%d')
     return render_template('index.html', default_date=today)

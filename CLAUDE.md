@@ -121,3 +121,27 @@ LOG_BACKUP_DAYS=7
 ## 定时任务
 
 参考 `crontab_server.txt` 和 `crontab_local.txt`，爬虫按小时交错运行避免并发过高。
+
+## 用户认证
+
+系统采用全局登录保护，所有页面访问前都需要先登录。
+
+**登录流程**:
+1. 访问任意页面（如 `/`, `/analysis/`, `/bidding/`）自动重定向到 `/auth/login`
+2. 使用用户名和密码登录
+3. 登录成功后重定向回原页面或主页
+
+**配置用户**:
+```bash
+# 生成密码哈希
+python tools/generate_password.py 用户名 密码
+
+# 编辑 .env 添加 USERS_CONFIG
+USERS_CONFIG=admin:密码哈希
+```
+
+**默认账号**: `admin` / `admin123`（首次登录后建议修改）
+
+**受保护页面**: 所有页面（主页 `/`、分析标书 `/analysis/`、投标项目 `/bidding/` 等）
+
+**自动记录操作人**: 登录后，所有更新操作自动记录当前用户名为操作人

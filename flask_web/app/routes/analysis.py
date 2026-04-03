@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
+from flask_login import login_required, current_user
 from app.extensions import get_db_connection
 from app.utils.helpers import format_date_for_display
 from datetime import datetime
@@ -16,15 +17,8 @@ def get_decision_text(decision):
     return mapping.get(decision, '待定')
 
 
-def verify_access_code(code):
-    """验证访问口令"""
-    if not code:
-        return False
-    expected_code = current_app.config.get('ANALYSIS_ACCESS_CODE', 'bid2024')
-    return code == expected_code
-
-
 @analysis_bp.route('/')
+@login_required
 def index():
     """分析标书页面"""
     return render_template('analysis.html')
@@ -116,13 +110,8 @@ def api_list():
 
 @analysis_bp.route('/api/detail/<int:analysis_id>')
 def api_detail(analysis_id):
-    """获取详情（需要口令）"""
+    """获取详情"""
     try:
-        access_code = request.headers.get('X-Access-Code')
-
-        if not verify_access_code(access_code):
-            return jsonify({'success': False, 'message': '访问口令错误'}), 403
-
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM analysis_projects WHERE id = %s", (analysis_id,))
@@ -155,31 +144,10 @@ def api_detail(analysis_id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@analysis_bp.route('/api/verify', methods=['POST'])
-def api_verify():
-    """验证口令"""
-    try:
-        data = request.get_json()
-        code = data.get('access_code')
-
-        if verify_access_code(code):
-            return jsonify({'success': True, 'message': '验证通过'})
-        else:
-            return jsonify({'success': False, 'message': '口令错误'}), 403
-
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
 @analysis_bp.route('/api/update/<int:analysis_id>', methods=['PUT'])
 def api_update(analysis_id):
-    """更新分析信息（需要口令）"""
+    """更新分析信息"""
     try:
-        access_code = request.headers.get('X-Access-Code')
-
-        if not verify_access_code(access_code):
-            return jsonify({'success': False, 'message': '访问口令错误'}), 403
-
         data = request.get_json()
 
         fields = []
@@ -200,6 +168,11 @@ def api_update(analysis_id):
                 fields.append(f"{db_field} = %s")
                 params.append(data[key] if data[key] != '' else None)
 
+        # 如果没有指定 operator，使用当前登录用户
+        if 'operator' not in data and current_user.is_authenticated:
+            fields.append("operator = %s")
+            params.append(current_user.username)
+
         if not fields:
             return jsonify({'success': False, 'message': '无更新内容'}), 400
 
@@ -208,7 +181,7 @@ def api_update(analysis_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(f"""
-            UPDATE analysis_projects 
+            UPDATE analysis_projects
             SET {', '.join(fields)}, updated_time = NOW()
             WHERE id = %s
         """, params)
@@ -227,13 +200,8 @@ def api_update(analysis_id):
 
 @analysis_bp.route('/api/delete/<int:analysis_id>', methods=['DELETE'])
 def api_delete(analysis_id):
-    """删除记录（需要口令）"""
+    """删除记录"""
     try:
-        access_code = request.headers.get('X-Access-Code')
-
-        if not verify_access_code(access_code):
-            return jsonify({'success': False, 'message': '访问口令错误'}), 403
-
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM analysis_projects WHERE id = %s", (analysis_id,))
