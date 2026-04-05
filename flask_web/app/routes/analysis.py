@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app.extensions import get_db_connection
 from app.utils.helpers import format_date_for_display
+from app.decorators import require_auth, require_auth_write
 from datetime import datetime
 
 analysis_bp = Blueprint('analysis', __name__, url_prefix='/analysis')
@@ -25,6 +26,7 @@ def index():
 
 
 @analysis_bp.route('/api/list')
+@require_auth
 def api_list():
     """获取分析标书列表"""
     try:
@@ -109,6 +111,7 @@ def api_list():
 
 
 @analysis_bp.route('/api/detail/<int:analysis_id>')
+@require_auth
 def api_detail(analysis_id):
     """获取详情"""
     try:
@@ -145,6 +148,7 @@ def api_detail(analysis_id):
 
 
 @analysis_bp.route('/api/update/<int:analysis_id>', methods=['PUT'])
+@require_auth_write
 def api_update(analysis_id):
     """更新分析信息"""
     try:
@@ -168,10 +172,10 @@ def api_update(analysis_id):
                 fields.append(f"{db_field} = %s")
                 params.append(data[key] if data[key] != '' else None)
 
-        # 如果没有指定 operator，使用当前登录用户
-        if 'operator' not in data and current_user.is_authenticated:
+        # 如果没有指定 operator，使用当前认证用户
+        if 'operator' not in data and hasattr(request, 'auth_user') and request.auth_user:
             fields.append("operator = %s")
-            params.append(current_user.username)
+            params.append(request.auth_user)
 
         if not fields:
             return jsonify({'success': False, 'message': '无更新内容'}), 400
@@ -199,6 +203,7 @@ def api_update(analysis_id):
 
 
 @analysis_bp.route('/api/delete/<int:analysis_id>', methods=['DELETE'])
+@require_auth_write
 def api_delete(analysis_id):
     """删除记录"""
     try:
@@ -216,3 +221,15 @@ def api_delete(analysis_id):
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+# analysis.py
+@analysis_bp.route('/api/verify', methods=['POST'])
+def verify_access_code():
+    """独立验证访问口令（供前端模态框使用）"""
+    data = request.get_json()
+    access_code = data.get('access_code', '')
+    config_code = current_app.config.get('ANALYSIS_ACCESS_CODE', '')
+    
+    if config_code and access_code == config_code:
+        return jsonify({'success': True, 'message': '验证通过'})
+    else:
+        return jsonify({'success': False, 'message': '口令错误'}), 403
