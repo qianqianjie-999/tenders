@@ -1,7 +1,7 @@
 from flask import Flask
 from datetime import timedelta
 from app.config import Config
-from app.extensions import close_db
+from app.extensions import close_db, init_db_pool
 from app.routes.design import design_bp
 from app.routes.audit import audit_bp
 
@@ -19,6 +19,10 @@ def create_app():
     # 初始化扩展
     from app.models.user import init_login
     init_login(app)
+
+    # 初始化数据库连接池
+    with app.app_context():
+        init_db_pool()
 
     # 从环境变量加载用户配置到 config
     users = {}
