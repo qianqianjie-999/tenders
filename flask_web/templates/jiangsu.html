@@ -2179,7 +2179,7 @@ function renderTable(data, pageSize) {
 }
 
 function loadKeywordList() {
-    $.get("{{ url_for('main.api_keywords') }}", {
+    $.get("{{ url_for('main.api_keywords') }}?detailed=true", function(response) {
         if (response.success) {
             const tbody = $('#keyword-table-body');
             tbody.empty();
@@ -2217,7 +2217,6 @@ function loadKeywordList() {
                         icon = 'fa-shield-alt';
                     }
 
-                    // 项目数为0时不显示链接样式，大于0时才可点击
                     const countClass = (item.project_count || 0) > 0 ? 'keyword-count-link' : '';
                     const cursorStyle = (item.project_count || 0) > 0 ? 'cursor-pointer' : 'cursor-default';
                     const clickHandler = (item.project_count || 0) > 0 ?
