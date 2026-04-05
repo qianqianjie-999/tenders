@@ -88,7 +88,10 @@
       "Bash(python tools/generate_password.py swq kwd12345)",
       "Bash(python tools/generate_password.py syj kwd12345)",
       "Bash(curl -s -X POST http://localhost:5000/auth/login -H 'Content-Type: application/x-www-form-urlencoded' -d 'username=__TRACKED_VAR__&password=kwd12345' -w 'HTTP Status: %{http_code}\\\\n')",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(git stash:*)",
+      "Bash(echo \"Exit code: $?\")"
     ]
   }
 }

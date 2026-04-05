@@ -475,7 +475,7 @@
                 </div>
                 <div class="text-end d-flex align-items-center gap-3">
                     <!-- 返回主页按钮 -->
-                    <a href="/" class="back-btn">
+                    <a href="{{ url_for('main.index') }}" class="back-btn">
                         <i class="fas fa-arrow-left"></i> 返回主页
                     </a>
                     <div class="status-indicator">
@@ -856,7 +856,7 @@
         async function loadOverview() {
             const _el = id => document.getElementById(id);
             try {
-                const response = await fetch('/monitor/api/overview');
+                const response = await fetch("{{ url_for('monitor.api_overview') }}");
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 const data = await response.json();
                 
@@ -946,7 +946,7 @@
         // 标记超时日志为已解决
         async function resolveTimeout(logId) {
             try {
-                const response = await fetch(`/monitor/api/timeout-logs/${logId}`, {
+                const response = await fetch(`{{ url_for('monitor.api_timeout_logs') }}/${logId}`, {
                     method: 'PUT',
                     headers: {'Content-Type': 'application/json'}
                 });
@@ -968,7 +968,7 @@
             btn.classList.add('spinning');
             
             try {
-                const response = await fetch('/monitor/api/resources');
+                const response = await fetch("{{ url_for('monitor.api_resources') }}");
                 const data = await response.json();
                 
                 if (data.success) {
@@ -1029,7 +1029,7 @@
         // 加载进程
         async function loadProcesses() {
             try {
-                const response = await fetch('/monitor/api/processes');
+                const response = await fetch("{{ url_for('monitor.api_processes') }}");
                 const data = await response.json();
                 
                 const container = document.getElementById('processes-container');
@@ -1080,7 +1080,7 @@
         // 加载爬虫列表
         async function loadSpiders() {
             try {
-                const response = await fetch('/monitor/api/spiders');
+                const response = await fetch("{{ url_for('monitor.api_spiders') }}");
                 const data = await response.json();
                 
                 const container = document.getElementById('spiders-container');
@@ -1144,7 +1144,7 @@
 
             try {
                 // 拉取文件列表（不带 content）
-                const response = await fetch(`/monitor/api/logs?lines=0&date=${dateFilter}`);
+                const response = await fetch(`{{ url_for('monitor.api_logs') }}?lines=0&date=${dateFilter}`);
                 const data = await response.json();
 
                 const filesContainer = document.getElementById('logs-files');
@@ -1177,7 +1177,7 @@
             document.getElementById('load-more-btn').style.display = 'none';
 
             try {
-                const resp = await fetch(`/monitor/api/logs?name=${encodeURIComponent(name)}&lines=${lines}&offset=0`);
+                const resp = await fetch(`{{ url_for('monitor.api_logs') }}?name=${encodeURIComponent(name)}&lines=${lines}&offset=0`);
                 const data = await resp.json();
                 const container = document.getElementById('logs-container');
                 if (data.success) {
@@ -1200,7 +1200,7 @@
             logOffsets[currentLogFile] = (logOffsets[currentLogFile] || 0) + lines;
 
             try {
-                const resp = await fetch(`/monitor/api/logs?name=${encodeURIComponent(currentLogFile)}&lines=${lines}&offset=${logOffsets[currentLogFile]}`);
+                const resp = await fetch(`{{ url_for('monitor.api_logs') }}?name=${encodeURIComponent(currentLogFile)}&lines=${lines}&offset=${logOffsets[currentLogFile]}`);
                 const data = await resp.json();
                 const container = document.getElementById('logs-container');
                 if (data.success) {
@@ -1217,7 +1217,7 @@
         // 加载统计
         async function loadStats() {
             try {
-                const response = await fetch('/monitor/api/stats');
+                const response = await fetch("{{ url_for('monitor.api_stats') }}");
                 const data = await response.json();
                 
                 if (data.success) {
@@ -1352,7 +1352,7 @@
             const args = document.getElementById('spider-args').value.trim();
             
             try {
-                const response = await fetch('/monitor/api/start', {
+                const response = await fetch("{{ url_for('monitor.api_start') }}", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1380,7 +1380,7 @@
             if (!confirm(`确定要停止进程 ${pid} 吗？`)) return;
             
             try {
-                const response = await fetch('/monitor/api/stop', {
+                const response = await fetch("{{ url_for('monitor.api_stop') }}", {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ pid: pid })

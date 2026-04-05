@@ -447,10 +447,10 @@
                     <p class="mb-0 mt-2 opacity-75">深度分析投标项目，辅助决策</p>
                 </div>
                 <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                    <a href="/bidding" class="back-btn me-2 mb-2">
+                    <a href="{{ url_for('bidding.index') }}" class="back-btn me-2 mb-2">
                         <i class="fas fa-file-signature"></i> 投标项目
                     </a>
-                    <a href="/" class="back-btn">
+                    <a href="{{ url_for('main.index') }}" class="back-btn">
                         <i class="fas fa-arrow-left"></i> 返回首页
                     </a>
                 </div>
@@ -651,8 +651,8 @@
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 
     <script>
-        const API_BASE = '/analysis/api';
-        const BIDDING_API_BASE = '/bidding/api';
+        const API_BASE = "{{ url_for('analysis.api_list') }}".replace('/list', '');
+        const BIDDING_API_BASE = "{{ url_for('bidding.api_list') }}".replace('/list', '');
         let currentPage = 1;
         let currentEditId = null;
         let verifiedCode = null;
@@ -888,7 +888,7 @@
                     if (res.success) {
                         showToast('已成功转为投标项目，即将跳转...', 'success');
                         setTimeout(() => {
-                            window.location.href = '/bidding';
+                            window.location.href = "{{ url_for('bidding.index') }}";
                         }, 1500);
                     } else {
                         showToast(res.message || '转换失败', 'error');

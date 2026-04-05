@@ -1,0 +1,19 @@
+<!-- ... existing code ... -->
+{% block content %}
+<div class="row">
+    {% for tender in tenders %}
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ tender.title }}</h5>
+                <p class="card-text">{{ tender.summary }}</p>
+                <!-- 删除: <a href="/detail/{{ tender.id }}" class="btn btn-primary">查看详情</a> -->
+                <a href="{{ url_for('detail', id=tender.id) }}" class="btn btn-primary">查看详情</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+<!-- ... existing code ... -->
+

@@ -384,7 +384,7 @@
                     <p class="mb-0 mt-2 opacity-75">跟踪管理重点招投标项目</p>
                 </div>
                 <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                    <a href="/" class="back-btn">
+                    <a href="{{ url_for('main.index') }}" class="back-btn">
                         <i class="fas fa-arrow-left"></i> 返回首页
                     </a>
                 </div>
@@ -607,7 +607,7 @@
 
     <script>
         // API基础路径
-        const FOCUS_API = '/focus/api';
+        const FOCUS_API = "{{ url_for('focus.api_list') }}".replace('/list', '');
         // ⭐ FIXED: 移除未使用的 ANALYSIS_API
 
         let currentPage = 1;

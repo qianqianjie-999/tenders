@@ -1048,7 +1048,7 @@
                     </h1>
                 </div>
                 <div class="col-md-4 text-end">
-                    <a href="/" class="header-function-block d-inline-flex" id="home-block" style="flex: 0 0 auto; max-width: 140px; height: 48px; background: rgba(255,255,255,0.3);">
+                    <a href="{{ url_for('main.index') }}" class="header-function-block d-inline-flex" id="home-block" style="flex: 0 0 auto; max-width: 140px; height: 48px; background: rgba(255,255,255,0.3);">
                         <div class="block-icon">
                             <i class="fas fa-arrow-left"></i>
                         </div>
@@ -1064,7 +1064,7 @@
                 <div class="col-12">
                     <div class="header-blocks-container">
                         <!-- 投标项目 -->
-                        <a href="/bidding" class="header-function-block" id="bid-projects-block">
+                        <a href="{{ url_for('bidding.index') }}" class="header-function-block" id="bid-projects-block">
                             <div class="block-icon">
                                 <i class="fas fa-file-signature"></i>
                             </div>
@@ -1075,7 +1075,7 @@
                         </a>
 
                         <!-- 分析标书 -->
-                        <a href="/analysis" class="header-function-block" id="analysis-block">
+                        <a href="{{ url_for('analysis.index') }}" class="header-function-block" id="analysis-block">
                             <div class="block-icon">
                                 <i class="fas fa-chart-pie"></i>
                             </div>
@@ -1086,7 +1086,7 @@
                         </a>
 
                         <!-- 重点关注 -->
-                        <a href="/focus" class="header-function-block" id="focus-block">
+                        <a href="{{ url_for('focus.index') }}" class="header-function-block" id="focus-block">
                             <div class="block-icon">
                                 <i class="fas fa-star"></i>
                             </div>
@@ -1119,7 +1119,7 @@
                         </div>
 
                         <!-- 数据看板 -->
-                        <a href="/dashboard" class="header-function-block" id="dashboard-block">
+                        <a href="{{ url_for('dashboard.index') }}" class="header-function-block" id="dashboard-block">
                             <div class="block-icon">
                                 <i class="fas fa-chart-line"></i>
                             </div>
@@ -1130,7 +1130,7 @@
                         </a>
 
                         <!-- 监控中心 -->
-                        <a href="/monitor" class="header-function-block" id="monitor-block">
+                        <a href="{{ url_for('monitor.index') }}" class="header-function-block" id="monitor-block">
                             <div class="block-icon">
                                 <i class="fas fa-heartbeat"></i>
                             </div>
@@ -1673,7 +1673,7 @@ $(document).ready(function() {
     $('#date-picker').val(todayDate);
 
     // 初始化分类下拉框
-    $.get('/jiangsu/api/categories', function(response) {
+    $.get("{{ url_for('jiangsu.api_categories') }}", function(response) {
         if (response.success) {
             const select = $('#category-filter');
             response.categories.forEach(category => {
@@ -1685,7 +1685,7 @@ $(document).ready(function() {
     });
 
     // 初始化来源下拉框
-    $.get('/jiangsu/api/sources', function(response) {
+    $.get("{{ url_for('jiangsu.api_sources') }}", function(response) {
         if (response.success) {
             const select = $('#source-filter');
             response.sources.forEach(source => {
@@ -1775,7 +1775,7 @@ $(document).ready(function() {
     updateFilterSummary();
 
     // 获取可用的日期
-    $.get('/api/dates', function(response) {
+    $.get("{{ url_for('main.api_dates') }}", function(response) {
         if (response.success && response.dates.length > 0) {
             const currentDate = $('#date-picker').val();
             if (!response.dates.includes(currentDate)) {
@@ -1792,7 +1792,7 @@ let currentKeywordForProjects = ''; // 存储当前查看的关键词
 
 // 更新投标项目数量
 function updateBiddingCount() {
-    $.get('/bidding/api/list', { page_size: 1 }, function(response) {
+    $.get("{{ url_for('bidding.api_list') }}", { page_size: 1 }, function(response) {
         if (response.success && response.statistics) {
             let total = 0;
             Object.values(response.statistics).forEach(count => {
@@ -1809,7 +1809,7 @@ function updateBiddingCount() {
 
 // 更新分析标书数量
 function updateAnalysisCount() {
-    $.get('/analysis/api/list', { page_size: 1 }, function(response) {
+    $.get("{{ url_for('analysis.api_list') }}", { page_size: 1 }, function(response) {
         if (response.success && response.statistics) {
             let total = 0;
             Object.values(response.statistics).forEach(count => {
@@ -1826,7 +1826,7 @@ function updateAnalysisCount() {
 
 // 更新重点关注数量
 function updateFocusCount() {
-    $.get('/focus/api/list', { page_size: 1 }, function(response) {
+    $.get("{{ url_for('focus.api_list') }}", { page_size: 1 }, function(response) {
         if (response.success && response.statistics) {
             $('#focus-count').text(response.statistics.total);
         } else {
@@ -1839,7 +1839,7 @@ function updateFocusCount() {
 
 // 更新方案设计数量
 function updateDesignCount() {
-    $.get('/design/api/list', { page_size: 1 }, function(response) {
+    $.get("{{ url_for('design.api_list') }}", { page_size: 1 }, function(response) {
         if (response.success) {
             let total = 0;
             if (response.statistics) {
@@ -1860,7 +1860,7 @@ function updateDesignCount() {
 
 // 更新项目跟踪审计数量
 function updateAuditCount() {
-    $.get('/audit/api/list', { page_size: 1 }, function(response) {
+    $.get("{{ url_for('audit.api_list') }}", { page_size: 1 }, function(response) {
         if (response.success) {
             let total = 0;
             if (response.statistics) {
@@ -2179,7 +2179,7 @@ function renderTable(data, pageSize) {
 }
 
 function loadKeywordList() {
-    $.get('/api/keywords?detailed=true', function(response) {
+    $.get("{{ url_for('main.api_keywords') }}", {
         if (response.success) {
             const tbody = $('#keyword-table-body');
             tbody.empty();
@@ -2475,7 +2475,7 @@ $(document).on('click', '.delete-keyword', function() {
     $(this).html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
 
     $.ajax({
-        url: `/api/keywords/${encodeURIComponent(keyword)}`,
+        url: `{{ url_for('main.api_keyword_detail', keyword='') }}${encodeURIComponent(keyword)}`,
         method: 'DELETE',
         success: function(response) {
             if (response.success) {
@@ -2529,7 +2529,7 @@ $(document).on('click', '.edit-keyword', function() {
     }
 
     $.ajax({
-        url: `/api/keywords/${encodeURIComponent(oldKeyword)}`,
+        url: `{{ url_for('main.api_keyword_detail', keyword='') }}${encodeURIComponent(oldKeyword)}`,
         method: 'PUT',
         contentType: 'application/json',
         data: JSON.stringify({
@@ -2558,7 +2558,7 @@ $(document).on('click', '.edit-keyword', function() {
 
 // 刷新关键词标签展示
 function refreshKeywordTags() {
-    $.get('/api/keywords', function(response) {
+    $.get('{{ url_for('main.api_keywords') }}', function(response) {
         if (response.success) {
             const container = $('#keyword-tags');
             container.empty();
@@ -2600,7 +2600,7 @@ function checkAndUpdateFocusStatus(data) {
     const keys = data.map(item => item.project_key).filter(key => key).join(',');
     if (!keys) return;
 
-    $.get('/focus/api/check', { keys: keys }, function(response) {
+    $.get('{{ url_for('focus.api_check') }}', { keys: keys }, function(response) {
         if (response.success && response.focused) {
             response.focused.forEach(key => {
                 const btn = $(`tr[data-project-key="${key}"] .focus-btn`);
@@ -2742,7 +2742,7 @@ function exportFilteredData() {
     const keyword = $('#keyword-search').val();
     const highlightOnly = $('#highlight-only-switch').is(':checked');
 
-    let exportUrl = `/jiangsu/api/export?date=${date}`;
+    let exportUrl = `{{ url_for('jiangsu.api_export') }}?date=${date}`;
 
     if (category !== '全部') {
         exportUrl += `&category=${encodeURIComponent(category)}`;

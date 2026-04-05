@@ -411,10 +411,10 @@
                     <p class="mb-0 mt-2 opacity-75">管理投标过程及中标结果</p>
                 </div>
                 <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                    <a href="/analysis" class="back-btn me-2 mb-2">
+                    <a href="{{ url_for('analysis.index') }}" class="back-btn me-2 mb-2">
                         <i class="fas fa-chart-pie"></i> 分析标书
                     </a>
-                    <a href="/" class="back-btn">
+                    <a href="{{ url_for('main.index') }}" class="back-btn">
                         <i class="fas fa-arrow-left"></i> 返回首页
                     </a>
                 </div>
@@ -628,7 +628,7 @@
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 
     <script>
-        const API_BASE = '/bidding/api';
+        const API_BASE = "{{ url_for('bidding.api_list') }}".replace('/list', '');
         let currentPage = 1;
         let currentEditId = null;
         let verifiedCode = null;
