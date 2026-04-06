@@ -207,6 +207,7 @@ def api_update(analysis_id):
 
 
 @analysis_bp.route('/api/delete/<int:analysis_id>', methods=['DELETE'])
+@csrf.exempt
 @require_auth_write
 def api_delete(analysis_id):
     """删除记录"""

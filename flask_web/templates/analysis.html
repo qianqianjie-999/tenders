@@ -946,7 +946,10 @@
             $.ajax({
                 url: `${BIDDING_API_BASE}/convert/${analysisId}`,
                 method: 'POST',
-                headers: { 'X-Access-Code': verifiedCode },
+                headers: {
+                    'X-Access-Code': verifiedCode,
+                    'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+                },
                 success: function(res) {
                     if (res.success) {
                         showToast('已成功转为投标项目，即将跳转...', 'success');
