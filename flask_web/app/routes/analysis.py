@@ -5,9 +5,6 @@ from app.utils.helpers import format_date_for_display
 from app.decorators import require_auth, require_auth_write
 from datetime import datetime
 
-# 导入csrf对象
-from app import csrf
-
 analysis_bp = Blueprint('analysis', __name__, url_prefix='/analysis')
 
 
@@ -151,10 +148,10 @@ def api_detail(analysis_id):
 
 
 @analysis_bp.route('/api/update/<int:analysis_id>', methods=['PUT'])
-@csrf.exempt
 @require_auth_write
 def api_update(analysis_id):
     """更新分析信息"""
+
     try:
         data = request.get_json()
 
@@ -207,7 +204,6 @@ def api_update(analysis_id):
 
 
 @analysis_bp.route('/api/delete/<int:analysis_id>', methods=['DELETE'])
-@csrf.exempt
 @require_auth_write
 def api_delete(analysis_id):
     """删除记录"""

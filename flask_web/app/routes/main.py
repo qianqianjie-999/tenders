@@ -6,9 +6,6 @@ from app.services.keyword_service import KeywordService  # 新增导入
 from app.utils.helpers import highlight_keywords, format_date_for_display
 from app.extensions import get_db_connection
 
-# 导入csrf对象
-from app import csrf
-
 main_bp = Blueprint('main', __name__)
 
 
@@ -125,7 +122,6 @@ def api_sources():
 
 
 @main_bp.route('/api/keywords', methods=['GET', 'POST'])
-@csrf.exempt
 def api_keywords():
     """
     GET: 获取关键词列表
@@ -176,7 +172,6 @@ def api_keywords():
 
 
 @main_bp.route('/api/keywords/<keyword>', methods=['PUT', 'DELETE'])
-@csrf.exempt
 def api_keyword_detail(keyword):
     """
     PUT: 修改关键词
