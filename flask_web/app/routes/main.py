@@ -16,22 +16,26 @@ def index():
     return render_template('index.html', default_date=today)
 
 
+from typing import Dict, List, Any, Optional
+
 @main_bp.route('/api/data')
 def api_data():
     try:
         # 支持单日期或日期范围
-        query_date = request.args.get('date')
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
+        query_date: Optional[str] = request.args.get('date')
+        start_date: Optional[str] = request.args.get('start_date')
+        end_date: Optional[str] = request.args.get('end_date')
 
-        category = request.args.get('category', '全部')
-        source = request.args.get('source', '全部')
-        keyword = request.args.get('keyword', '')
-        page = int(request.args.get('page', 1))
-        page_size = int(request.args.get('page_size', 20))
-        highlight_only = request.args.get('highlight_only', 'false') == 'true'
+        category: str = request.args.get('category', '全部')
+        source: str = request.args.get('source', '全部')
+        keyword: str = request.args.get('keyword', '')
+        page: int = int(request.args.get('page', 1))
+        page_size: int = int(request.args.get('page_size', 20))
+        highlight_only: bool = request.args.get('highlight_only', 'false') == 'true'
 
         # 确定日期范围
+        date_filter_type: str
+        date_params: List[str]
         if start_date and end_date:
             # 使用提供的日期范围
             date_filter_type = 'range'
@@ -47,7 +51,7 @@ def api_data():
             date_params = [query_date]
 
         # 获取数据（修改BiddingService支持范围查询）
-        data, total = BiddingService.get_data(
+        result = BiddingService.get_data(
             date_filter_type=date_filter_type,
             date_params=date_params,
             category=category,
@@ -57,10 +61,12 @@ def api_data():
             page=page,
             page_size=page_size
         )
+        data: List[Dict[str, Any]] = result[0]
+        total: int = result[1]
 
         # 处理高亮显示...
-        keywords = current_app.config['HIGHLIGHT_KEYWORDS']
-        processed_data = []
+        keywords: List[str] = current_app.config['HIGHLIGHT_KEYWORDS']
+        processed_data: List[Dict[str, Any]] = []
         for item in data:
             item['original_name'] = item['project_name']
             item['project_name'] = highlight_keywords(item['project_name'], keywords)
@@ -68,6 +74,7 @@ def api_data():
             processed_data.append(item)
 
         # 统计数据（也需要支持范围）
+        stats: Dict[str, Any]
         if date_filter_type == 'range':
             stats = BiddingService.get_statistics_range(start_date, end_date)
         else:
@@ -130,8 +137,9 @@ def api_keywords():
     if request.method == 'GET':
         try:
             # 支持两种模式：简单列表 或 带统计的详细列表
-            detailed = request.args.get('detailed', 'false') == 'true'
+            detailed: bool = request.args.get('detailed', 'false') == 'true'
 
+            keywords: List[Dict[str, Any]]
             if detailed:
                 keywords = KeywordService.get_keywords_with_stats()
             else:
@@ -150,14 +158,16 @@ def api_keywords():
 
     elif request.method == 'POST':
         try:
-            data = request.get_json()
+            data: Optional[Dict[str, Any]] = request.get_json()
             if not data:
                 return jsonify({'success': False, 'message': '请求数据不能为空'}), 400
 
-            keyword = data.get('keyword', '').strip()
-            category = data.get('category', 'general')
+            keyword: str = data.get('keyword', '').strip()
+            category: str = data.get('category', 'general')
 
-            success, message = KeywordService.add_keyword(keyword, category)
+            result = KeywordService.add_keyword(keyword, category)
+            success: bool = result[0]
+            message: str = result[1]
 
             if success:
                 return jsonify({'success': True, 'message': message})
@@ -172,14 +182,16 @@ def api_keywords():
 
 
 @main_bp.route('/api/keywords/<keyword>', methods=['PUT', 'DELETE'])
-def api_keyword_detail(keyword):
+def api_keyword_detail(keyword: str):
     """
     PUT: 修改关键词
     DELETE: 删除关键词
     """
     if request.method == 'DELETE':
         try:
-            success, message = KeywordService.delete_keyword(keyword)
+            result = KeywordService.delete_keyword(keyword)
+            success: bool = result[0]
+            message: str = result[1]
             if success:
                 return jsonify({'success': True, 'message': message})
             else:
@@ -192,16 +204,18 @@ def api_keyword_detail(keyword):
 
     elif request.method == 'PUT':
         try:
-            data = request.get_json()
+            data: Optional[Dict[str, Any]] = request.get_json()
             if not data:
                 return jsonify({'success': False, 'message': '请求数据不能为空'}), 400
 
-            new_keyword = data.get('new_keyword', '').strip()
-            new_category = data.get('new_category')  # 可选
+            new_keyword: str = data.get('new_keyword', '').strip()
+            new_category: Optional[str] = data.get('new_category')  # 可选
 
-            success, message = KeywordService.update_keyword(
+            result = KeywordService.update_keyword(
                 keyword, new_keyword, new_category
             )
+            success: bool = result[0]
+            message: str = result[1]
 
             if success:
                 return jsonify({'success': True, 'message': message})
@@ -219,7 +233,7 @@ def api_keyword_detail(keyword):
 def api_keyword_categories():
     """获取关键词分类列表"""
     try:
-        categories = KeywordService.get_categories()
+        categories: List[str] = KeywordService.get_categories()
         return jsonify({
             'success': True,
             'categories': categories
@@ -240,8 +254,8 @@ def api_dates():
             ORDER BY publish_date DESC
             LIMIT 30
         """)
-        rows = cursor.fetchall()
-        dates = [row['publish_date'].strftime('%Y-%m-%d') for row in rows]
+        rows: List[Dict[str, Any]] = cursor.fetchall()
+        dates: List[str] = [row['publish_date'].strftime('%Y-%m-%d') for row in rows]
         cursor.close()
         return jsonify({'success': True, 'dates': dates})
     except Exception as e:
@@ -257,18 +271,18 @@ def api_export():
         import io
         import urllib.parse
 
-        query_date = request.args.get('date', date.today().strftime('%Y-%m-%d'))
-        category = request.args.get('category', '全部')
-        source = request.args.get('source', '全部')
-        keyword = request.args.get('keyword', '')
-        highlight_only = request.args.get('highlight_only', 'false')
+        query_date: str = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+        category: str = request.args.get('category', '全部')
+        source: str = request.args.get('source', '全部')
+        keyword: str = request.args.get('keyword', '')
+        highlight_only: str = request.args.get('highlight_only', 'false')
 
         conn = get_db_connection()
         cursor = conn.cursor()
 
         # 构建查询条件
-        conditions = ["publish_date = %s"]
-        params = [query_date]
+        conditions: List[str] = ["publish_date = %s"]
+        params: List[Any] = [query_date]
 
         if category != '全部' and category:
             conditions.append("project_category = %s")
@@ -283,7 +297,7 @@ def api_export():
             params.append(f'%{keyword}%')
 
         if highlight_only == 'true':
-            highlight_conditions = []
+            highlight_conditions: List[str] = []
             for kw in current_app.config['HIGHLIGHT_KEYWORDS']:
                 highlight_conditions.append("project_name LIKE %s")
                 params.append(f'%{kw}%')
@@ -308,7 +322,7 @@ def api_export():
         """
 
         cursor.execute(sql, params)
-        rows = cursor.fetchall()
+        rows: List[Dict[str, Any]] = cursor.fetchall()
 
         # 生成CSV
         output = io.StringIO()
@@ -320,8 +334,8 @@ def api_export():
         ])
 
         for idx, row in enumerate(rows, 1):
-            project_name = row['project_name']
-            has_keyword = any(kw in project_name for kw in current_app.config['HIGHLIGHT_KEYWORDS'])
+            project_name: str = row['project_name']
+            has_keyword: bool = any(kw in project_name for kw in current_app.config['HIGHLIGHT_KEYWORDS'])
 
             writer.writerow([
                 idx,
@@ -338,20 +352,20 @@ def api_export():
         output.seek(0)
 
         # 构建文件名
-        filter_desc = []
+        filter_desc: List[str] = []
         if category != '全部':
             filter_desc.append(f"分类_{category}")
         if source != '全部':
             filter_desc.append(f"来源_{source}")
         if keyword:
-            short_keyword = keyword[:10] + "..." if len(keyword) > 10 else keyword
+            short_keyword: str = keyword[:10] + "..." if len(keyword) > 10 else keyword
             filter_desc.append(f"搜索_{short_keyword}")
         if highlight_only == 'true':
             filter_desc.append("仅高亮")
 
-        filter_suffix = "_" + "_".join(filter_desc) if filter_desc else ""
-        filename = f"招标数据_{query_date}{filter_suffix}.csv"
-        encoded_filename = urllib.parse.quote(filename, encoding='utf-8')
+        filter_suffix: str = "_" + "_".join(filter_desc) if filter_desc else ""
+        filename: str = f"招标数据_{query_date}{filter_suffix}.csv"
+        encoded_filename: str = urllib.parse.quote(filename, encoding='utf-8')
 
         from flask import Response
         response = Response(
@@ -377,10 +391,10 @@ def api_export():
 def api_keyword_projects():
     """获取指定关键词近N天的项目列表（支持分页）"""
     try:
-        keyword = request.args.get('keyword', '').strip()
-        days = int(request.args.get('days', 30))
-        page = int(request.args.get('page', 1))
-        page_size = int(request.args.get('page_size', 50))  # 默认50条
+        keyword: str = request.args.get('keyword', '').strip()
+        days: int = int(request.args.get('days', 30))
+        page: int = int(request.args.get('page', 1))
+        page_size: int = int(request.args.get('page_size', 50))  # 默认50条
 
         if not keyword:
             return jsonify({'success': False, 'message': '关键词不能为空'}), 400
@@ -395,10 +409,10 @@ def api_keyword_projects():
             WHERE project_name LIKE %s 
             AND publish_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
         """, (f'%{keyword}%', days))
-        total = cursor.fetchone()['total']
+        total: int = cursor.fetchone()['total']
 
         # 分页查询
-        offset = (page - 1) * page_size
+        offset: int = (page - 1) * page_size
         cursor.execute("""
             SELECT 
                 id,
@@ -415,15 +429,15 @@ def api_keyword_projects():
             LIMIT %s OFFSET %s
         """, (f'%{keyword}%', days, page_size, offset))
 
-        rows = cursor.fetchall()
+        rows: List[Dict[str, Any]] = cursor.fetchall()
         cursor.close()
 
         # 处理数据...
-        keywords = KeywordService.get_all_keywords()
-        processed_data = []
+        keywords: List[str] = KeywordService.get_all_keywords()
+        processed_data: List[Dict[str, Any]] = []
 
         for row in rows:
-            is_highlighted = any(kw in row['project_name'] for kw in keywords)
+            is_highlighted: bool = any(kw in row['project_name'] for kw in keywords)
             processed_data.append({
                 'id': row['id'],
                 'project_name': highlight_keywords(row['project_name'], keywords),
