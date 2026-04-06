@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>招投标信息展示系统</title>
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <title>招投标信息展示系统</title>
+        <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <!-- Bootstrap 5 CSS -->
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <!-- Font Awesome -->
@@ -2466,6 +2467,9 @@ $('#add-keyword-btn').click(function() {
     $.ajax({
         url: '{{ url_for('main.api_keywords') }}',
         method: 'POST',
+        headers: {
+            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+        },
         contentType: 'application/json',
         data: JSON.stringify({
             keyword: keyword,
@@ -2518,6 +2522,9 @@ $(document).on('click', '.delete-keyword', function() {
     $.ajax({
         url: `{{ url_for('main.api_keyword_detail', keyword='') }}${encodeURIComponent(keyword)}`,
         method: 'DELETE',
+        headers: {
+            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+        },
         success: function(response) {
             if (response.success) {
                 showToast('关键词删除成功', 'success');
@@ -2572,6 +2579,9 @@ $(document).on('click', '.edit-keyword', function() {
     $.ajax({
         url: `{{ url_for('main.api_keyword_detail', keyword='') }}${encodeURIComponent(oldKeyword)}`,
         method: 'PUT',
+        headers: {
+            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+        },
         contentType: 'application/json',
         data: JSON.stringify({
             new_keyword: newKeyword.trim(),
@@ -2683,6 +2693,9 @@ function toggleFocus(btn) {
     $.ajax({
         url: '{{ url_for('focus.api_add') }}',
         method: 'POST',
+        headers: {
+            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+        },
         contentType: 'application/json',
         data: JSON.stringify(projectData),
         success: function(response) {
