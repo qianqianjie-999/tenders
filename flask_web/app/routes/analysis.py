@@ -5,6 +5,9 @@ from app.utils.helpers import format_date_for_display
 from app.decorators import require_auth, require_auth_write
 from datetime import datetime
 
+# 导入csrf对象
+from app import csrf
+
 analysis_bp = Blueprint('analysis', __name__, url_prefix='/analysis')
 
 
@@ -148,6 +151,7 @@ def api_detail(analysis_id):
 
 
 @analysis_bp.route('/api/update/<int:analysis_id>', methods=['PUT'])
+@csrf.exempt
 @require_auth_write
 def api_update(analysis_id):
     """更新分析信息"""
@@ -221,7 +225,7 @@ def api_delete(analysis_id):
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
-# analysis.py
+
 @analysis_bp.route('/api/verify', methods=['POST'])
 def verify_access_code():
     """独立验证访问口令（供前端模态框使用）"""

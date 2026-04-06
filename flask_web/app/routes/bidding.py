@@ -6,6 +6,9 @@ from app.decorators import require_auth, require_auth_write
 from datetime import datetime
 import json
 
+# 导入csrf对象
+from app import csrf
+
 bidding_bp = Blueprint('bidding', __name__, url_prefix='/bidding')
 
 
@@ -114,9 +117,11 @@ def api_list():
 
 
 @bidding_bp.route('/api/convert/<int:analysis_id>', methods=['POST'])
+@csrf.exempt
 @require_auth_write
 def convert_from_analysis(analysis_id):
     """从分析标书转为投标项目"""
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -205,6 +210,7 @@ def api_detail(bidding_id):
 
 
 @bidding_bp.route('/api/update/<int:bidding_id>', methods=['PUT'])
+@csrf.exempt
 @require_auth_write
 def api_update(bidding_id):
     """更新投标项目"""
@@ -263,7 +269,8 @@ def api_update(bidding_id):
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
-# bidding.py
+
+
 @bidding_bp.route('/api/verify', methods=['POST'])
 def verify_access_code():
     """独立验证访问口令（供前端模态框使用）"""

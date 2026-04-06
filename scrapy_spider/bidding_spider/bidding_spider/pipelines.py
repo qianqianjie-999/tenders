@@ -304,7 +304,7 @@ class MariaDBPipeline:
             self.conn.close()
 
         # 清空内存集合
-        self.seen_keys.clear()
+        self.seen_keys = ScalableBloomFilter(initial_capacity=10000, error_rate=0.001)
 
         logger.info("数据库连接已关闭，内存已清理")
 

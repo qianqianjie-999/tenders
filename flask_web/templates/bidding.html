@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>投标项目 - 招投标信息展示系统</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
@@ -1009,10 +1010,16 @@
                 return;
             }
 
+            // 获取CSRF token
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
             $.ajax({
                 url: `${API_BASE}/update/${currentEditId}`,
                 method: 'PUT',
-                headers: { 'X-Access-Code': verifiedCode },
+                headers: {
+                    'X-Access-Code': verifiedCode,
+                    'X-CSRFToken': csrfToken
+                },
                 contentType: 'application/json',
                 data: JSON.stringify(data),
                 success: function(res) {

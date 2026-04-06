@@ -33,11 +33,18 @@ class LogAnalyzer:
                         # 尝试解析JSON格式日志
                         try:
                             log_entry = json.loads(line)
-                            self.logs.append(log_entry)
+                            # 处理可能的JSON数组
+                            if isinstance(log_entry, list):
+                                # 只添加有效的字典条目
+                                for item in log_entry:
+                                    if isinstance(item, dict):
+                                        self.logs.append(item)
+                            elif isinstance(log_entry, dict):
+                                self.logs.append(log_entry)
                         except json.JSONDecodeError:
                             # 如果不是JSON，尝试解析普通日志
                             parsed = self._parse_plain_log(line)
-                            if parsed:
+                            if parsed and isinstance(parsed, dict):
                                 self.logs.append(parsed)
             
             print(f"✓ 已加载 {len(self.logs)} 条日志")
@@ -49,16 +56,28 @@ class LogAnalyzer:
     
     def _parse_plain_log(self, line):
         """解析普通格式日志"""
-        # 尝试匹配常见日志格式
-        pattern = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) - (\w+) - (\w+) - (.+)'
+        # 尝试匹配方括号格式的日志
+        pattern = r'\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] \[(\w+)\] \[(.*?)\] (.*)'
         match = re.match(pattern, line)
         
         if match:
             return {
                 'timestamp': match.group(1),
-                'logger': match.group(2),
-                'level': match.group(3),
+                'level': match.group(2),
+                'logger': match.group(3),
                 'message': match.group(4)
+            }
+        
+        # 尝试匹配其他常见日志格式
+        pattern2 = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) - (\w+) - (\w+) - (.+)'
+        match2 = re.match(pattern2, line)
+        
+        if match2:
+            return {
+                'timestamp': match2.group(1),
+                'logger': match2.group(2),
+                'level': match2.group(3),
+                'message': match2.group(4)
             }
         
         return None

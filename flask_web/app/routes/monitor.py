@@ -5,6 +5,9 @@
 from flask import Blueprint, render_template, jsonify, request
 from app.services.monitor_service import MonitorService
 
+# 导入csrf对象
+from app import csrf
+
 monitor_bp = Blueprint('monitor', __name__, url_prefix='/monitor')
 
 
@@ -132,8 +135,10 @@ def api_spiders():
 
 
 @monitor_bp.route('/api/start', methods=['POST'])
+@csrf.exempt
 def api_start():
     """API: 启动爬虫"""
+
     data = request.get_json()
     if not data or 'spider_name' not in data:
         return jsonify({'success': False, 'message': '缺少 spider_name 参数'}), 400
@@ -146,8 +151,10 @@ def api_start():
 
 
 @monitor_bp.route('/api/stop', methods=['POST'])
+@csrf.exempt
 def api_stop():
     """API: 停止爬虫"""
+
     data = request.get_json()
     if not data or 'pid' not in data:
         return jsonify({'success': False, 'message': '缺少 pid 参数'}), 400

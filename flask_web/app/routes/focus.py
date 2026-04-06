@@ -3,6 +3,9 @@ from app.services.focus_service import FocusService
 from app.utils.helpers import format_date_for_display
 from app.extensions import get_db_connection
 
+# 导入csrf对象
+from app import csrf
+
 
 focus_bp = Blueprint('focus', __name__, url_prefix='/focus')
 
@@ -58,8 +61,10 @@ def api_list():
 
 
 @focus_bp.route('/api/add', methods=['POST'])
+@csrf.exempt
 def api_add():
     """API: 添加关注"""
+
     try:
         data = request.get_json()
         if not all(k in data for k in ['project_name', 'publish_date', 'project_source']):
@@ -75,8 +80,10 @@ def api_add():
 
 
 @focus_bp.route('/api/update/<int:focus_id>', methods=['PUT'])
+@csrf.exempt
 def api_update(focus_id):
     """API: 更新状态"""
+
     try:
         data = request.get_json()
         status = data.get('status')
@@ -93,8 +100,10 @@ def api_update(focus_id):
 
 
 @focus_bp.route('/api/delete', methods=['DELETE'])
+@csrf.exempt
 def api_delete():
     """API: 取消关注"""
+
     try:
         data = request.get_json()
         focus_id = data.get('id')
@@ -126,8 +135,10 @@ def api_tracks(focus_id):
 
 
 @focus_bp.route('/api/tracks/<int:focus_id>', methods=['POST'])
+@csrf.exempt
 def api_add_track(focus_id):
     """API: 添加跟踪记录"""
+
     try:
         data = request.get_json()
         content = data.get('content')
@@ -155,8 +166,10 @@ def api_check():
 
 
 @focus_bp.route('/api/move-to-analysis', methods=['POST'])
+@csrf.exempt
 def api_move_to_analysis():
     """将关注项目转入分析标书表（默认复制模式，保留原记录）"""
+
     try:
         from datetime import datetime
 

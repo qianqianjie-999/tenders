@@ -32,6 +32,12 @@ def create_app():
     # 会话配置 - 关闭浏览器后失效
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)  # 会话有效期 8 小时
     app.config['REMEMBER_COOKIE_DURATION'] = timedelta(hours=8)  # 记住我有效期 8 小时
+    
+    # 安全配置
+    app.config['SESSION_COOKIE_SECURE'] = False  # 内网使用HTTP，设为False
+    app.config['SESSION_COOKIE_HTTPONLY'] = True  # 防止JavaScript访问cookie，减少XSS攻击的风险
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # 限制cookie的发送范围，防止CSRF攻击
+    app.config['PREFERRED_URL_SCHEME'] = 'https'  # 外部访问使用HTTPS，设为https
 
     # 初始化扩展
     from app.models.user import init_login
@@ -88,6 +94,16 @@ def create_app():
     app.register_blueprint(jiangsu_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(enhanced_monitor_bp)
+
+    # 为分析模块的验证接口添加CSRF豁免
+    from app.routes.analysis import verify_access_code
+    csrf.exempt(verify_access_code)
+    
+    # 为投标模块的验证接口添加CSRF豁免
+    from app.routes.bidding import verify_access_code as bidding_verify_access_code
+    csrf.exempt(bidding_verify_access_code)
+    
+
 
     app.teardown_appcontext(close_db)
 

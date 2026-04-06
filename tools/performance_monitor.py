@@ -24,12 +24,13 @@ class PerformanceMonitor:
     def collect_metrics(self):
         """收集性能指标"""
         try:
-            response = requests.get(f'{self.base_url}/api/monitor/system', timeout=5)
+            # 使用健康检查接口，避免登录认证
+            response = requests.get(f'{self.base_url}/api/monitor/health', timeout=5)
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('success'):
-                    metrics = data['data']
+                if data.get('status') in ['healthy', 'degraded']:
+                    metrics = data.get('metrics', {})
                     metrics['timestamp'] = datetime.now().isoformat()
                     self.metrics_history.append(metrics)
                     return metrics
