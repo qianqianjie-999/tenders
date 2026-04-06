@@ -5,7 +5,7 @@ from flask import jsonify
 import traceback
 
 
-def format_date_for_display(date_str):
+def format_date_for_display(date_str: object) -> str:
     """格式化日期显示（你原来的函数）"""
     try:
         if isinstance(date_str, date):
@@ -13,12 +13,12 @@ def format_date_for_display(date_str):
         elif isinstance(date_str, str):
             dt = datetime.strptime(date_str, '%Y-%m-%d')
             return dt.strftime('%Y-%m-%d')
-        return date_str
+        return str(date_str)
     except:
-        return date_str
+        return str(date_str)
 
 
-def highlight_keywords(text, keywords):
+def highlight_keywords(text: str, keywords: list) -> str:
     """高亮显示关键词（你原来的函数）"""
     if not text:
         return text
@@ -31,7 +31,7 @@ def highlight_keywords(text, keywords):
     return text
 
 
-def categorize_project(project_name, category_rules):
+def categorize_project(project_name: str, category_rules: dict) -> str:
     """自动分类项目"""
     if not project_name:
         return '其他'
@@ -45,7 +45,7 @@ def categorize_project(project_name, category_rules):
     return '其他'
 
 
-def get_time_diff(crawl_time):
+def get_time_diff(crawl_time: datetime) -> str:
     """计算时间差"""
     if not crawl_time:
         return '未知'
@@ -64,7 +64,7 @@ def get_time_diff(crawl_time):
         return '刚刚'
 
 
-def api_response(success=True, data=None, message='', status_code=200):
+def api_response(success: bool = True, data: any = None, message: str = '', status_code: int = 200) -> tuple:
     """
     统一的API响应格式
     
@@ -88,7 +88,7 @@ def api_response(success=True, data=None, message='', status_code=200):
     return jsonify(response), status_code
 
 
-def paginate(total, page, page_size):
+def paginate(total: int, page: int, page_size: int) -> dict:
     """
     计算分页信息
     
