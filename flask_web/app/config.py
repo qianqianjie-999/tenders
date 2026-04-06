@@ -31,6 +31,10 @@ class Config:
     DB_PORT = 3306
     DB_CHARSET = 'utf8mb4'
 
+    # 缓存配置
+    CACHE_TYPE = 'SimpleCache'  # 使用简单的内存缓存
+    CACHE_DEFAULT_TIMEOUT = 300  # 默认缓存时间5分钟
+
     # 关键词列表
     HIGHLIGHT_KEYWORDS = [
         '交通', '信号灯', '监控', '交通信号灯', '电警', '运维', '智能化', '交警',

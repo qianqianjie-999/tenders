@@ -4,6 +4,7 @@ from itemadapter import ItemAdapter
 import logging
 import hashlib
 from typing import Dict, Any
+from pybloom_live import ScalableBloomFilter
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ class MariaDBPipeline:
             db_config: 数据库配置字典
         """
         self.db_config = db_config
-        self.seen_keys = set()  # 内存中缓存的已处理组合键
+        self.seen_keys = ScalableBloomFilter(initial_capacity=10000, error_rate=0.001)  # 使用布隆过滤器
         self.conn = None
         self.cursor = None
         self.monitor = None  # 监控实例
