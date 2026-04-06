@@ -76,6 +76,7 @@ def create_app():
     from app.routes.monitor import monitor_bp
     from app.routes.jiangsu import jiangsu_bp
     from app.routes.auth import auth_bp
+    from app.routes.enhanced_monitor import enhanced_monitor_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(focus_bp)
     app.register_blueprint(dashboard_bp)
@@ -86,6 +87,7 @@ def create_app():
     app.register_blueprint(monitor_bp)
     app.register_blueprint(jiangsu_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(enhanced_monitor_bp)
 
     app.teardown_appcontext(close_db)
 
