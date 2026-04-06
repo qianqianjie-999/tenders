@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>重点关注项目 - 招投标信息展示系统</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <!-- Bootstrap 5 CSS -->
@@ -904,6 +905,9 @@ function confirmDelete() {
     $.ajax({
         url: `${FOCUS_API}/delete`,
         method: 'DELETE',
+        headers: {
+            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+        },
         contentType: 'application/json',
         data: JSON.stringify({
             id: currentFocusId,
@@ -972,6 +976,9 @@ function confirmDelete() {
             $.ajax({
                 url: `${FOCUS_API}/tracks/${currentFocusId}`,
                 method: 'POST',
+                headers: {
+                    'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+                },
                 contentType: 'application/json',
                 data: JSON.stringify({
                     content: content,
@@ -1007,6 +1014,9 @@ function confirmDelete() {
             $.ajax({
                 url: `${FOCUS_API}/update/${currentFocusId}`,
                 method: 'PUT',
+                headers: {
+                    'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+                },
                 contentType: 'application/json',
                 data: JSON.stringify({
                     status: status,
@@ -1038,6 +1048,9 @@ function confirmDelete() {
             $.ajax({
                 url: `${FOCUS_API}/move-to-analysis`,
                 method: 'POST',
+                headers: {
+                    'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+                },
                 contentType: 'application/json',
                 data: JSON.stringify({
                     focus_id: projectId,
