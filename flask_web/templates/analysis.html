@@ -427,11 +427,73 @@
             background: rgba(79, 172, 254, 0.5);
         }
 
-        /* 响应式调整 */
+        /* 响应式调整 - 增强移动端适配 */
         @media (max-width: 768px) {
-            .stat-value { font-size: 1.5rem; }
-            .btn-action { width: 100%; margin-right: 0; justify-content: center; }
-            .meta-item { display: block; margin-bottom: 0.5rem; }
+            .header-container {
+                padding: 1rem 0;
+            }
+            
+            .header-container h1 {
+                font-size: 1.25rem;
+            }
+            
+            .header-container p {
+                font-size: 0.875rem;
+            }
+            
+            .back-btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.875rem;
+            }
+            
+            .stat-card {
+                padding: 1rem;
+            }
+            
+            .stat-value {
+                font-size: 1.5rem;
+            }
+            
+            .btn-action {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 0.5rem;
+                justify-content: center;
+            }
+            
+            .meta-item {
+                display: block;
+                margin-bottom: 0.5rem;
+            }
+            
+            .search-form .form-control,
+            .search-form .form-select {
+                min-height: 44px;
+                font-size: 16px;
+            }
+            
+            .filter-group {
+                margin-bottom: 1rem;
+            }
+            
+            .table-responsive {
+                font-size: 0.875rem;
+            }
+        }
+        
+        /* 进一步优化超小屏幕 */
+        @media (max-width: 400px) {
+            .header-container h1 {
+                font-size: 1.125rem;
+            }
+            
+            .stat-card {
+                padding: 0.75rem;
+            }
+            
+            .stat-value {
+                font-size: 1.25rem;
+            }
         }
     </style>
 <base target="_blank">

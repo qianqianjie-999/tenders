@@ -1041,6 +1041,40 @@
         font-weight: 600;
         font-size: 0.9rem;
     }
+    
+    /* 移动端优化 - 增强触控友好 */
+    @media (max-width: 768px) {
+        .header-function-block {
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        .btn-action {
+            min-height: 44px;
+            font-size: 14px;
+        }
+        
+        .stat-card {
+            margin-bottom: 1rem;
+        }
+        
+        .search-form .form-control,
+        .search-form .form-select {
+            min-height: 44px;
+            font-size: 16px;
+        }
+        
+        .pagination {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .pagination .page-link {
+            padding: 0.5rem 0.75rem;
+            min-width: 44px;
+            min-height: 44px;
+        }
+    }
 </style>
 </head>
 <body>
