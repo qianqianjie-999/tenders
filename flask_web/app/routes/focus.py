@@ -3,7 +3,6 @@ from app.services.focus_service import FocusService
 from app.utils.helpers import format_date_for_display
 from app.extensions import get_db_connection
 
-
 focus_bp = Blueprint('focus', __name__, url_prefix='/focus')
 
 

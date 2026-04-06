@@ -151,7 +151,6 @@ def api_detail(analysis_id):
 @require_auth_write
 def api_update(analysis_id):
     """更新分析信息"""
-
     try:
         data = request.get_json()
 

@@ -103,7 +103,18 @@ def create_app():
     from app.routes.bidding import verify_access_code as bidding_verify_access_code
     csrf.exempt(bidding_verify_access_code)
     
-
+    # 为main模块的API接口添加CSRF豁免
+    from app.routes.main import api_keywords, api_keyword_detail
+    csrf.exempt(api_keywords)
+    csrf.exempt(api_keyword_detail)
+    
+    # 为focus模块的API接口添加CSRF豁免
+    from app.routes.focus import api_add, api_update, api_delete, api_add_track, api_move_to_analysis
+    csrf.exempt(api_add)
+    csrf.exempt(api_update)
+    csrf.exempt(api_delete)
+    csrf.exempt(api_add_track)
+    csrf.exempt(api_move_to_analysis)
 
     app.teardown_appcontext(close_db)
 
