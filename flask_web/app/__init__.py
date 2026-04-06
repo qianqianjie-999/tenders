@@ -8,6 +8,7 @@ from app.config import Config
 from app.extensions import close_db, init_db_pool
 from app.routes.design import design_bp
 from app.routes.audit import audit_bp
+from app.utils.exceptions import BaseAPIException
 
 # 初始化缓存
 cache = Cache()
@@ -49,6 +50,9 @@ def create_app():
     with app.app_context():
         init_db_pool()
 
+    # 注册全局异常处理器
+    register_error_handlers(app)
+
     # 从环境变量加载用户配置到 config
     users = {}
     users_config = Config.USERS_CONFIG if hasattr(Config, 'USERS_CONFIG') else ''
@@ -86,5 +90,38 @@ def create_app():
     app.teardown_appcontext(close_db)
 
     return app
+
+
+def register_error_handlers(app):
+    """注册全局异常处理器"""
+    
+    @app.errorhandler(BaseAPIException)
+    def handle_api_exception(error):
+        """处理自定义API异常"""
+        from flask import jsonify
+        response = jsonify(error.to_dict())
+        response.status_code = error.status_code
+        return response
+    
+    @app.errorhandler(404)
+    def handle_not_found(error):
+        """处理404错误"""
+        from flask import jsonify
+        return jsonify({'success': False, 'message': '资源不存在'}), 404
+    
+    @app.errorhandler(500)
+    def handle_internal_error(error):
+        """处理500错误"""
+        from flask import jsonify
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
+    
+    @app.errorhandler(Exception)
+    def handle_unexpected_error(error):
+        """处理未预期的异常"""
+        from flask import jsonify
+        import traceback
+        print(f"Unexpected error: {str(error)}")
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 

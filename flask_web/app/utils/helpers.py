@@ -1,5 +1,8 @@
 from datetime import datetime, date
 import re
+from functools import wraps
+from flask import jsonify
+import traceback
 
 
 def format_date_for_display(date_str):
@@ -59,3 +62,63 @@ def get_time_diff(crawl_time):
         return f'{minutes}分钟前'
     else:
         return '刚刚'
+
+
+def api_response(success=True, data=None, message='', status_code=200):
+    """
+    统一的API响应格式
+    
+    Args:
+        success: 是否成功
+        data: 返回的数据
+        message: 消息
+        status_code: HTTP状态码
+        
+    Returns:
+        tuple: (jsonify响应, 状态码)
+    """
+    response = {'success': success}
+    
+    if data is not None:
+        response['data'] = data
+    
+    if message:
+        response['message'] = message
+    
+    return jsonify(response), status_code
+
+
+def paginate(total, page, page_size):
+    """
+    计算分页信息
+    
+    Args:
+        total: 总记录数
+        page: 当前页码
+        page_size: 每页大小
+        
+    Returns:
+        dict: 分页信息
+    """
+    return {
+        'page': page,
+        'page_size': page_size,
+        'total': total,
+        'total_pages': (total + page_size - 1) // page_size
+    }
+
+
+def handle_api_errors(f):
+    """
+    API错误处理装饰器
+    自动捕获异常并返回统一格式的错误响应
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            print(f"API ERROR: {str(e)}")
+            print(traceback.format_exc())
+            return api_response(success=False, message=str(e), status_code=500)
+    return decorated_function
