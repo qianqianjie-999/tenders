@@ -1,6 +1,9 @@
 from flask import Flask
 from datetime import timedelta
 from flask_caching import Cache
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from app.config import Config
 from app.extensions import close_db, init_db_pool
 from app.routes.design import design_bp
@@ -8,6 +11,15 @@ from app.routes.audit import audit_bp
 
 # 初始化缓存
 cache = Cache()
+
+# 初始化CSRF保护
+csrf = CSRFProtect()
+
+# 初始化速率限制
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per hour", "50 per minute"]
+)
 
 def create_app():
     app = Flask(__name__,
@@ -26,6 +38,12 @@ def create_app():
 
     # 初始化缓存
     cache.init_app(app)
+
+    # 初始化CSRF保护
+    csrf.init_app(app)
+
+    # 初始化速率限制
+    limiter.init_app(app)
 
     # 初始化数据库连接池
     with app.app_context():

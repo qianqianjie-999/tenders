@@ -6,11 +6,47 @@
 """
 import sys
 import os
+import re
 
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'flask_web'))
 
 from werkzeug.security import generate_password_hash
+
+
+def validate_password_strength(password):
+    """
+    验证密码强度
+    
+    Args:
+        password: 密码字符串
+        
+    Returns:
+        tuple: (是否有效, 错误信息列表)
+    """
+    errors = []
+    
+    # 检查长度
+    if len(password) < 8:
+        errors.append("密码长度至少8位")
+    
+    # 检查是否包含数字
+    if not re.search(r'\d', password):
+        errors.append("密码必须包含至少一个数字")
+    
+    # 检查是否包含小写字母
+    if not re.search(r'[a-z]', password):
+        errors.append("密码必须包含至少一个小写字母")
+    
+    # 检查是否包含大写字母
+    if not re.search(r'[A-Z]', password):
+        errors.append("密码必须包含至少一个大写字母")
+    
+    # 检查是否包含特殊字符
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        errors.append("密码必须包含至少一个特殊字符")
+    
+    return len(errors) == 0, errors
 
 
 def main():
@@ -34,12 +70,28 @@ def main():
         print("错误：用户名和密码不能为空")
         sys.exit(1)
 
+    # 验证密码强度
+    is_valid, errors = validate_password_strength(password)
+    if not is_valid:
+        print()
+        print("❌ 密码强度不足：")
+        for error in errors:
+            print(f"  - {error}")
+        print()
+        print("密码要求：")
+        print("  - 至少8位长度")
+        print("  - 包含数字")
+        print("  - 包含小写字母")
+        print("  - 包含大写字母")
+        print("  - 包含特殊字符")
+        sys.exit(1)
+
     # 生成密码哈希
     password_hash = generate_password_hash(password)
 
     print()
     print("=" * 60)
-    print("生成结果")
+    print("✅ 生成结果")
     print("=" * 60)
     print()
     print(f"用户名：{username}")
