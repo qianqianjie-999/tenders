@@ -2551,10 +2551,10 @@ $(document).on('click', '.delete-keyword', function() {
                             </tr>
                         `);
                     }
+                    loadKeywordList();
+                    refreshKeywordTags();
+                    refreshKeywordStats();
                 });
-                loadKeywordList();
-                refreshKeywordTags();
-                refreshKeywordStats();
             } else {
                 row.removeClass('table-danger');
                 showToast(response.message || '删除失败', 'error');
