@@ -2435,8 +2435,10 @@ $('#add-keyword-btn').click(function() {
                 input.val('');
                 categorySelect.val('');
                 loadKeywordList();
-                refreshKeywordTags();
-                refreshKeywordStats();
+                setTimeout(function() {
+                    refreshKeywordTags();
+                    refreshKeywordStats();
+                }, 100);
             } else {
                 showToast(response.message || '添加失败', 'error');
             }
@@ -2492,8 +2494,11 @@ $(document).on('click', '.delete-keyword', function() {
                         `);
                     }
                 });
-                refreshKeywordTags();
-                refreshKeywordStats();
+                loadKeywordList();
+                setTimeout(function() {
+                    refreshKeywordTags();
+                    refreshKeywordStats();
+                }, 100);
             } else {
                 row.removeClass('table-danger');
                 showToast(response.message || '删除失败', 'error');
