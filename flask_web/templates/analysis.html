@@ -593,7 +593,7 @@
                 <div class="col-md-6">
                     <label class="form-label">关键词搜索</label>
                     <div class="input-group">
-                        <input type="text" class="form-control" id="analysis-search" name="search" placeholder="搜索项目名称..." autocomplete="off" onkeyup="debounceSearch()">
+                        <input type="text" class="form-control" id="analysis-search" name="search" placeholder="搜索项目名称..." autocomplete="new-password" onkeyup="debounceSearch()">
                         <button class="btn btn-outline-secondary" onclick="clearSearch()">
                             <i class="fas fa-times"></i>
                         </button>
@@ -721,6 +721,13 @@
         let verifiedCode = null;
 
         $(document).ready(function() {
+            // 清空搜索框并添加聚焦事件
+            const searchInput = document.getElementById('analysis-search');
+            searchInput.value = '';
+            searchInput.addEventListener('focus', function() {
+                if (this.value === '') return;
+                this.value = '';
+            });
             loadData(1);
         });
 
