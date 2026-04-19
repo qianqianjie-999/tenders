@@ -46,7 +46,7 @@ def api_list():
         params = []
 
         if keyword:
-            conditions.append("project_name LIKE %s")
+            conditions.append("b.project_name LIKE %s")
             params.append(f'%{keyword}%')
 
         if status != 'all':
