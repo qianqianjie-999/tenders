@@ -52,8 +52,6 @@ COOKIES_ENABLED = False
 
 # Enable or disable downloader middlewares
 DOWNLOADER_MIDDLEWARES = {
-    'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
-    'scrapy_fake_useragent.middleware.RandomUserAgentMiddleware': 400,
     'bidding_spider.middlewares.TimeoutRetryMiddleware': 550,
     'bidding_spider.middlewares.RequestStatsMiddleware': 600,
 }

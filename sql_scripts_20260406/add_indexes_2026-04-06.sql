@@ -20,6 +20,10 @@ ALTER TABLE bidding_projects ADD INDEX IF NOT EXISTS idx_project_category (proje
 ALTER TABLE jiangsu_bidding_info ADD INDEX IF NOT EXISTS idx_project_category (project_category);
 ALTER TABLE jiangsu_bidding_info ADD INDEX IF NOT EXISTS idx_crawl_time (crawl_time);
 
+-- 为zhejiang_bidding_info表添加额外索引
+ALTER TABLE zhejiang_bidding_info ADD INDEX IF NOT EXISTS idx_project_category (project_category);
+ALTER TABLE zhejiang_bidding_info ADD INDEX IF NOT EXISTS idx_crawl_time (crawl_time);
+
 -- 为spider_run_logs表添加额外索引
 ALTER TABLE spider_run_logs ADD INDEX IF NOT EXISTS idx_items_crawled (items_crawled);
 ALTER TABLE spider_run_logs ADD INDEX IF NOT EXISTS idx_duration_seconds (duration_seconds);

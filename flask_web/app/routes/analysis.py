@@ -233,3 +233,17 @@ def verify_access_code():
         return jsonify({'success': True, 'message': '验证通过'})
     else:
         return jsonify({'success': False, 'message': '口令错误'}), 403
+
+
+@analysis_bp.route('/api/count')
+def api_count():
+    """获取分析标书总数"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) as count FROM analysis_projects")
+        count = cursor.fetchone()['count']
+        cursor.close()
+        return jsonify({'success': True, 'count': count})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500

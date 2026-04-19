@@ -237,3 +237,17 @@ def api_move_to_analysis():
         import traceback
         current_app.logger.error(f"转入分析标书失败: {str(e)}")
         return jsonify({'success': False, 'message': f'服务器错误: {str(e)}'}), 500
+
+
+@focus_bp.route('/api/count')
+def api_count():
+    """获取重点关注项目总数"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) as count FROM focus_projects")
+        count = cursor.fetchone()['count']
+        cursor.close()
+        return jsonify({'success': True, 'count': count})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500

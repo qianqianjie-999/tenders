@@ -1,20 +1,16 @@
 from flask import Flask
 from datetime import timedelta
 from flask_caching import Cache
-from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from app.config import Config
-from app.extensions import close_db, init_db_pool
+from app.extensions import close_db, init_db_pool, csrf
 from app.routes.design import design_bp
 from app.routes.audit import audit_bp
 from app.utils.exceptions import BaseAPIException
 
 # 初始化缓存
 cache = Cache()
-
-# 初始化CSRF保护
-csrf = CSRFProtect()
 
 # 初始化速率限制
 limiter = Limiter(
@@ -81,6 +77,7 @@ def create_app():
     from app.routes.bidding import bidding_bp
     from app.routes.monitor import monitor_bp
     from app.routes.jiangsu import jiangsu_bp
+    from app.routes.zhejiang import zhejiang_bp
     from app.routes.auth import auth_bp
     from app.routes.enhanced_monitor import enhanced_monitor_bp
     app.register_blueprint(main_bp)
@@ -92,6 +89,7 @@ def create_app():
     app.register_blueprint(audit_bp)
     app.register_blueprint(monitor_bp)
     app.register_blueprint(jiangsu_bp)
+    app.register_blueprint(zhejiang_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(enhanced_monitor_bp)
 

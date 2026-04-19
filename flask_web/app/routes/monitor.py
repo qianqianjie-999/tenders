@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, jsonify, request
 from app.services.monitor_service import MonitorService
 
 # 导入csrf对象
-from app import csrf
+from app.extensions import csrf
 
 monitor_bp = Blueprint('monitor', __name__, url_prefix='/monitor')
 

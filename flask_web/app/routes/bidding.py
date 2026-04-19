@@ -7,7 +7,7 @@ from datetime import datetime
 import json
 
 # 导入csrf对象
-from app import csrf
+from app.extensions import csrf
 
 bidding_bp = Blueprint('bidding', __name__, url_prefix='/bidding')
 
@@ -282,3 +282,17 @@ def verify_access_code():
         return jsonify({'success': True, 'message': '验证通过'})
     else:
         return jsonify({'success': False, 'message': '口令错误'}), 403
+
+
+@bidding_bp.route('/api/count')
+def api_count():
+    """获取投标项目总数"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) as count FROM bidding_projects")
+        count = cursor.fetchone()['count']
+        cursor.close()
+        return jsonify({'success': True, 'count': count})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500

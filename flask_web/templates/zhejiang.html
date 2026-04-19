@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
-        <title>山东省招投标信息展示系统</title>
-        <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>浙江省招标信息展示系统</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <!-- Bootstrap 5 CSS -->
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <!-- Font Awesome -->
@@ -100,11 +99,6 @@
         overflow-x: auto;
     }
 
-    /* 江苏数据块 - 单独一行或放在最右侧 */
-    #jiangsu-block {
-        margin-left: auto;
-    }
-
     /* 头部功能块 - 统一卡片样式 */
     .header-function-block {
         background: rgba(255, 255, 255, 0.2);
@@ -128,7 +122,6 @@
         max-width: none;
         white-space: nowrap;
     }
-
 
     /* 链接样式重置 */
     a.header-function-block {
@@ -209,7 +202,6 @@
         line-height: 1.2;
         margin-top: 1px;
         letter-spacing: 0.3px;
-        white-space: nowrap;
     }
 
     /* 投标项目块特殊样式 */
@@ -1042,77 +1034,32 @@
         font-weight: 600;
         font-size: 0.9rem;
     }
-    
-    /* 移动端优化 - 增强触控友好 */
-    @media (max-width: 768px) {
-        .header-function-block {
-            min-height: 44px;
-            min-width: 44px;
-        }
-        
-        .btn-action {
-            min-height: 44px;
-            font-size: 14px;
-        }
-        
-        .stat-card {
-            margin-bottom: 1rem;
-        }
-        
-        .search-form .form-control,
-        .search-form .form-select {
-            min-height: 44px;
-            font-size: 16px;
-        }
-        
-        .pagination {
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .pagination .page-link {
-            padding: 0.5rem 0.75rem;
-            min-width: 44px;
-            min-height: 44px;
-        }
-    }
 </style>
 </head>
 <body>
      <!-- 头部 - 移出container，使其全宽 -->
     <div class="header-container">
         <div class="container">
-            <!-- 第一行：主标题 + 江苏数据 -->
+            <!-- 第一行：主标题 + 返回山东主页 -->
             <div class="row mb-3 align-items-center">
                 <div class="col-md-8">
                     <h1 class="h3 fw-bold mb-0">
-                        <i class="fas fa-search-dollar me-2"></i>山东省招投标信息展示系统
+                        <i class="fas fa-search-dollar me-2"></i>浙江省招标信息展示系统
                     </h1>
                 </div>
                 <div class="col-md-4 text-end">
-                    <div class="d-inline-flex gap-2">
-                        <a href="{{ url_for('zhejiang.index') }}" class="header-function-block d-inline-flex" id="zhejiang-block" style="flex: 0 0 auto; max-width: 140px; height: 48px;">
-                            <div class="block-icon">
-                                <i class="fas fa-map-marked-alt"></i>
-                            </div>
-                            <div class="block-content">
-                                <div class="block-title">浙江数据</div>
-                                <div class="block-subtitle">浙江招标</div>
-                            </div>
-                        </a>
-                        <a href="{{ url_for('jiangsu.index') }}" class="header-function-block d-inline-flex" id="jiangsu-block" style="flex: 0 0 auto; max-width: 140px; height: 48px;">
-                            <div class="block-icon">
-                                <i class="fas fa-map-marked-alt"></i>
-                            </div>
-                            <div class="block-content">
-                                <div class="block-title">江苏数据</div>
-                                <div class="block-subtitle">江苏招标</div>
-                            </div>
-                        </a>
-                    </div>
+                    <a href="{{ url_for('main.index') }}" class="header-function-block d-inline-flex" id="home-block" style="flex: 0 0 auto; max-width: 140px; height: 48px; background: rgba(255,255,255,0.3);">
+                        <div class="block-icon">
+                            <i class="fas fa-arrow-left"></i>
+                        </div>
+                        <div class="block-content">
+                            <div class="block-title">返回</div>
+                            <div class="block-subtitle">山东主页</div>
+                        </div>
+                    </a>
                 </div>
             </div>
-            <!-- 第二行：7个功能块 -->
+            <!-- 第二行：8 个功能块 -->
             <div class="row">
                 <div class="col-12">
                     <div class="header-blocks-container">
@@ -1726,7 +1673,7 @@ $(document).ready(function() {
     $('#date-picker').val(todayDate);
 
     // 初始化分类下拉框
-    $.get('{{ url_for('main.api_categories') }}', function(response) {
+    $.get("{{ url_for('jiangsu.api_categories') }}", function(response) {
         if (response.success) {
             const select = $('#category-filter');
             response.categories.forEach(category => {
@@ -1738,7 +1685,7 @@ $(document).ready(function() {
     });
 
     // 初始化来源下拉框
-    $.get('{{ url_for('main.api_sources') }}', function(response) {
+    $.get("{{ url_for('jiangsu.api_sources') }}", function(response) {
         if (response.success) {
             const select = $('#source-filter');
             response.sources.forEach(source => {
@@ -1828,7 +1775,7 @@ $(document).ready(function() {
     updateFilterSummary();
 
     // 获取可用的日期
-    $.get('{{ url_for('main.api_dates') }}', function(response) {
+    $.get("{{ url_for('main.api_dates') }}", function(response) {
         if (response.success && response.dates.length > 0) {
             const currentDate = $('#date-picker').val();
             if (!response.dates.includes(currentDate)) {
@@ -1845,7 +1792,7 @@ let currentKeywordForProjects = ''; // 存储当前查看的关键词
 
 // 更新投标项目数量
 function updateBiddingCount() {
-    $.get('{{ url_for('bidding.api_list') }}', { page_size: 1 }, function(response) {
+    $.get("{{ url_for('bidding.api_list') }}", { page_size: 1 }, function(response) {
         if (response.success && response.statistics) {
             let total = 0;
             Object.values(response.statistics).forEach(count => {
@@ -1862,7 +1809,7 @@ function updateBiddingCount() {
 
 // 更新分析标书数量
 function updateAnalysisCount() {
-    $.get('{{ url_for('analysis.api_list') }}', { page_size: 1 }, function(response) {
+    $.get("{{ url_for('analysis.api_list') }}", { page_size: 1 }, function(response) {
         if (response.success && response.statistics) {
             let total = 0;
             Object.values(response.statistics).forEach(count => {
@@ -1879,7 +1826,7 @@ function updateAnalysisCount() {
 
 // 更新重点关注数量
 function updateFocusCount() {
-    $.get('{{ url_for('focus.api_list') }}', { page_size: 1 }, function(response) {
+    $.get("{{ url_for('focus.api_list') }}", { page_size: 1 }, function(response) {
         if (response.success && response.statistics) {
             $('#focus-count').text(response.statistics.total);
         } else {
@@ -1892,7 +1839,7 @@ function updateFocusCount() {
 
 // 更新方案设计数量
 function updateDesignCount() {
-    $.get('{{ url_for('design.api_list') }}', { page_size: 1 }, function(response) {
+    $.get("{{ url_for('design.api_list') }}", { page_size: 1 }, function(response) {
         if (response.success) {
             let total = 0;
             if (response.statistics) {
@@ -1913,7 +1860,7 @@ function updateDesignCount() {
 
 // 更新项目跟踪审计数量
 function updateAuditCount() {
-    $.get('{{ url_for('audit.api_list') }}', { page_size: 1 }, function(response) {
+    $.get("{{ url_for('audit.api_list') }}", { page_size: 1 }, function(response) {
         if (response.success) {
             let total = 0;
             if (response.statistics) {
@@ -2122,7 +2069,7 @@ function loadData() {
     $('#no-data').hide();
 
     $.ajax({
-        url: '{{ url_for('main.api_data') }}',
+        url: '/zhejiang/api/data',
         method: 'GET',
         data: requestData,
         success: function(response) {
@@ -2232,7 +2179,7 @@ function renderTable(data, pageSize) {
 }
 
 function loadKeywordList() {
-    $.get('{{ url_for('main.api_keywords') }}?detailed=true', function(response) {
+    $.get("{{ url_for('main.api_keywords') }}?detailed=true", function(response) {
         if (response.success) {
             const tbody = $('#keyword-table-body');
             tbody.empty();
@@ -2270,7 +2217,6 @@ function loadKeywordList() {
                         icon = 'fa-shield-alt';
                     }
 
-                    // 项目数为0时不显示链接样式，大于0时才可点击
                     const countClass = (item.project_count || 0) > 0 ? 'keyword-count-link' : '';
                     const cursorStyle = (item.project_count || 0) > 0 ? 'cursor-pointer' : 'cursor-default';
                     const clickHandler = (item.project_count || 0) > 0 ?
@@ -2365,7 +2311,7 @@ function loadKeywordProjectsData(keyword, page = 1) {
     $('#keyword-projects-pagination-container').remove();
 
     $.ajax({
-        url: '{{ url_for('main.api_keyword_projects') }}',
+        url: '/api/keyword-projects',
         method: 'GET',
         data: {
             keyword: keyword,
@@ -2476,11 +2422,8 @@ $('#add-keyword-btn').click(function() {
     btn.html('<i class="fas fa-spinner fa-spin me-2"></i>添加中...').prop('disabled', true);
 
     $.ajax({
-        url: '{{ url_for('main.api_keywords') }}',
+        url: '/api/keywords',
         method: 'POST',
-        headers: {
-            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
-        },
         contentType: 'application/json',
         data: JSON.stringify({
             keyword: keyword,
@@ -2533,9 +2476,6 @@ $(document).on('click', '.delete-keyword', function() {
     $.ajax({
         url: `{{ url_for('main.api_keyword_detail', keyword='') }}${encodeURIComponent(keyword)}`,
         method: 'DELETE',
-        headers: {
-            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
-        },
         success: function(response) {
             if (response.success) {
                 showToast('关键词删除成功', 'success');
@@ -2590,9 +2530,6 @@ $(document).on('click', '.edit-keyword', function() {
     $.ajax({
         url: `{{ url_for('main.api_keyword_detail', keyword='') }}${encodeURIComponent(oldKeyword)}`,
         method: 'PUT',
-        headers: {
-            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
-        },
         contentType: 'application/json',
         data: JSON.stringify({
             new_keyword: newKeyword.trim(),
@@ -2702,11 +2639,8 @@ function toggleFocus(btn) {
     $(btn).prop('disabled', true);
 
     $.ajax({
-        url: '{{ url_for('focus.api_add') }}',
+        url: '/focus/api/add',
         method: 'POST',
-        headers: {
-            'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
-        },
         contentType: 'application/json',
         data: JSON.stringify(projectData),
         success: function(response) {
@@ -2807,7 +2741,7 @@ function exportFilteredData() {
     const keyword = $('#keyword-search').val();
     const highlightOnly = $('#highlight-only-switch').is(':checked');
 
-    let exportUrl = `{{ url_for('main.api_export') }}?date=${date}`;
+    let exportUrl = `{{ url_for('jiangsu.api_export') }}?date=${date}`;
 
     if (category !== '全部') {
         exportUrl += `&category=${encodeURIComponent(category)}`;

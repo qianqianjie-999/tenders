@@ -77,6 +77,7 @@ CREATE TABLE analysis_projects (
     control_price DECIMAL(15,2),           -- 招标控制价（万元）
     decision VARCHAR(20) DEFAULT 'pending', -- 分析决定：pending/投标/不投
     decision_reason TEXT,                  -- 备注原因（不投原因等）
+    analysis_content TEXT,                 -- 标书分析情况
 
     -- 关联和安全字段
     focus_id INT,                          -- 原关注表ID（关联用）
@@ -211,3 +212,21 @@ CREATE TABLE IF NOT EXISTS jiangsu_bidding_info (
     INDEX idx_publish_date (publish_date),
     INDEX idx_project_source (project_source)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='江苏省招标信息表';
+
+-- 5. 浙江省招标信息表（独立于山东省数据）
+CREATE TABLE IF NOT EXISTS zhejiang_bidding_info (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    project_name VARCHAR(500) NOT NULL,
+    publish_date DATE NOT NULL,
+    detail_url VARCHAR(1000) DEFAULT NULL,
+    project_source VARCHAR(100) NOT NULL,
+    project_category VARCHAR(50) DEFAULT NULL,
+    crawl_time DATETIME NOT NULL,
+    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY idx_unique_project (project_name(200), publish_date, project_source(50)),
+    INDEX idx_publish_date (publish_date),
+    INDEX idx_project_source (project_source)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='浙江省招标信息表';

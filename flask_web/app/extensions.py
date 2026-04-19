@@ -1,9 +1,13 @@
 import pymysql
 from dbutils.pooled_db import PooledDB
 from flask import current_app, g
+from flask_wtf.csrf import CSRFProtect
 
 # 全局连接池实例
 connection_pool = None
+
+# 初始化CSRF保护
+csrf = CSRFProtect()
 
 def init_db_pool():
     """初始化数据库连接池"""

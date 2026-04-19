@@ -73,12 +73,20 @@ class MariaDBPipeline:
                 AND detail_url LIKE 'http://jsggzy.jszwfw.gov.cn%'
                 """,
                 'description': "加载今日数据且域名符合'http://jsggzy.jszwfw.gov.cn'"
+            },
+            'zhejiang_post': {
+                'condition': """
+                AND DATE(publish_date) = CURDATE()
+                AND detail_url LIKE 'https://ggzy.zj.gov.cn%'
+                """,
+                'description': "加载今日数据且域名符合'https://ggzy.zj.gov.cn'"
             }
         }
 
         # 爬虫与数据表的映射关系
         self.spider_table_mapping = {
             'jiangsu_post': 'jiangsu_bidding_info',
+            'zhejiang_post': 'zhejiang_bidding_info',
             'sd_post': 'bidding_info',
             'jining_get': 'bidding_info',
             'taian_post': 'bidding_info',
@@ -328,6 +336,16 @@ class MariaDBPipeline:
             project_source = adapter.get('project_source', '')
             detail_url = adapter.get('detail_url', '')
 
+            # 处理发布日期格式
+            if publish_date and isinstance(publish_date, str):
+                # 尝试转换带时间的日期格式为纯日期格式
+                try:
+                    dt = datetime.datetime.strptime(publish_date, '%Y-%m-%d %H:%M:%S')
+                    publish_date = dt.strftime('%Y-%m-%d')
+                    adapter['publish_date'] = publish_date
+                except ValueError:
+                    pass
+
             # 验证必要字段
             if not self.validate_required_fields(project_name, publish_date, project_source):
                 logger.warning(f"必要字段缺失，跳过: {project_name[:50] if project_name else '无名项目'}...")
@@ -351,6 +369,10 @@ class MariaDBPipeline:
                 elif spider_name == 'jiangsu_post':
                     if detail_url and 'http://jsggzy.jszwfw.gov.cn' not in detail_url:
                         logger.info(f"jiangsu_post 爬虫跳过非指定域名：{detail_url}")
+                        return item
+                elif spider_name == 'zhejiang_post':
+                    if detail_url and 'https://ggzy.zj.gov.cn' not in detail_url:
+                        logger.info(f"zhejiang_post 爬虫跳过非指定域名：{detail_url}")
                         return item
 
             # 生成组合键
@@ -440,7 +462,15 @@ class MariaDBPipeline:
             else:
                 publish_date_str = str(publish_date).strip()
 
-            datetime.datetime.strptime(publish_date_str, '%Y-%m-%d')
+            # 尝试解析多种日期格式
+            try:
+                # 尝试解析 YYYY-MM-DD 格式
+                datetime.datetime.strptime(publish_date_str, '%Y-%m-%d')
+            except ValueError:
+                # 尝试解析 YYYY-MM-DD HH:MM:SS 格式
+                dt = datetime.datetime.strptime(publish_date_str, '%Y-%m-%d %H:%M:%S')
+                # 转换为日期格式
+                publish_date_str = dt.strftime('%Y-%m-%d')
         except ValueError:
             logger.warning(f"发布日期格式不正确: {publish_date}")
             return False
