@@ -65,14 +65,17 @@ def cleanup_database(days_to_keep):
         conn = pymysql.connect(**db_config)
         cursor = conn.cursor()
 
-        # 1. 统计将要删除的数据量（山东 + 江苏）
+        # 1. 统计将要删除的数据量（山东 + 江苏 + 浙江）
         cursor.execute("SELECT COUNT(*) FROM bidding_info WHERE publish_date < %s", (cutoff_date,))
         shandong_count = cursor.fetchone()[0]
 
         cursor.execute("SELECT COUNT(*) FROM jiangsu_bidding_info WHERE publish_date < %s", (cutoff_date,))
         jiangsu_count = cursor.fetchone()[0]
 
-        count_before_delete = shandong_count + jiangsu_count
+        cursor.execute("SELECT COUNT(*) FROM zhejiang_bidding_info WHERE publish_date < %s", (cutoff_date,))
+        zhejiang_count = cursor.fetchone()[0]
+
+        count_before_delete = shandong_count + jiangsu_count + zhejiang_count
 
         if count_before_delete == 0:
             print(f"ℹ️  没有需要清理的旧数据")
@@ -87,8 +90,13 @@ def cleanup_database(days_to_keep):
             cursor.execute(delete_sql, (cutoff_date,))
             jiangsu_deleted = cursor.rowcount
 
+            # 4. 删除浙江数据
+            delete_sql = "DELETE FROM zhejiang_bidding_info WHERE publish_date < %s"
+            cursor.execute(delete_sql, (cutoff_date,))
+            zhejiang_deleted = cursor.rowcount
+
             conn.commit()
-            print(f"✅ 数据库清理完成：删除山东 {shandong_deleted} 条，江苏 {jiangsu_deleted} 条，共 {shandong_deleted + jiangsu_deleted} 条记录")
+            print(f"✅ 数据库清理完成：删除山东 {shandong_deleted} 条，江苏 {jiangsu_deleted} 条，浙江 {zhejiang_deleted} 条，共 {shandong_deleted + jiangsu_deleted + zhejiang_deleted} 条记录")
 
         # 3. 清理过期的运行日志
         cursor.execute("""
