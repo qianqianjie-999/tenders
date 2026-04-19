@@ -2492,8 +2492,10 @@ $('#add-keyword-btn').click(function() {
                 input.val('');
                 categorySelect.val('');
                 loadKeywordList();
-                refreshKeywordTags();
-                refreshKeywordStats();
+                setTimeout(function() {
+                    refreshKeywordTags();
+                    refreshKeywordStats();
+                }, 100);
             } else {
                 showToast(response.message || '添加失败', 'error');
             }
