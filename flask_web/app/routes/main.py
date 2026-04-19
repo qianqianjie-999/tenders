@@ -170,7 +170,9 @@ def api_keywords():
             message: str = result[1]
 
             if success:
-                return jsonify({'success': True, 'message': message})
+                # 强制重新加载关键词列表，确保缓存被更新
+                keywords = KeywordService.get_all_keywords(use_cache=False)
+                return jsonify({'success': True, 'message': message, 'keywords': keywords})
             else:
                 return jsonify({'success': False, 'message': message}), 400
 
