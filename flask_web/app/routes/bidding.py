@@ -78,7 +78,18 @@ def api_list():
 
         data = []
         for row in rows:
-            bid_prices = json.loads(row['bid_prices']) if row['bid_prices'] else []
+            # 安全解析bid_prices字段
+            try:
+                bid_prices = json.loads(row['bid_prices']) if row['bid_prices'] else []
+            except (json.JSONDecodeError, TypeError):
+                bid_prices = []
+            
+            # 安全处理control_price
+            try:
+                control_price = float(row['control_price']) if row['control_price'] else None
+            except (ValueError, TypeError):
+                control_price = None
+            
             data.append({
                 'id': row['id'],
                 'analysis_project_id': row['analysis_project_id'],
@@ -88,7 +99,7 @@ def api_list():
                 'publish_date': format_date_for_display(row['publish_date']),
                 'detail_url': row['detail_url'],
                 'tenderer': row['tenderer'] or '-',
-                'control_price': float(row['control_price']) if row['control_price'] else None,
+                'control_price': control_price,
                 'bid_document_creator': row['bid_document_creator'] or '-',
                 'bid_document_key_points': row['bid_document_key_points'] or '',
                 'bid_prices': bid_prices,
@@ -185,6 +196,18 @@ def api_detail(bidding_id):
         if not row:
             return jsonify({'success': False, 'message': '记录不存在'}), 404
 
+        # 安全解析bid_prices字段
+        try:
+            bid_prices = json.loads(row['bid_prices']) if row['bid_prices'] else []
+        except (json.JSONDecodeError, TypeError):
+            bid_prices = []
+        
+        # 安全处理control_price
+        try:
+            control_price = float(row['control_price']) if row['control_price'] else ''
+        except (ValueError, TypeError):
+            control_price = ''
+        
         return jsonify({
             'success': True,
             'data': {
@@ -195,10 +218,10 @@ def api_detail(bidding_id):
                 'publish_date': format_date_for_display(row['publish_date']),
                 'detail_url': row['detail_url'],
                 'tenderer': row['tenderer'] or '',
-                'control_price': float(row['control_price']) if row['control_price'] else '',
+                'control_price': control_price,
                 'bid_document_creator': row['bid_document_creator'] or '',
                 'bid_document_key_points': row['bid_document_key_points'] or '',
-                'bid_prices': json.loads(row['bid_prices']) if row['bid_prices'] else [],
+                'bid_prices': bid_prices,
                 'final_status': row['final_status'] or 'pending',
                 'summary_reason': row['summary_reason'] or '',
                 'operator': row['operator'] or ''
