@@ -61,7 +61,8 @@ class ZhejiangPostSpider(scrapy.Spider):
                 self.logger.warning(f"[Monitor] 记录运行开始失败：{e}")
 
         # 只抓取当天的数据
-        today = datetime.datetime.now()
+        tz = datetime.timezone(datetime.timedelta(hours=8))
+        today = datetime.datetime.now(tz)
         today_date = today.strftime('%Y-%m-%d')
         today_start = f'{today_date} 00:00:00'
         today_end = f'{today_date} 23:59:59'
@@ -72,63 +73,71 @@ class ZhejiangPostSpider(scrapy.Spider):
 
         # 各类别配置
         configs = [
-            # 1. 采购公告
-            {
-                'name': '采购公告',
-                'category_num': '002002001',
-                'category': '采购公告',
-                'source': '省级',
-            },
-            # 2. 竞争性磋商
-            {
-                'name': '竞争性磋商',
-                'category_num': '002002005',
-                'category': '竞争性磋商',
-                'source': '省级',
-            },
-            # 3. 竞争性谈判
-            {
-                'name': '竞争性谈判',
-                'category_num': '002002006',
-                'category': '竞争性谈判',
-                'source': '省级',
-            },
-            # 4. 询价公告
-            {
-                'name': '询价公告',
-                'category_num': '002002008',
-                'category': '询价公告',
-                'source': '省级',
-            },
-            # 5. 工程招标计划
-            {
-                'name': '工程招标计划',
-                'category_num': '002001013',
-                'category': '工程招标计划',
-                'source': '省级',
-            },
-            # 6. 工程招标文件公示
-            {
-                'name': '工程招标文件公示',
-                'category_num': '002001011',
-                'category': '工程招标文件公示',
-                'source': '省级',
-            },
-            # 7. 工程招标公告
-            {
-                'name': '工程招标公告',
-                'category_num': '002001001',
-                'category': '工程招标公告',
-                'source': '省级',
-            },
-            # 8. 资格预审公告
-            {
-                'name': '资格预审公告',
-                'category_num': '002001002',
-                'category': '资格预审公告',
-                'source': '省级',
-            },
-        ]
+    # 1. 采购公告
+    {
+        'name': '采购公告',
+        'category_num': '002002001',
+        'category': '采购公告',
+        'source': '省级',
+        'time_field': 'webdate'  # 公告类用 webdate
+    },
+    # 2. 竞争性磋商
+    {
+        'name': '竞争性磋商',
+        'category_num': '002002005',
+        'category': '竞争性磋商',
+        'source': '省级',
+        'time_field': 'webdate'
+    },
+    # 3. 竞争性谈判
+    {
+        'name': '竞争性谈判',
+        'category_num': '002002006',
+        'category': '竞争性谈判',
+        'source': '省级',
+        'time_field': 'webdate'
+    },
+    # 4. 询价公告
+    {
+        'name': '询价公告',
+        'category_num': '002002008',
+        'category': '询价公告',
+        'source': '省级',
+        'time_field': 'webdate'
+    },
+    # 5. 工程招标计划
+    {
+        'name': '工程招标计划',
+        'category_num': '002001013',
+        'category': '工程招标计划',
+        'source': '省级',
+        'time_field': 'infodate'  # 计划类用 infodate
+    },
+    # 6. 工程招标文件公示
+    {
+        'name': '工程招标文件公示',
+        'category_num': '002001011',
+        'category': '工程招标文件公示',
+        'source': '省级',
+        'time_field': 'infodate'
+    },
+    # 7. 工程招标公告
+    {
+        'name': '工程招标公告',
+        'category_num': '002001001',
+        'category': '工程招标公告',
+        'source': '省级',
+        'time_field': 'webdate'
+    },
+    # 8. 资格预审公告
+    {
+        'name': '资格预审公告',
+        'category_num': '002001002',
+        'category': '资格预审公告',
+        'source': '省级',
+        'time_field': 'webdate'
+    },
+]
 
         self.logger.info(f"共有 {len(configs)} 个配置项")
 
@@ -150,7 +159,7 @@ class ZhejiangPostSpider(scrapy.Spider):
                 "cl": "200",
                 "terminal": "",
                 "condition": '[{"fieldName":"categorynum","isLike":true,"likeType":2,"equal":"' + config['category_num'] + '"},{"fieldName":"infoc","isLike":true,"likeType":2,"equal":"33"}]',
-                "time": '[{"fieldName":"webdate","startTime":"' + today_start + '","endTime":"' + today_end + '"}]',
+                "time": '[{"fieldName":"' + config['time_field'] + '","startTime":"' + today_start + '","endTime":"' + today_end + '"}]',
                 "highlights": "",
                 "statistics": "null",
                 "unionCondition": "null",
@@ -233,8 +242,12 @@ class ZhejiangPostSpider(scrapy.Spider):
                 item_index += 1
                 title = record.get('title', '').strip()
                 linkurl = record.get('linkurl', '')
-                infodate = record.get('webdate', '')
-                infodateformat = record.get('webdate', '')
+    
+                  # ✅ 关键修复：根据配置自动取正确的时间字段
+                time_field = response.meta['config']['time_field']
+                infodate = record.get(time_field, '')
+                infodateformat = record.get(time_field, '')
+    
                 zhuanzai = record.get('zhuanzai', '')
 
                 # 确定地区
@@ -252,9 +265,10 @@ class ZhejiangPostSpider(scrapy.Spider):
                 # 检查是否为最近3天的数据
                 if infodateformat:
                     pub_date_str = infodateformat.strip()
-
-                    # 判断是否为最近3天数据
-                    if start_date <= pub_date_str <= end_date:
+                     # 只比对年月日，无视时区、无视时分秒
+                    pub_date_only = pub_date_str[:10]
+                    # 判断是否为当天数据
+                    if pub_date_only==today_date:
                         found_today_data = True
                         today_count += 1
 
