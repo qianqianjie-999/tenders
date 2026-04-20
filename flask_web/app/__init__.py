@@ -16,7 +16,7 @@ cache = Cache()
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per hour", "50 per minute"],
-    storage_uri="redis://localhost:6379/0"  # 使用Redis存储，生产环境推荐
+    storage_uri="memory://"  # 使用内存存储，适合开发环境
 )
 
 def create_app():

@@ -245,6 +245,60 @@ def api_export():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@zhejiang_bp.route('/api/keywords', methods=['GET'])
+def api_keywords():
+    """API: 获取关键词列表（带统计信息）"""
+    try:
+        # 支持两种模式：简单列表 或 带统计的详细列表
+        detailed = request.args.get('detailed', 'false') == 'true'
+
+        if detailed:
+            # 获取所有关键词
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT keyword, category, created_time 
+                FROM highlight_keywords 
+                ORDER BY category, created_time DESC
+            """)
+            keywords = cursor.fetchall()
+
+            # 统计每个关键词关联的项目数（近30天，浙江数据）
+            result = []
+            for kw in keywords:
+                cursor.execute("""
+                    SELECT COUNT(*) as count 
+                    FROM zhejiang_bidding_info 
+                    WHERE project_name LIKE %s 
+                    AND publish_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                """, (f'%{kw["keyword"]}%',))
+                stat = cursor.fetchone()
+
+                result.append({
+                    'keyword': kw['keyword'],
+                    'category': kw['category'],
+                    'project_count': stat['count'] if stat else 0,
+                    'created_time': kw['created_time'].strftime('%Y-%m-%d') if kw['created_time'] else ''
+                })
+
+            cursor.close()
+            keywords = result
+        else:
+            keywords = KeywordService.get_all_keywords()
+
+        return jsonify({
+            'success': True,
+            'keywords': keywords,
+            'total': len(keywords)
+        })
+
+    except Exception as e:
+        import traceback
+        print(f"[API] 获取关键词失败: {e}")
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @zhejiang_bp.route('/api/keyword-projects')
 def api_keyword_projects():
     """API: 获取指定关键词近 N 天的项目列表"""
@@ -291,7 +345,7 @@ def api_keyword_projects():
         cursor.close()
 
         # 处理数据
-        keywords = KeywordService.get_all_keywords()
+        keywords = current_app.config['HIGHLIGHT_KEYWORDS']
         processed_data = []
 
         for row in rows:

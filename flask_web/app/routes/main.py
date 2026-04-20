@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, current_app
+from flask import Blueprint, render_template, request, jsonify, current_app, Markup
 from flask_login import login_required
 from datetime import date
 from app.services.bidding_service import BiddingService
@@ -407,8 +407,7 @@ def api_keyword_projects():
             SELECT COUNT(*) as total 
             FROM bidding_info 
             WHERE project_name LIKE %s 
-            AND publish_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
-        """, (f'%{keyword}%', days))
+        """, (f'%{keyword}%',))
         total: int = cursor.fetchone()['total']
 
         # 分页查询
@@ -424,16 +423,15 @@ def api_keyword_projects():
                 crawl_time
             FROM bidding_info 
             WHERE project_name LIKE %s 
-            AND publish_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
             ORDER BY publish_date DESC, id DESC
             LIMIT %s OFFSET %s
-        """, (f'%{keyword}%', days, page_size, offset))
+        """, (f'%{keyword}%', page_size, offset))
 
         rows: List[Dict[str, Any]] = cursor.fetchall()
         cursor.close()
 
         # 处理数据...
-        keywords: List[str] = KeywordService.get_all_keywords()
+        keywords: List[str] = current_app.config['HIGHLIGHT_KEYWORDS']
         processed_data: List[Dict[str, Any]] = []
 
         for row in rows:
