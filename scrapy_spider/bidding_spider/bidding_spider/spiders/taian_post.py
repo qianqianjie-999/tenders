@@ -404,29 +404,57 @@ class TaianPostSpider(scrapy.Spider):
 
         try:
             data = json.loads(response.text)
+        except Exception as e:
+            self.logger.error(f"❌ JSON解析失败: {e}, URL: {response.url}")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'json_error',
+                    response_status=response.status,
+                    error_message=f"JSON解析失败: {e}"
+                )
+            return
 
-            # 检查外层响应
-            if response.status != 200:
-                self.logger.error(f"HTTP错误: {response.status}")
-                return
+        # 检查外层响应
+        if response.status != 200:
+            self.logger.error(f"HTTP错误: {response.status}")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'http_error',
+                    response_status=response.status,
+                    error_message=f"HTTP错误: {response.status}"
+                )
+            return
 
-            # 检查result是否存在
-            result_data = data.get('result', {})
-            if not result_data:
-                self.logger.error(f"API返回数据格式异常: {data.get('error', '未知错误')}")
-                return
+        # 检查result是否存在
+        result_data = data.get('result', {})
+        if not result_data:
+            error_msg = data.get('error', '未知错误')
+            self.logger.error(f"API返回数据格式异常: {error_msg}")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'empty_response',
+                    response_status=response.status,
+                    error_message=f"API返回数据格式异常: {error_msg}"
+                )
+            return
 
-            # 获取实际数据
-            items = result_data.get('records', [])
-            total_count = int(result_data.get('totalcount', 0))
-            current_pn = response.meta['config']['payload']['pn']
-            rn = response.meta['config']['payload']['rn']
+        # 获取实际数据
+        items = result_data.get('records', [])
+        total_count = int(result_data.get('totalcount', 0))
+        current_pn = response.meta['config']['payload']['pn']
+        rn = response.meta['config']['payload']['rn']
 
-            self.logger.info(f"第{current_pn // rn + 1}页: {len(items)}条原始数据，共{total_count}条")
+        self.logger.info(f"第{current_pn // rn + 1}页: {len(items)}条原始数据，共{total_count}条")
 
-            if not items:
-                self.logger.info("本页没有数据，停止翻页")
-                return
+        if not items:
+            self.logger.info("本页没有数据，停止翻页")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'empty_response',
+                    response_status=response.status,
+                    item_count=0
+                )
+            return
 
             found_today_data = False
             today_count = 0

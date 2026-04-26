@@ -216,26 +216,54 @@ class JinanPostSpider(scrapy.Spider):
 
         try:
             data = json.loads(response.text)
+        except Exception as e:
+            self.logger.error(f"❌ JSON解析失败: {e}, URL: {response.url}")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'json_error',
+                    response_status=response.status,
+                    error_message=f"JSON解析失败: {e}"
+                )
+            return
 
-            # 检查响应状态
-            if not data.get('success', False) and data.get('code') is not None:
-                self.logger.error(f"API返回错误: {data.get('message', '未知错误')}")
-                return
+        # 检查响应状态
+        if not data.get('success', False) and data.get('code') is not None:
+            error_msg = data.get('message', '未知错误')
+            self.logger.error(f"API返回错误: {error_msg}")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'api_error',
+                    response_status=response.status,
+                    error_message=f"API返回错误: {error_msg}"
+                )
+            return
 
-            params = data.get('params', {})
-            if not params:
-                self.logger.error("API返回数据格式异常: 缺少params字段")
-                return
+        params = data.get('params', {})
+        if not params:
+            self.logger.error("API返回数据格式异常: 缺少params字段")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'empty_response',
+                    response_status=response.status,
+                    error_message="API返回数据格式异常: 缺少params字段"
+                )
+            return
 
-            # 获取HTML内容和分页信息
-            html_str = params.get('str', '')
-            pagesum = int(params.get('pagesum', 0))
+        # 获取HTML内容和分页信息
+        html_str = params.get('str', '')
+        pagesum = int(params.get('pagesum', 0))
 
-            self.logger.info(f"第{page_num}页: 共{pagesum}页数据")
+        self.logger.info(f"第{page_num}页: 共{pagesum}页数据")
 
-            if not html_str:
-                self.logger.info("本页没有数据，停止翻页")
-                return
+        if not html_str:
+            self.logger.info("本页没有数据，停止翻页")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'empty_response',
+                    response_status=response.status,
+                    item_count=0
+                )
+            return
 
             # 解析HTML提取项目信息
             items = self.parse_html_items(html_str, config['api_type'], config['detail_type'])

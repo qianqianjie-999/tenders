@@ -187,22 +187,43 @@ class JiangsuPostSpider(scrapy.Spider):
 
         try:
             data = json.loads(response.text)
+        except Exception as e:
+            self.logger.error(f"❌ JSON解析失败: {e}, URL: {response.url}")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'json_error',
+                    response_status=response.status,
+                    error_message=f"JSON解析失败: {e}"
+                )
+            return
 
-            # 获取返回结果
-            result = data.get('result', {})
-            if not result:
-                self.logger.warning("API 返回数据格式异常：缺少 result 字段")
-                return
+        # 获取返回结果
+        result = data.get('result', {})
+        if not result:
+            self.logger.warning("API 返回数据格式异常：缺少 result 字段")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'empty_response',
+                    response_status=response.status,
+                    item_count=0
+                )
+            return
 
-            # 获取总数和列表数据
-            total_count = int(result.get('totalcount', 0))
-            records = result.get('records', [])
+        # 获取总数和列表数据
+        total_count = int(result.get('totalcount', 0))
+        records = result.get('records', [])
 
-            self.logger.info(f"第{page_num + 1}页：共{total_count}条数据，返回{len(records)}条")
+        self.logger.info(f"第{page_num + 1}页：共{total_count}条数据，返回{len(records)}条")
 
-            if not records:
-                self.logger.info("本页没有数据，停止翻页")
-                return
+        if not records:
+            self.logger.info("本页没有数据，停止翻页")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'empty_response',
+                    response_status=response.status,
+                    item_count=0
+                )
+            return
 
             found_today_data = False
             today_count = 0

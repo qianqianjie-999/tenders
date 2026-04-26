@@ -215,32 +215,59 @@ class SdPostSpider(scrapy.Spider):
 
         try:
             data = json.loads(response.text)
+        except Exception as e:
+            self.logger.error(f"❌ JSON解析失败: {e}, URL: {response.url}")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'json_error',
+                    response_status=response.status,
+                    error_message=f"JSON解析失败: {e}"
+                )
+            return
 
-            # 检查HTTP状态
-            if response.status != 200:
-                self.logger.error(f"HTTP错误: {response.status}")
-                return
+        # 检查HTTP状态
+        if response.status != 200:
+            self.logger.error(f"HTTP错误: {response.status}")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'http_error',
+                    response_status=response.status,
+                    error_message=f"HTTP错误: {response.status}"
+                )
+            return
 
-            # 检查业务状态码
-            inner_data = data.get('data', {})
-            inner_code = inner_data.get('code')
+        # 检查业务状态码
+        inner_data = data.get('data', {})
+        inner_code = inner_data.get('code')
 
-            if inner_code != 100:
-                self.logger.error(f"API业务错误: {inner_data.get('message', '无错误信息')}, 错误码: {inner_code}")
-                return
+        if inner_code != 100:
+            self.logger.error(f"API业务错误: {inner_data.get('message', '无错误信息')}, 错误码: {inner_code}")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'api_error',
+                    response_status=response.status,
+                    error_message=f"API业务错误: {inner_data.get('message', '无错误信息')}, 错误码: {inner_code}"
+                )
+            return
 
-            # 获取数据
-            records_data = inner_data.get('data', {})
-            items = records_data.get('records', [])
-            total_records = records_data.get('total', 0)
-            current_page = records_data.get('current', 1)
-            total_pages = records_data.get('pages', 0)
+        # 获取数据
+        records_data = inner_data.get('data', {})
+        items = records_data.get('records', [])
+        total_records = records_data.get('total', 0)
+        current_page = records_data.get('current', 1)
+        total_pages = records_data.get('pages', 0)
 
-            self.logger.info(f"第{current_page}页: {len(items)}条数据，共{total_records}条，共{total_pages}页")
+        self.logger.info(f"第{current_page}页: {len(items)}条数据，共{total_records}条，共{total_pages}页")
 
-            if not items:
-                self.logger.info("本页没有数据，停止翻页")
-                return
+        if not items:
+            self.logger.info("本页没有数据，停止翻页")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'empty_response',
+                    response_status=response.status,
+                    item_count=0
+                )
+            return
 
             found_target_data = False
             target_count = 0

@@ -182,27 +182,55 @@ class ZiboPostSpider(scrapy.Spider):
 
         try:
             data = json.loads(response.text)
+        except Exception as e:
+            self.logger.error(f"❌ JSON解析失败: {e}, URL: {response.url}")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'json_error',
+                    response_status=response.status,
+                    error_message=f"JSON解析失败: {e}"
+                )
+            return
 
-            # 检查响应状态
-            status = data.get('status', {})
-            if status.get('code') != 1:
-                self.logger.error(f"API返回错误: {status.get('text', '未知错误')}")
-                return
+        # 检查响应状态
+        status = data.get('status', {})
+        if status.get('code') != 1:
+            error_msg = status.get('text', '未知错误')
+            self.logger.error(f"API返回错误: {error_msg}")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'api_error',
+                    response_status=response.status,
+                    error_message=f"API返回错误: {error_msg}"
+                )
+            return
 
-            custom_data = data.get('custom', {})
-            if not custom_data:
-                self.logger.error("API返回数据格式异常: 缺少custom字段")
-                return
+        custom_data = data.get('custom', {})
+        if not custom_data:
+            self.logger.error("API返回数据格式异常: 缺少custom字段")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'empty_response',
+                    response_status=response.status,
+                    error_message="API返回数据格式异常: 缺少custom字段"
+                )
+            return
 
-            # 获取总数和列表数据
-            total_count = int(custom_data.get('count', 0))
-            info_list = custom_data.get('infodata', [])
+        # 获取总数和列表数据
+        total_count = int(custom_data.get('count', 0))
+        info_list = custom_data.get('infodata', [])
 
-            self.logger.info(f"第{page_index + 1}页: 共{total_count}条数据，本页{len(info_list)}条")
+        self.logger.info(f"第{page_index + 1}页: 共{total_count}条数据，本页{len(info_list)}条")
 
-            if not info_list:
-                self.logger.info("本页没有数据，停止翻页")
-                return
+        if not info_list:
+            self.logger.info("本页没有数据，停止翻页")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'empty_response',
+                    response_status=response.status,
+                    item_count=0
+                )
+            return
 
             found_today_data = False
             today_count = 0
