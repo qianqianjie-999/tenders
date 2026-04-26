@@ -318,9 +318,9 @@ class JiningGetSpider(scrapy.Spider):
         self.logger.info(f"✅ 找到 {len(items)} 个列表项")
 
         today_date = datetime.date.today()
-        thirty_days_ago = today_date - datetime.timedelta(days=29)
+        three_days_ago = today_date - datetime.timedelta(days=2)
 
-        self.logger.info(f"📅 抓取日期范围: {thirty_days_ago} 到 {today_date}")
+        self.logger.info(f"📅 抓取日期范围: {three_days_ago} 到 {today_date}")
 
         found_recent_data = False
         last_item_date = None
@@ -338,7 +338,7 @@ class JiningGetSpider(scrapy.Spider):
                 try:
                     pub_date = datetime.datetime.strptime(publish_date, '%Y-%m-%d').date()
 
-                    if thirty_days_ago <= pub_date <= today_date:
+                    if three_days_ago <= pub_date <= today_date:
                         found_recent_data = True
 
                         bidding_item = BiddingItem()
@@ -375,11 +375,11 @@ class JiningGetSpider(scrapy.Spider):
         if last_item_date:
             try:
                 last_date = datetime.datetime.strptime(last_item_date, '%Y-%m-%d').date()
-                if thirty_days_ago <= last_date <= today_date:
+                if three_days_ago <= last_date <= today_date:
                     should_continue = True
-                    self.logger.info(f"📄 最后一页日期 {last_item_date} 在最近30天内，继续翻页")
+                    self.logger.info(f"📄 最后一页日期 {last_item_date} 在最近3天内，继续翻页")
                 else:
-                    self.logger.info(f"🛑 最后一页日期 {last_item_date} 不在最近30天内，停止翻页")
+                    self.logger.info(f"🛑 最后一页日期 {last_item_date} 不在最近3天内，停止翻页")
             except:
                 self.logger.warning(f"⚠️ 无法解析最后一页日期: {last_item_date}")
 
@@ -414,7 +414,7 @@ class JiningGetSpider(scrapy.Spider):
                 self.logger.info(f"🛑 没有找到下一页链接")
         else:
             if not found_recent_data:
-                self.logger.info(f"🛑 当前页没有最近30天的数据，停止翻页")
+                self.logger.info(f"🛑 当前页没有最近3天的数据，停止翻页")
             elif not should_continue:
                 self.logger.info(f"🛑 最后一页日期不在最近3天内，停止翻页")
 
