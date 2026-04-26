@@ -225,109 +225,101 @@ class JiangsuPostSpider(scrapy.Spider):
                 )
             return
 
-            found_today_data = False
-            today_count = 0
+        found_today_data = False
+        today_count = 0
 
-            for record in records:
-                item_index += 1
-                title = record.get('title', '').strip()
-                linkurl = record.get('linkurl', '')
-                infodate = record.get('infodate', '')
-                infodateformat = record.get('infodateformat', '')
-                zhuanzai = record.get('zhuanzai', '')
+        for record in records:
+            item_index += 1
+            title = record.get('title', '').strip()
+            linkurl = record.get('linkurl', '')
+            infodate = record.get('infodate', '')
+            infodateformat = record.get('infodateformat', '')
+            zhuanzai = record.get('zhuanzai', '')
 
-                # 确定地区
-                if zhuanzai and zhuanzai != '省级':
-                    project_source = zhuanzai.rstrip('市')
-                else:
-                    project_source = '省级'
-
-                # 构建详情页链接
-                if linkurl and not linkurl.startswith('http'):
-                    detail_url = self.DETAIL_BASE_URL + linkurl
-                else:
-                    detail_url = linkurl
-
-                # 检查是否为当天的数据
-                if infodateformat:
-                    pub_date_str = infodateformat.strip()
-
-                    # 判断是否为当天数据
-                    if pub_date_str == today_date:
-                        found_today_data = True
-                        today_count += 1
-
-                        # 创建 Item
-                        item = BiddingItem()
-
-                        item['project_name'] = title
-                        item['publish_date'] = pub_date_str
-                        item['detail_url'] = detail_url
-                        item['project_source'] = project_source
-                        item['project_category'] = config['category']
-                        item['data_source'] = '江苏省公共资源交易中心'
-                        item['page_num'] = page_num + 1
-                        item['item_index'] = item_index
-                        item['crawl_time'] = datetime.datetime.now()
-
-                        self.logger.info(
-                            f"发现当天数据 [{pub_date_str}]: {item['project_name'][:50]}...")
-                        self.logger.debug(f"详情链接：{item['detail_url']}")
-
-                        yield item
-                        self.items_crawled += 1
-                    else:
-                        self.logger.debug(
-                            f"跳过非当天数据 [{pub_date_str}]: {title[:30]}...")
-
-            self.logger.info(f"本页共有 {today_count} 条当天数据")
-
-            # 翻页逻辑：只要本页有当天数据，就一直翻页，直到不是当日的
-            if found_today_data:
-                next_page = page_num + 1
-                next_payload = payload.copy()
-                next_payload['pn'] = str(next_page * 20)  # pn 是偏移量
-
-                self.logger.info(f"当前页有当天数据，继续翻页到第{next_page + 1}页")
-
-                # 将 payload 转为 JSON 字符串作为请求体
-                next_body_json = json.dumps(next_payload, separators=(',', ':'))
-
-                yield scrapy.Request(
-                    url=self.API_URL,
-                    method='POST',
-                    body=next_body_json,
-                    headers={
-                        'Content-Type': 'application/json; charset=UTF-8',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Origin': 'http://jsggzy.jszwfw.gov.cn',
-                        'Referer': 'http://jsggzy.jszwfw.gov.cn/'
-                    },
-                    callback=self.parse_api_response,
-                    meta={
-                        'config': config,
-                        'today_date': today_date,
-                        'today_start': today_start,
-                        'today_end': today_end,
-                        'page_num': next_page,
-                        'item_index': item_index,
-                        'payload': next_payload
-                    },
-                    errback=self.handle_error,
-                    dont_filter=True
-                )
+            # 确定地区
+            if zhuanzai and zhuanzai != '省级':
+                project_source = zhuanzai.rstrip('市')
             else:
-                self.logger.info(f"当前页没有当天数据，停止翻页")
+                project_source = '省级'
 
-        except json.JSONDecodeError as e:
-            self.logger.error(f'JSON 解析失败：{e}')
-            self.logger.error(f'响应内容：{response.text[:500]}')
-        except Exception as e:
-            self.logger.error(f'解析 API 响应时出错：{e}')
-            import traceback
-            self.logger.error(traceback.format_exc())
+            # 构建详情页链接
+            if linkurl and not linkurl.startswith('http'):
+                detail_url = self.DETAIL_BASE_URL + linkurl
+            else:
+                detail_url = linkurl
+
+            # 检查是否为当天的数据
+            if infodateformat:
+                pub_date_str = infodateformat.strip()
+
+                # 判断是否为当天数据
+                if pub_date_str == today_date:
+                    found_today_data = True
+                    today_count += 1
+
+                    # 创建 Item
+                    item = BiddingItem()
+
+                    item['project_name'] = title
+                    item['publish_date'] = pub_date_str
+                    item['detail_url'] = detail_url
+                    item['project_source'] = project_source
+                    item['project_category'] = config['category']
+                    item['data_source'] = '江苏省公共资源交易中心'
+                    item['page_num'] = page_num + 1
+                    item['item_index'] = item_index
+                    item['crawl_time'] = datetime.datetime.now()
+
+                    self.logger.info(
+                        f"发现当天数据 [{pub_date_str}]: {item['project_name'][:50]}...")
+                    self.logger.debug(f"详情链接：{item['detail_url']}")
+
+                    yield item
+                    self.items_crawled += 1
+                else:
+                    self.logger.debug(
+                        f"跳过非当天数据 [{pub_date_str}]: {title[:30]}...")
+
+        self.logger.info(f"本页共有 {today_count} 条当天数据")
+
+        # 翻页逻辑：只要本页有当天数据，就一直翻页，直到不是当日的
+        if found_today_data:
+            next_page = page_num + 1
+            next_payload = payload.copy()
+            next_payload['pn'] = str(next_page * 20)  # pn 是偏移量
+
+            self.logger.info(f"当前页有当天数据，继续翻页到第{next_page + 1}页")
+
+            # 将 payload 转为 JSON 字符串作为请求体
+            next_body_json = json.dumps(next_payload, separators=(',', ':'))
+
+            yield scrapy.Request(
+                url=self.API_URL,
+                method='POST',
+                body=next_body_json,
+                headers={
+                    'Content-Type': 'application/json; charset=UTF-8',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Origin': 'http://jsggzy.jszwfw.gov.cn',
+                    'Referer': 'http://jsggzy.jszwfw.gov.cn/'
+                },
+                callback=self.parse_api_response,
+                meta={
+                    'config': config,
+                    'today_date': today_date,
+                    'today_start': today_start,
+                    'today_end': today_end,
+                    'page_num': next_page,
+                    'item_index': item_index,
+                    'payload': next_payload
+                },
+                errback=self.handle_error,
+                dont_filter=True
+            )
+        else:
+            self.logger.info(f"当前页没有当天数据，停止翻页")
 
     def handle_error(self, failure):
         """处理请求错误"""

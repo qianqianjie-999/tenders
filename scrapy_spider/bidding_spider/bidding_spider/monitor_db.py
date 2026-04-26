@@ -8,6 +8,7 @@ import sys
 import pymysql
 import json
 import logging
+from typing import List, Dict, Optional
 from datetime import datetime, date
 from typing import Optional, Dict, Any
 from pathlib import Path

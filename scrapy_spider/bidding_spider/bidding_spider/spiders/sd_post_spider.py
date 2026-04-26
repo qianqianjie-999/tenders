@@ -269,82 +269,74 @@ class SdPostSpider(scrapy.Spider):
                 )
             return
 
-            found_target_data = False
-            target_count = 0
+        found_target_data = False
+        target_count = 0
 
-            for idx, item_data in enumerate(items):
-                item_index += 1
+        for idx, item_data in enumerate(items):
+            item_index += 1
 
-                # 创建Item
-                item = BiddingItem()
+            # 创建Item
+            item = BiddingItem()
 
-                # 提取基础信息
-                item['project_name'] = item_data.get('title', '').strip()
-                publish_time = item_data.get('date', '')
-                item['publish_date'] = publish_time.split(' ')[0] if publish_time else ''
-                item['detail_url'] = self.build_detail_url(item_data, config)
-                item['project_source'] = config['source']
-                item['project_category'] = config['category']
+            # 提取基础信息
+            item['project_name'] = item_data.get('title', '').strip()
+            publish_time = item_data.get('date', '')
+            item['publish_date'] = publish_time.split(' ')[0] if publish_time else ''
+            item['detail_url'] = self.build_detail_url(item_data, config)
+            item['project_source'] = config['source']
+            item['project_category'] = config['category']
 
-                # 设置爬虫元数据
-                item['data_source'] = '山东省政府采购网'
-                item['page_num'] = current_page
-                item['item_index'] = item_index
-                item['crawl_time'] = datetime.datetime.now()
+            # 设置爬虫元数据
+            item['data_source'] = '山东省政府采购网'
+            item['page_num'] = current_page
+            item['item_index'] = item_index
+            item['crawl_time'] = datetime.datetime.now()
 
-                # 检查是否为目标日期的数据
-                if item['publish_date']:
-                    try:
-                        pub_date = datetime.datetime.strptime(item['publish_date'], '%Y-%m-%d').date()
-                        target = datetime.datetime.strptime(self.target_date, '%Y-%m-%d').date()
+            # 检查是否为目标日期的数据
+            if item['publish_date']:
+                try:
+                    pub_date = datetime.datetime.strptime(item['publish_date'], '%Y-%m-%d').date()
+                    target = datetime.datetime.strptime(self.target_date, '%Y-%m-%d').date()
 
-                        if pub_date == target:
-                            found_target_data = True
-                            target_count += 1
-                            self.logger.info(
-                                f"发现目标数据 [{item['publish_date']}]: {item['project_name'][:50]}..."
-                            )
-                            yield item
-                            self.items_crawled += 1
-                        else:
-                            self.logger.debug(
-                                f"跳过非目标日期数据 [{item['publish_date']}]: {item['project_name'][:30]}..."
-                            )
-                    except Exception as e:
-                        self.logger.warning(f"日期处理失败: {item['publish_date']}, 错误: {e}")
-                else:
-                    self.logger.warning(f"无发布日期信息: {item['project_name'][:30]}...")
-
-            self.logger.info(f"本页共有 {target_count} 条目标日期({self.target_date})数据")
-
-            # 翻页逻辑
-            if found_target_data and current_page < total_pages:
-                self.logger.info(f"继续翻页到第{current_page + 1}页")
-                yield self._create_request(
-                    col_code=col_code,
-                    area=area,
-                    config=config,
-                    page=current_page + 1
-                ).replace(meta={
-                    'config': config,
-                    'page_num': current_page + 1,
-                    'item_index': item_index,
-                    'col_code': col_code,
-                    'area': area
-                })
+                    if pub_date == target:
+                        found_target_data = True
+                        target_count += 1
+                        self.logger.info(
+                            f"发现目标数据 [{item['publish_date']}]: {item['project_name'][:50]}..."
+                        )
+                        yield item
+                        self.items_crawled += 1
+                    else:
+                        self.logger.debug(
+                            f"跳过非目标日期数据 [{item['publish_date']}]: {item['project_name'][:30]}..."
+                        )
+                except Exception as e:
+                    self.logger.warning(f"日期处理失败: {item['publish_date']}, 错误: {e}")
             else:
-                if not found_target_data:
-                    self.logger.info("当前页无目标日期数据，停止翻页")
-                elif current_page >= total_pages:
-                    self.logger.info("已达到最后一页")
+                self.logger.warning(f"无发布日期信息: {item['project_name'][:30]}...")
 
-        except json.JSONDecodeError as e:
-            self.logger.error(f'JSON解析失败: {e}')
-            self.logger.error(f'响应内容: {response.text[:500]}')
-        except Exception as e:
-            self.logger.error(f'解析API响应时出错: {e}')
-            import traceback
-            self.logger.error(traceback.format_exc())
+        self.logger.info(f"本页共有 {target_count} 条目标日期({self.target_date})数据")
+
+        # 翻页逻辑
+        if found_target_data and current_page < total_pages:
+            self.logger.info(f"继续翻页到第{current_page + 1}页")
+            yield self._create_request(
+                col_code=col_code,
+                area=area,
+                config=config,
+                page=current_page + 1
+            ).replace(meta={
+                'config': config,
+                'page_num': current_page + 1,
+                'item_index': item_index,
+                'col_code': col_code,
+                'area': area
+            })
+        else:
+            if not found_target_data:
+                self.logger.info("当前页无目标日期数据，停止翻页")
+            elif current_page >= total_pages:
+                self.logger.info("已达到最后一页")
 
     def build_detail_url(self, item_data, config):
         """构建详情页URL"""
