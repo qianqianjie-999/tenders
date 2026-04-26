@@ -265,105 +265,97 @@ class JinanPostSpider(scrapy.Spider):
                 )
             return
 
-            # 解析HTML提取项目信息
-            items = self.parse_html_items(html_str, config['api_type'], config['detail_type'])
+        # 解析HTML提取项目信息
+        items = self.parse_html_items(html_str, config['api_type'], config['detail_type'])
 
-            self.logger.info(f"解析到 {len(items)} 条原始数据")
+        self.logger.info(f"解析到 {len(items)} 条原始数据")
 
-            found_today_data = False
-            today_count = 0
+        found_today_data = False
+        today_count = 0
 
-            for idx, item_data in enumerate(items):
-                item_index += 1
-                publish_date = item_data.get('publish_date', '')
+        for idx, item_data in enumerate(items):
+            item_index += 1
+            publish_date = item_data.get('publish_date', '')
 
-                # 检查是否为当天的数据
-                if publish_date:
-                    try:
-                        # 标准化日期格式
-                        pub_date_str = publish_date.strip()
+            # 检查是否为当天的数据
+            if publish_date:
+                try:
+                    # 标准化日期格式
+                    pub_date_str = publish_date.strip()
 
-                        # 判断是否为当天数据
-                        if pub_date_str == today_date:
-                            found_today_data = True
-                            today_count += 1
+                    # 判断是否为当天数据
+                    if pub_date_str == today_date:
+                        found_today_data = True
+                        today_count += 1
 
-                            # 创建Item
-                            item = BiddingItem()
+                        # 创建Item
+                        item = BiddingItem()
 
-                            item['project_name'] = item_data.get('title', '').strip()
-                            item['publish_date'] = pub_date_str
-                            item['detail_url'] = item_data.get('detail_url', '')
-                            item['project_source'] = config['source']
-                            item['project_category'] = config['category']
-                            item['data_source'] = '济南市公共资源交易中心'
-                            item['page_num'] = page_num
-                            item['item_index'] = item_index
-                            item['crawl_time'] = datetime.datetime.now()
+                        item['project_name'] = item_data.get('title', '').strip()
+                        item['publish_date'] = pub_date_str
+                        item['detail_url'] = item_data.get('detail_url', '')
+                        item['project_source'] = config['source']
+                        item['project_category'] = config['category']
+                        item['data_source'] = '济南市公共资源交易中心'
+                        item['page_num'] = page_num
+                        item['item_index'] = item_index
+                        item['crawl_time'] = datetime.datetime.now()
 
-                            self.logger.info(
-                                f"发现当天数据 [{pub_date_str}]: {item['project_name'][:50]}...")
-                            self.logger.debug(f"详情链接: {item['detail_url']}")
+                        self.logger.info(
+                            f"发现当天数据 [{pub_date_str}]: {item['project_name'][:50]}...")
+                        self.logger.debug(f"详情链接: {item['detail_url']}")
 
-                            yield item
-                            self.items_crawled += 1
-                        else:
-                            self.logger.debug(
-                                f"跳过非当天数据 [{pub_date_str}]: {item_data.get('title', '')[:30]}...")
-                    except Exception as e:
-                        self.logger.warning(f"日期处理失败: {publish_date}, 错误: {e}")
-                else:
-                    self.logger.warning(f"无发布日期信息: {item_data.get('title', '')[:30]}...")
-
-            self.logger.info(f"本页共有 {today_count} 条当天数据")
-
-            # 翻页逻辑
-            if found_today_data and page_num < pagesum:
-                next_page = page_num + 1
-                next_payload = config['payload'].copy()
-
-                # 根据不同API类型设置页码参数
-                if config['api_type'] == 'tendering' or config['api_type'] == 'soa':
-                    next_payload['index'] = str(next_page)
-                else:
-                    next_payload['pagenum'] = str(next_page)
-
-                self.logger.info(f"当前页有当天数据，继续翻页到第{next_page}页")
-
-                yield scrapy.FormRequest(
-                    url=config['url'],
-                    formdata=next_payload,
-                    headers={
-                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                        'Accept': 'application/json, text/javascript, */*; q=0.01',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Origin': 'https://jnggzy.jinan.gov.cn',
-                        'Referer': 'https://jnggzy.jinan.gov.cn/jnggzyztb/front/'
-                    },
-                    callback=self.parse_api_response,
-                    meta={
-                        'config': config,
-                        'today_date': today_date,
-                        'page_num': next_page,
-                        'item_index': item_index
-                    },
-                    errback=self.handle_error,
-                    dont_filter=True
-                )
+                        yield item
+                        self.items_crawled += 1
+                    else:
+                        self.logger.debug(
+                            f"跳过非当天数据 [{pub_date_str}]: {item_data.get('title', '')[:30]}...")
+                except Exception as e:
+                    self.logger.warning(f"日期处理失败: {publish_date}, 错误: {e}")
             else:
-                if not found_today_data:
-                    self.logger.info(f"当前页没有当天数据，停止翻页")
-                elif page_num >= pagesum:
-                    self.logger.info(f"已达到最后一页")
+                self.logger.warning(f"无发布日期信息: {item_data.get('title', '')[:30]}...")
 
-        except json.JSONDecodeError as e:
-            self.logger.error(f'JSON解析失败: {e}')
-            self.logger.error(f'响应内容: {response.text[:500]}')
-        except Exception as e:
-            self.logger.error(f'解析API响应时出错: {e}')
-            import traceback
-            self.logger.error(traceback.format_exc())
+        self.logger.info(f"本页共有 {today_count} 条当天数据")
+
+        # 翻页逻辑
+        if found_today_data and page_num < pagesum:
+            next_page = page_num + 1
+            next_payload = config['payload'].copy()
+
+            # 根据不同API类型设置页码参数
+            if config['api_type'] == 'tendering' or config['api_type'] == 'soa':
+                next_payload['index'] = str(next_page)
+            else:
+                next_payload['pagenum'] = str(next_page)
+
+            self.logger.info(f"当前页有当天数据，继续翻页到第{next_page}页")
+
+            yield scrapy.FormRequest(
+                url=config['url'],
+                formdata=next_payload,
+                headers={
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Origin': 'https://jnggzy.jinan.gov.cn',
+                    'Referer': 'https://jnggzy.jinan.gov.cn/jnggzyztb/front/'
+                },
+                callback=self.parse_api_response,
+                meta={
+                    'config': config,
+                    'today_date': today_date,
+                    'page_num': next_page,
+                    'item_index': item_index
+                },
+                errback=self.handle_error,
+                dont_filter=True
+            )
+        else:
+            if not found_today_data:
+                self.logger.info(f"当前页没有当天数据，停止翻页")
+            elif page_num >= pagesum:
+                self.logger.info(f"已达到最后一页")
 
     def parse_html_items(self, html_str, api_type, detail_type):
         """

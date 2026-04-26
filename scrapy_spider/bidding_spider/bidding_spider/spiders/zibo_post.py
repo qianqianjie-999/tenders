@@ -232,107 +232,99 @@ class ZiboPostSpider(scrapy.Spider):
                 )
             return
 
-            found_today_data = False
-            today_count = 0
+        found_today_data = False
+        today_count = 0
 
-            for idx, info in enumerate(info_list):
-                item_index += 1
+        for idx, info in enumerate(info_list):
+            item_index += 1
 
-                # 提取发布日期
-                infodate = info.get('infodate', '')
-                publish_date = infodate.strip() if infodate else ''
+            # 提取发布日期
+            infodate = info.get('infodate', '')
+            publish_date = infodate.strip() if infodate else ''
 
-                # 检查是否为当天的数据
-                if publish_date:
-                    try:
-                        # 判断是否为当天数据
-                        if publish_date == today_date:
-                            found_today_data = True
-                            today_count += 1
+            # 检查是否为当天的数据
+            if publish_date:
+                try:
+                    # 判断是否为当天数据
+                    if publish_date == today_date:
+                        found_today_data = True
+                        today_count += 1
 
-                            # 创建Item
-                            item = BiddingItem()
+                        # 创建Item
+                        item = BiddingItem()
 
-                            # 提取标题（清理HTML标签）
-                            real_title = info.get('realtitle', '')
-                            title = self.clean_html_tags(real_title)
+                        # 提取标题（清理HTML标签）
+                        real_title = info.get('realtitle', '')
+                        title = self.clean_html_tags(real_title)
 
-                            # 构建详情链接
-                            infoid = info.get('infoid', '')
-                            relationguid = info.get('relationguid', '')
-                            categorynum = info.get('categorynum', '')
+                        # 构建详情链接
+                        infoid = info.get('infoid', '')
+                        relationguid = info.get('relationguid', '')
+                        categorynum = info.get('categorynum', '')
 
-                            detail_url = f"{self.DETAIL_BASE_URL}?infoid={infoid}&relationguid={relationguid}&categorynum={categorynum}"
+                        detail_url = f"{self.DETAIL_BASE_URL}?infoid={infoid}&relationguid={relationguid}&categorynum={categorynum}"
 
-                            item['project_name'] = title
-                            item['publish_date'] = publish_date
-                            item['detail_url'] = detail_url
-                            item['project_source'] = config['source']
-                            item['project_category'] = config['category']
-                            item['data_source'] = '淄博市公共资源交易中心'
-                            item['page_num'] = page_index + 1
-                            item['item_index'] = item_index
-                            item['crawl_time'] = datetime.datetime.now()
+                        item['project_name'] = title
+                        item['publish_date'] = publish_date
+                        item['detail_url'] = detail_url
+                        item['project_source'] = config['source']
+                        item['project_category'] = config['category']
+                        item['data_source'] = '淄博市公共资源交易中心'
+                        item['page_num'] = page_index + 1
+                        item['item_index'] = item_index
+                        item['crawl_time'] = datetime.datetime.now()
 
-                            self.logger.info(f"发现当天数据 [{publish_date}]: {item['project_name'][:50]}...")
-                            self.logger.debug(f"详情链接: {item['detail_url']}")
+                        self.logger.info(f"发现当天数据 [{publish_date}]: {item['project_name'][:50]}...")
+                        self.logger.debug(f"详情链接: {item['detail_url']}")
 
-                            yield item
-                            self.items_crawled += 1
-                        else:
-                            self.logger.debug(f"跳过非当天数据 [{publish_date}]: {info.get('realtitle', '')[:30]}...")
-                    except Exception as e:
-                        self.logger.warning(f"日期处理失败: {publish_date}, 错误: {e}")
-                else:
-                    self.logger.warning(f"无发布日期信息: {info.get('realtitle', '')[:30]}...")
-
-            self.logger.info(f"本页共有 {today_count} 条当天数据")
-
-            # 翻页逻辑：如果本页有当天数据且还有下一页，则继续翻页
-            if found_today_data and len(info_list) == 14:  # 每页14条，如果满页说明可能还有下一页
-                next_page = page_index + 1
-                next_params = params.copy()
-                next_params['pageIndex'] = next_page
-
-                next_params_json = json.dumps(next_params, separators=(',', ':'))
-
-                self.logger.info(f"当前页有当天数据，继续翻页到第{next_page + 1}页")
-
-                yield scrapy.FormRequest(
-                    url=self.API_BASE_URL,
-                    formdata={'params': next_params_json},
-                    headers={
-                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                        'Accept': 'application/json, text/javascript, */*; q=0.01',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Origin': 'http://ggzyjy.zibo.gov.cn:8082',
-                        'Referer': 'http://ggzyjy.zibo.gov.cn:8082/'
-                    },
-                    callback=self.parse_api_response,
-                    meta={
-                        'config': config,
-                        'today_date': today_date,
-                        'page_index': next_page,
-                        'item_index': item_index,
-                        'params': next_params
-                    },
-                    errback=self.handle_error,
-                    dont_filter=True
-                )
+                        yield item
+                        self.items_crawled += 1
+                    else:
+                        self.logger.debug(f"跳过非当天数据 [{publish_date}]: {info.get('realtitle', '')[:30]}...")
+                except Exception as e:
+                    self.logger.warning(f"日期处理失败: {publish_date}, 错误: {e}")
             else:
-                if not found_today_data:
-                    self.logger.info(f"当前页没有当天数据，停止翻页")
-                elif len(info_list) < 14:
-                    self.logger.info(f"已到达最后一页")
+                self.logger.warning(f"无发布日期信息: {info.get('realtitle', '')[:30]}...")
 
-        except json.JSONDecodeError as e:
-            self.logger.error(f'JSON解析失败: {e}')
-            self.logger.error(f'响应内容: {response.text[:500]}')
-        except Exception as e:
-            self.logger.error(f'解析API响应时出错: {e}')
-            import traceback
-            self.logger.error(traceback.format_exc())
+        self.logger.info(f"本页共有 {today_count} 条当天数据")
+
+        # 翻页逻辑：如果本页有当天数据且还有下一页，则继续翻页
+        if found_today_data and len(info_list) == 14:  # 每页14条，如果满页说明可能还有下一页
+            next_page = page_index + 1
+            next_params = params.copy()
+            next_params['pageIndex'] = next_page
+
+            next_params_json = json.dumps(next_params, separators=(',', ':'))
+
+            self.logger.info(f"当前页有当天数据，继续翻页到第{next_page + 1}页")
+
+            yield scrapy.FormRequest(
+                url=self.API_BASE_URL,
+                formdata={'params': next_params_json},
+                headers={
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Origin': 'http://ggzyjy.zibo.gov.cn:8082',
+                    'Referer': 'http://ggzyjy.zibo.gov.cn:8082/'
+                },
+                callback=self.parse_api_response,
+                meta={
+                    'config': config,
+                    'today_date': today_date,
+                    'page_index': next_page,
+                    'item_index': item_index,
+                    'params': next_params
+                },
+                errback=self.handle_error,
+                dont_filter=True
+            )
+        else:
+            if not found_today_data:
+                self.logger.info(f"当前页没有当天数据，停止翻页")
+            elif len(info_list) < 14:
+                self.logger.info(f"已到达最后一页")
 
     def clean_html_tags(self, text):
         """清理HTML标签和特殊字符"""

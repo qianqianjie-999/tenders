@@ -456,121 +456,113 @@ class TaianPostSpider(scrapy.Spider):
                 )
             return
 
-            found_today_data = False
-            today_count = 0
+        found_today_data = False
+        today_count = 0
 
-            for idx, item_data in enumerate(items):
-                item_index += 1
+        for idx, item_data in enumerate(items):
+            item_index += 1
 
-                # 提取基础信息
-                publish_time = item_data.get('webdate', '')
-                publish_date = publish_time.split(' ')[0] if publish_time else ''
+            # 提取基础信息
+            publish_time = item_data.get('webdate', '')
+            publish_date = publish_time.split(' ')[0] if publish_time else ''
 
-                # 检查是否为当天的数据
-                if publish_date:
-                    try:
-                        pub_date = datetime.datetime.strptime(publish_date, '%Y-%m-%d').date()
-                        today = datetime.datetime.strptime(today_date, '%Y-%m-%d').date()
+            # 检查是否为当天的数据
+            if publish_date:
+                try:
+                    pub_date = datetime.datetime.strptime(publish_date, '%Y-%m-%d').date()
+                    today = datetime.datetime.strptime(today_date, '%Y-%m-%d').date()
 
-                        # 判断是否为当天数据
-                        if pub_date == today:
-                            found_today_data = True
-                            today_count += 1
+                    # 判断是否为当天数据
+                    if pub_date == today:
+                        found_today_data = True
+                        today_count += 1
 
-                            # 创建Item
-                            item = BiddingItem()
+                        # 创建Item
+                        item = BiddingItem()
 
-                            # 提取基础信息
-                            item['project_name'] = item_data.get('title', item_data.get('titlenew', '')).strip()
-                            item['publish_date'] = publish_date
+                        # 提取基础信息
+                        item['project_name'] = item_data.get('title', item_data.get('titlenew', '')).strip()
+                        item['publish_date'] = publish_date
 
-                            # 构建详情链接 - 根据提供的格式构造
-                            info_id = item_data.get('id', '')
-                            # 处理id，去掉"_001"后缀
-                            if info_id and '_' in info_id:
-                                info_id = info_id.split('_')[0]
+                        # 构建详情链接 - 根据提供的格式构造
+                        info_id = item_data.get('id', '')
+                        # 处理id，去掉"_001"后缀
+                        if info_id and '_' in info_id:
+                            info_id = info_id.split('_')[0]
 
-                            category_num = item_data.get('categorynum', '')
-                            relation_guid = item_data.get('relationguid', '')
+                        category_num = item_data.get('categorynum', '')
+                        relation_guid = item_data.get('relationguid', '')
 
-                            # 构造详情页URL
-                            if info_id and category_num and relation_guid:
-                                detail_params = {
-                                    'infoid': info_id,
-                                    'categorynum': category_num,
-                                    'relationguid': relation_guid
-                                }
-                                item['detail_url'] = f"{self.DETAIL_BASE_URL}?{urlencode(detail_params)}"
-                            else:
-                                # 如果没有完整参数，使用linkurl字段
-                                linkurl = item_data.get('linkurl', '')
-                                if linkurl and not linkurl.startswith('http'):
-                                    item['detail_url'] = f"http://www.taggzyjy.com.cn{linkurl}"
-                                else:
-                                    item['detail_url'] = linkurl or ''
-
-                            item['project_source'] = response.meta['config']['source']
-                            item['project_category'] = response.meta['config']['category']
-
-                            # 设置爬虫元数据
-                            item['data_source'] = '泰安公共资源交易中心'
-                            item['page_num'] = current_pn // rn + 1
-                            item['item_index'] = item_index
-                            item['crawl_time'] = datetime.datetime.now()
-
-                            self.logger.info(
-                                f"发现当天数据 [{publish_date}]: {item['project_name'][:50]}...")
-                            self.logger.debug(f"详情链接: {item['detail_url']}")
-
-                            yield item
+                        # 构造详情页URL
+                        if info_id and category_num and relation_guid:
+                            detail_params = {
+                                'infoid': info_id,
+                                'categorynum': category_num,
+                                'relationguid': relation_guid
+                            }
+                            item['detail_url'] = f"{self.DETAIL_BASE_URL}?{urlencode(detail_params)}"
                         else:
-                            self.logger.debug(
-                                f"跳过非当天数据 [{publish_date}]: {item_data.get('title', '')[:30]}...")
-                    except Exception as e:
-                        self.logger.warning(f"日期处理失败: {publish_date}, 错误: {e}")
-                else:
-                    self.logger.warning(f"无发布日期信息: {item_data.get('title', '')[:30]}...")
+                            # 如果没有完整参数，使用linkurl字段
+                            linkurl = item_data.get('linkurl', '')
+                            if linkurl and not linkurl.startswith('http'):
+                                item['detail_url'] = f"http://www.taggzyjy.com.cn{linkurl}"
+                            else:
+                                item['detail_url'] = linkurl or ''
 
-            self.logger.info(f"本页共有 {today_count} 条当天数据")
+                        item['project_source'] = response.meta['config']['source']
+                        item['project_category'] = response.meta['config']['category']
 
-            # 翻页逻辑：如果当前页有当天数据，并且还有更多数据，则继续翻页
-            if found_today_data and (current_pn + rn) < total_count:
-                next_payload = response.meta['config']['payload'].copy()
-                next_payload['pn'] = current_pn + rn
+                        # 设置爬虫元数据
+                        item['data_source'] = '泰安公共资源交易中心'
+                        item['page_num'] = current_pn // rn + 1
+                        item['item_index'] = item_index
+                        item['crawl_time'] = datetime.datetime.now()
 
-                self.logger.info(f"当前页有当天数据，继续翻页到第{next_payload['pn'] // rn + 1}页")
+                        self.logger.info(
+                            f"发现当天数据 [{publish_date}]: {item['project_name'][:50]}...")
+                        self.logger.debug(f"详情链接: {item['detail_url']}")
 
-                yield scrapy.Request(
-                    url=self.LIST_API_URL,
-                    method='POST',
-                    body=json.dumps(next_payload),
-                    headers={
-                        'Content-Type': 'application/json',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                    },
-                    callback=self.parse_api_response,
-                    meta={
-                        'config': response.meta['config'],
-                        'today_date': today_date,
-                        'page_num': next_payload['pn'],
-                        'item_index': item_index
-                    },
-                    errback=self.handle_error,
-                    dont_filter=True
-                )
+                        yield item
+                    else:
+                        self.logger.debug(
+                            f"跳过非当天数据 [{publish_date}]: {item_data.get('title', '')[:30]}...")
+                except Exception as e:
+                    self.logger.warning(f"日期处理失败: {publish_date}, 错误: {e}")
             else:
-                if not found_today_data:
-                    self.logger.info(f"当前页没有当天数据，停止翻页")
-                elif (current_pn + rn) >= total_count:
-                    self.logger.info(f"已达到最后一页")
+                self.logger.warning(f"无发布日期信息: {item_data.get('title', '')[:30]}...")
 
-        except json.JSONDecodeError as e:
-            self.logger.error(f'JSON解析失败: {e}')
-            self.logger.error(f'响应内容: {response.text[:500]}')
-        except Exception as e:
-            self.logger.error(f'解析API响应时出错: {e}')
-            import traceback
-            self.logger.error(traceback.format_exc())
+        self.logger.info(f"本页共有 {today_count} 条当天数据")
+
+        # 翻页逻辑：如果当前页有当天数据，并且还有更多数据，则继续翻页
+        if found_today_data and (current_pn + rn) < total_count:
+            next_payload = response.meta['config']['payload'].copy()
+            next_payload['pn'] = current_pn + rn
+
+            self.logger.info(f"当前页有当天数据，继续翻页到第{next_payload['pn'] // rn + 1}页")
+
+            yield scrapy.Request(
+                url=self.LIST_API_URL,
+                method='POST',
+                body=json.dumps(next_payload),
+                headers={
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                },
+                callback=self.parse_api_response,
+                meta={
+                    'config': response.meta['config'],
+                    'today_date': today_date,
+                    'page_num': next_payload['pn'],
+                    'item_index': item_index
+                },
+                errback=self.handle_error,
+                dont_filter=True
+            )
+        else:
+            if not found_today_data:
+                self.logger.info(f"当前页没有当天数据，停止翻页")
+            elif (current_pn + rn) >= total_count:
+                self.logger.info(f"已达到最后一页")
 
     def handle_error(self, failure):
         """处理请求错误"""
