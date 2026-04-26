@@ -791,15 +791,15 @@ class MonitorService:
                         id,
                         spider_name,
                         url,
-                        timeout_seconds as warning_type,
-                        retry_count as response_status,
+                        warning_type,
+                        response_status,
                         error_message,
                         occurred_at,
                         resolved
                     FROM spider_timeout_logs
                     WHERE spider_name = %s
                     AND occurred_at >= %s
-                    AND timeout_seconds IN ('json_error', 'empty_response', 'no_data')
+                    AND warning_type IN ('no_data', 'json_error', 'http_error', 'empty_response')
                     ORDER BY occurred_at DESC
                     LIMIT %s
                 """, (spider_name, start_date, limit))
@@ -809,14 +809,14 @@ class MonitorService:
                         id,
                         spider_name,
                         url,
-                        timeout_seconds as warning_type,
-                        retry_count as response_status,
+                        warning_type,
+                        response_status,
                         error_message,
                         occurred_at,
                         resolved
                     FROM spider_timeout_logs
                     WHERE occurred_at >= %s
-                    AND timeout_seconds IN ('json_error', 'empty_response', 'no_data')
+                    AND warning_type IN ('no_data', 'json_error', 'http_error', 'empty_response')
                     ORDER BY occurred_at DESC
                     LIMIT %s
                 """, (start_date, limit))

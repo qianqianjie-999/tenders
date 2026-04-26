@@ -307,13 +307,14 @@ class SpiderMonitorDB:
             with self.connection.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO spider_timeout_logs
-                    (spider_run_id, spider_name, url, timeout_seconds, retry_count,
-                     error_message, occurred_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                    (spider_run_id, spider_name, url, warning_type, response_status,
+                     error_message, occurred_at, resolved)
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW(), FALSE)
                 """, (spider_run_id, spider_name, url, warning_type,
                       response_status or 0, f"item_count:{item_count} {error_message or ''}"))
 
                 self.connection.commit()
+                logger.info(f"[MonitorDB] 接口警告已记录: {warning_type} - {url}")
                 return True
 
         except Exception as e:
@@ -339,6 +340,7 @@ class SpiderMonitorDB:
                 sql = """
                     SELECT * FROM spider_timeout_logs
                     WHERE occurred_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+                    AND warning_type IN ('no_data', 'json_error', 'http_error', 'empty_response')
                 """
                 params = [days]
 
