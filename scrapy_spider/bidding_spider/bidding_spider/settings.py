@@ -112,7 +112,41 @@ STATS_LOG_FILE = str(LOG_DIR / 'spider_stats.log')
 ERROR_LOG_FILE = str(LOG_DIR / 'spider_errors.log')
 
 # User agent
-USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+
+# Default request headers
+DEFAULT_REQUEST_HEADERS = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+    'Cache-Control': 'max-age=0'
+}
+
+# DNS settings
+DNS_TIMEOUT = 60
+DNSCACHE_ENABLED = True
+
+# Connection settings
+DOWNLOAD_MAXSIZE = 10485760  # 10MB
+DOWNLOAD_WARNSIZE = 1048576  # 1MB
+
+# Socket timeout
+DOWNLOAD_TIMEOUT = 60  # 60秒超时
+
+# Disable redirect middleware to avoid unnecessary redirects
+REDIRECT_ENABLED = False
+
+# Enable HTTP compression
+HTTPCOMPRESS_ENABLED = True
+
+# Optimize for JSON responses
+FEED_EXPORT_ENCODING = 'utf-8'
+
+# Reduce memory usage
+MEMUSAGE_LIMIT_MB = 512
+MEMUSAGE_NOTIFY_MAIL = []
 
 # Retry settings
 RETRY_ENABLED = True
