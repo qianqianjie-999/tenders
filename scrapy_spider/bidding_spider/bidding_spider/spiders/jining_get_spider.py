@@ -95,200 +95,201 @@ class JiningGetSpider(scrapy.Spider):
             except Exception as e:
                 self.logger.warning(f"[Monitor] 记录运行开始失败: {e}")
         
-        # 正确的URL列表（基于你最初的需求）
+        # JSON接口URL列表（新的接口格式）
         url_configs = [
             # 济宁市
-            {'url': 'https://www.jnsggzy.cn/JiNing/Posts?cat=536&pn=1&filter=', 'region': '济宁市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JiNing/Posts/536/newest.json', 'region': '济宁市',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/JiNing/Posts?cat=503002&pn=1&filter=', 'region': '济宁市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JiNing/Posts/503000/newest.json', 'region': '济宁市',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/JiNing/Posts?cat=55100101&pn=1&filter=', 'region': '济宁市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JiNing/Posts/551001/newest.json', 'region': '济宁市',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/JiNing/Posts?cat=551003&pn=1&filter=', 'region': '济宁市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JiNing/Posts/551003/newest.json', 'region': '济宁市',
              'category': '济宁市其他交易'},
 
             # 汶上县
-            {'url': 'https://www.jnsggzy.cn/WenShang/Posts?cat=536&pn=1&filter=', 'region': '汶上县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/WenShang/Posts/536/newest.json', 'region': '汶上县',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/WenShang/Posts?cat=503000&pn=1&filter=', 'region': '汶上县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/WenShang/Posts/503000/newest.json', 'region': '汶上县',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/WenShang/Posts?cat=551001&pn=1&filter=', 'region': '汶上县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/WenShang/Posts/551001/newest.json', 'region': '汶上县',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/WenShang/Posts?cat=551003&pn=1&filter=', 'region': '汶上县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/WenShang/Posts/551003/newest.json', 'region': '汶上县',
              'category': '汶上县其他交易'},
 
             # 泗水县
-            {'url': 'https://www.jnsggzy.cn/SiShui/Posts?cat=536&pn=1&filter=', 'region': '泗水县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/SiShui/Posts/536/newest.json', 'region': '泗水县',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/SiShui/Posts?cat=503000&pn=1&filter=', 'region': '泗水县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/SiShui/Posts/503000/newest.json', 'region': '泗水县',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/SiShui/Posts?cat=551001&pn=1&filter=', 'region': '泗水县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/SiShui/Posts/551001/newest.json', 'region': '泗水县',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/SiShui/Posts?cat=551003&pn=1&filter=', 'region': '泗水县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/SiShui/Posts/551003/newest.json', 'region': '泗水县',
              'category': '泗水县其他交易'},
 
             # 高新区
-            {'url': 'https://www.jnsggzy.cn/GaoXinQu/Posts?cat=536&pn=1&filter=', 'region': '高新区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/GaoXinQu/Posts/536/newest.json', 'region': '高新区',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/GaoXinQu/Posts?cat=503000&pn=1&filter=', 'region': '高新区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/GaoXinQu/Posts/503000/newest.json', 'region': '高新区',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/GaoXinQu/Posts?cat=551001&pn=1&filter=', 'region': '高新区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/GaoXinQu/Posts/551001/newest.json', 'region': '高新区',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/GaoXinQu/Posts?cat=551003&pn=1&filter=', 'region': '高新区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/GaoXinQu/Posts/551003/newest.json', 'region': '高新区',
              'category': '高新区其他交易'},
 
             # 太白湖新区
-            {'url': 'https://www.jnsggzy.cn/TaiBaiHu/Posts?cat=536&pn=1&filter=', 'region': '太白湖新区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/TaiBaiHu/Posts/536/newest.json', 'region': '太白湖新区',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/TaiBaiHu/Posts?cat=503000&pn=1&filter=', 'region': '太白湖新区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/TaiBaiHu/Posts/503000/newest.json', 'region': '太白湖新区',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/TaiBaiHu/Posts?cat=551001&pn=1&filter=', 'region': '太白湖新区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/TaiBaiHu/Posts/551001/newest.json', 'region': '太白湖新区',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/TaiBaiHu/Posts?cat=551003&pn=1&filter=', 'region': '太白湖新区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/TaiBaiHu/Posts/551003/newest.json', 'region': '太白湖新区',
              'category': '太白湖新区其他交易'},
 
             # 梁山县
-            {'url': 'https://www.jnsggzy.cn/LiangShan/Posts?cat=536&pn=1&filter=', 'region': '梁山县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/LiangShan/Posts/536/newest.json', 'region': '梁山县',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/LiangShan/Posts?cat=503000&pn=1&filter=', 'region': '梁山县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/LiangShan/Posts/503000/newest.json', 'region': '梁山县',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/LiangShan/Posts?cat=551001&pn=1&filter=', 'region': '梁山县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/LiangShan/Posts/551001/newest.json', 'region': '梁山县',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/LiangShan/Posts?cat=551003&pn=1&filter=', 'region': '梁山县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/LiangShan/Posts/551003/newest.json', 'region': '梁山县',
              'category': '梁山县其他交易'},
 
             # 任城区
-            {'url': 'https://www.jnsggzy.cn/RenCheng/Posts?cat=536&pn=1&filter=', 'region': '任城区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/RenCheng/Posts/536/newest.json', 'region': '任城区',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/RenCheng/Posts?cat=503000&pn=1&filter=', 'region': '任城区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/RenCheng/Posts/503000/newest.json', 'region': '任城区',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/RenCheng/Posts?cat=551001&pn=1&filter=', 'region': '任城区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/RenCheng/Posts/551001/newest.json', 'region': '任城区',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/RenCheng/Posts?cat=551003&pn=1&filter=', 'region': '任城区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/RenCheng/Posts/551003/newest.json', 'region': '任城区',
              'category': '任城区其他交易'},
 
             # 经开区
-            {'url': 'https://www.jnsggzy.cn/JingKaiQu/Posts?cat=536&pn=1&filter=', 'region': '经开区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JingKaiQu/Posts/536/newest.json', 'region': '经开区',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/JingKaiQu/Posts?cat=503000&pn=1&filter=', 'region': '经开区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JingKaiQu/Posts/503000/newest.json', 'region': '经开区',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/JingKaiQu/Posts?cat=551001&pn=1&filter=', 'region': '经开区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JingKaiQu/Posts/551001/newest.json', 'region': '经开区',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/JingKaiQu/Posts?cat=551003&pn=1&filter=', 'region': '经开区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JingKaiQu/Posts/551003/newest.json', 'region': '经开区',
              'category': '经开区其他交易'},
 
             # 邹城市
-            {'url': 'https://www.jnsggzy.cn/ZouCheng/Posts?cat=536&pn=1&filter=', 'region': '邹城市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/ZouCheng/Posts/536/newest.json', 'region': '邹城市',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/ZouCheng/Posts?cat=503000&pn=1&filter=', 'region': '邹城市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/ZouCheng/Posts/503000/newest.json', 'region': '邹城市',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/ZouCheng/Posts?cat=551001&pn=1&filter=', 'region': '邹城市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/ZouCheng/Posts/551001/newest.json', 'region': '邹城市',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/ZouCheng/Posts?cat=551003&pn=1&filter=', 'region': '邹城市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/ZouCheng/Posts/551003/newest.json', 'region': '邹城市',
              'category': '邹城市其他交易'},
 
             # 曲阜市
-            {'url': 'https://www.jnsggzy.cn/QuFu/Posts?cat=536&pn=1&filter=', 'region': '曲阜市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/QuFu/Posts/536/newest.json', 'region': '曲阜市',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/QuFu/Posts?cat=503000&pn=1&filter=', 'region': '曲阜市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/QuFu/Posts/503000/newest.json', 'region': '曲阜市',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/QuFu/Posts?cat=551001&pn=1&filter=', 'region': '曲阜市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/QuFu/Posts/551001/newest.json', 'region': '曲阜市',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/QuFu/Posts?cat=551003&pn=1&filter=', 'region': '曲阜市',
+            {'url': 'https://www.jnsggzy.cn/Tenants/QuFu/Posts/551003/newest.json', 'region': '曲阜市',
              'category': '曲阜市其他交易'},
 
             # 兖州区
-            {'url': 'https://www.jnsggzy.cn/YanZhou/Posts?cat=536&pn=1&filter=', 'region': '兖州区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/YanZhou/Posts/536/newest.json', 'region': '兖州区',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/YanZhou/Posts?cat=503000&pn=1&filter=', 'region': '兖州区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/YanZhou/Posts/503000/newest.json', 'region': '兖州区',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/YanZhou/Posts?cat=551001&pn=1&filter=', 'region': '兖州区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/YanZhou/Posts/551001/newest.json', 'region': '兖州区',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/YanZhou/Posts?cat=551003&pn=1&filter=', 'region': '兖州区',
+            {'url': 'https://www.jnsggzy.cn/Tenants/YanZhou/Posts/551003/newest.json', 'region': '兖州区',
              'category': '兖州区其他交易'},
 
             # 嘉祥县
-            {'url': 'https://www.jnsggzy.cn/JiaXiang/Posts?cat=536&pn=1&filter=', 'region': '嘉祥县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JiaXiang/Posts/536/newest.json', 'region': '嘉祥县',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/JiaXiang/Posts?cat=503000&pn=1&filter=', 'region': '嘉祥县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JiaXiang/Posts/503000/newest.json', 'region': '嘉祥县',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/JiaXiang/Posts?cat=551001&pn=1&filter=', 'region': '嘉祥县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JiaXiang/Posts/551001/newest.json', 'region': '嘉祥县',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/JiaXiang/Posts?cat=551003&pn=1&filter=', 'region': '嘉祥县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JiaXiang/Posts/551003/newest.json', 'region': '嘉祥县',
              'category': '嘉祥县其他交易'},
 
             # 金乡县
-            {'url': 'https://www.jnsggzy.cn/JinXiang/Posts?cat=536&pn=1&filter=', 'region': '金乡县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JinXiang/Posts/536/newest.json', 'region': '金乡县',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/JinXiang/Posts?cat=503000&pn=1&filter=', 'region': '金乡县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JinXiang/Posts/503000/newest.json', 'region': '金乡县',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/JinXiang/Posts?cat=551001&pn=1&filter=', 'region': '金乡县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JinXiang/Posts/551001/newest.json', 'region': '金乡县',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/JinXiang/Posts?cat=551003&pn=1&filter=', 'region': '金乡县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/JinXiang/Posts/551003/newest.json', 'region': '金乡县',
              'category': '金乡县其他交易'},
 
             # 鱼台县
-            {'url': 'https://www.jnsggzy.cn/YuTai/Posts?cat=536&pn=1&filter=', 'region': '鱼台县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/YuTai/Posts/536/newest.json', 'region': '鱼台县',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/YuTai/Posts?cat=503000&pn=1&filter=', 'region': '鱼台县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/YuTai/Posts/503000/newest.json', 'region': '鱼台县',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/YuTai/Posts?cat=551001&pn=1&filter=', 'region': '鱼台县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/YuTai/Posts/551001/newest.json', 'region': '鱼台县',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/YuTai/Posts?cat=551003&pn=1&filter=', 'region': '鱼台县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/YuTai/Posts/551003/newest.json', 'region': '鱼台县',
              'category': '鱼台县其他交易'},
 
             # 微山县
-            {'url': 'https://www.jnsggzy.cn/WeiShan/Posts?cat=536&pn=1&filter=', 'region': '微山县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/WeiShan/Posts/536/newest.json', 'region': '微山县',
              'category': '建设工程招标计划'},
-            {'url': 'https://www.jnsggzy.cn/WeiShan/Posts?cat=503000&pn=1&filter=', 'region': '微山县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/WeiShan/Posts/503000/newest.json', 'region': '微山县',
              'category': '建设工程招标公告'},
-            {'url': 'https://www.jnsggzy.cn/WeiShan/Posts?cat=551001&pn=1&filter=', 'region': '微山县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/WeiShan/Posts/551001/newest.json', 'region': '微山县',
              'category': '采购公告'},
-            {'url': 'https://www.jnsggzy.cn/WeiShan/Posts?cat=551003&pn=1&filter=', 'region': '微山县',
+            {'url': 'https://www.jnsggzy.cn/Tenants/WeiShan/Posts/551003/newest.json', 'region': '微山县',
              'category': '微山县其他交易'},
         ]
 
         for config in url_configs:
+            import time
+            timestamp = int(time.time() * 1000)
+            url_with_timestamp = f"{config['url']}?t={timestamp}"
+            region_path = '/' + config['url'].split('/')[4]
             meta = {
                 'region': config['region'],
                 'category': config['category'],
                 'page_num': 1,
-                'base_url': config['url'].split('/Posts')[0],  # 获取基础URL
-                'retry_count': 0,  # 重试次数
+                'region_path': region_path,
+                'retry_count': 0,
                 'max_retries': self.MAX_RETRIES,
                 'download_timeout': self.DEFAULT_TIMEOUT,
-                'start_time': time.time(),  # 记录请求开始时间
+                'start_time': time.time(),
             }
 
             self.total_requests += 1
 
             yield scrapy.Request(
-                config['url'],
-                callback=self.parse_list,
+                url_with_timestamp,
+                callback=self.parse_json_list,
                 meta=meta,
                 errback=self.handle_error,
                 headers={
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
                     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
                     'Accept-Encoding': 'gzip, deflate, br',
                     'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1',
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
                 dont_filter=True,
-                priority=10  # 高优先级
+                priority=10
             )
 
-    def parse_list(self, response):
-        """解析列表页 - 精确控制：只抓取最近3天的项目，翻页基于最后一项日期"""
-        # 更新统计信息
+    def parse_json_list(self, response):
+        """解析JSON列表页 - 适配新的JSON接口"""
         self.successful_requests += 1
 
-        # 计算响应时间
         start_time = response.meta.get('start_time', time.time())
-        response_time = (time.time() - start_time) * 1000  # 转换为毫秒
+        response_time = (time.time() - start_time) * 1000
 
-        # 检查是否为慢请求
         if response_time > self.SLOW_REQUEST_THRESHOLD:
             self.slow_requests += 1
             self.logger.warning(
@@ -296,92 +297,73 @@ class JiningGetSpider(scrapy.Spider):
                 f"耗时: {response_time:.0f}ms | "
                 f"状态码: {response.status}"
             )
-
-            # 记录到慢请求日志文件
             self._log_slow_request(response.url, response_time, response.status)
 
-            # 检查慢请求是否过多
             if self.slow_requests > self.MAX_SLOW_REQUESTS:
                 self.logger.warning(f"慢请求已达{self.slow_requests}次")
 
-        self.logger.info(
-            f"📄 开始解析列表页 [{response_time:.0f}ms]: {response.url}"
-        )
+        self.logger.info(f"📄 开始解析JSON列表页 [{response_time:.0f}ms]: {response.url}")
 
-        items = response.css(self.SELECTORS['list_item'])
+        try:
+            json_data = response.json()
+        except Exception as e:
+            self.logger.error(f"❌ JSON解析失败: {e}, URL: {response.url}")
+            return
+
+        items = json_data.get('data', [])
         if not items:
             self.logger.warning(f"⚠️ 未找到列表项: {response.url}")
             return
 
         self.logger.info(f"✅ 找到 {len(items)} 个列表项")
 
-        # 计算最近3天的日期范围
         today_date = datetime.date.today()
-        three_days_ago = today_date - datetime.timedelta(days=2)  # 包括今天、昨天、前天
+        thirty_days_ago = today_date - datetime.timedelta(days=29)
 
-        self.logger.info(f"📅 抓取日期范围: {three_days_ago} 到 {today_date}")
+        self.logger.info(f"📅 抓取日期范围: {thirty_days_ago} 到 {today_date}")
 
-        # 用于记录是否找到最近3天的数据
         found_recent_data = False
-        # 用于记录当前页最后一个项目的日期
         last_item_date = None
 
         for index, item in enumerate(items):
             try:
-                # 提取日期
-                date_text = item.css(self.SELECTORS['date']).get('').strip()
-                publish_date = self.parse_date(date_text)
-
+                publish_date = item.get('date', '').strip()
                 if not publish_date:
                     continue
 
-                # 记录最后一个项目的日期（用于翻页判断）
                 if index == len(items) - 1:
                     last_item_date = publish_date
                     self.logger.debug(f"📅 当前页最后一个项目日期: {last_item_date}")
 
-                # 检查是否为最近3天的数据
                 try:
                     pub_date = datetime.datetime.strptime(publish_date, '%Y-%m-%d').date()
 
-                    # 判断是否在最近3天内（包括今天）
-                    if three_days_ago <= pub_date <= today_date:
+                    if thirty_days_ago <= pub_date <= today_date:
                         found_recent_data = True
 
-                        # 创建Item并填充字段
                         bidding_item = BiddingItem()
                         bidding_item['publish_date'] = publish_date
                         bidding_item['project_source'] = response.meta['region']
                         bidding_item['project_category'] = response.meta['category']
 
-                        # 提取标题
-                        title_text = item.css('a').xpath('string()').get().strip()
-                        title_text = re.sub(r'^\d+\s*', '', title_text).strip()
+                        title_text = item.get('title', '').strip()
                         bidding_item['project_name'] = title_text
 
-                        # 提取详情页链接
-                        relative_url = item.css(self.SELECTORS['detail_url']).get()
-                        if relative_url:
-                            if relative_url.startswith('/'):
-                                detail_url = urljoin('https://www.jnsggzy.cn', relative_url)
-                            else:
-                                detail_url = urljoin(response.meta['base_url'], relative_url)
+                        item_url = item.get('url', '')
+                        if item_url:
+                            region_path = response.meta.get('region_path', '')
+                            detail_url = f"https://www.jnsggzy.cn{region_path}/Posts/Detail?id={item_url}"
                             bidding_item['detail_url'] = detail_url
                         else:
                             bidding_item['detail_url'] = ''
 
-                        # 填充爬虫元数据
                         bidding_item['data_source'] = self.name
                         bidding_item['page_num'] = response.meta['page_num']
                         bidding_item['item_index'] = index + 1
                         bidding_item['crawl_time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-                        # # 添加响应时间信息
-                        # bidding_item['response_time_ms'] = int(response_time)
-                        # bidding_item['retry_count'] = response.meta.get('retry_count', 0)
-
                         yield bidding_item
-                        self.items_crawled += 1  # 增加爬取计数
+                        self.items_crawled += 1
 
                 except Exception as e:
                     self.logger.warning(f"📅 日期处理失败: {publish_date}, 错误: {e}")
@@ -389,18 +371,15 @@ class JiningGetSpider(scrapy.Spider):
             except Exception as e:
                 self.logger.error(f"❌ 解析列表项时出错: {e}")
 
-        # 翻页逻辑：基于当前页最后一个项目的日期判断
         should_continue = False
-
         if last_item_date:
             try:
                 last_date = datetime.datetime.strptime(last_item_date, '%Y-%m-%d').date()
-                # 如果最后一页的最后一个项目日期在最近3天内，继续翻页
-                if three_days_ago <= last_date <= today_date:
+                if thirty_days_ago <= last_date <= today_date:
                     should_continue = True
-                    self.logger.info(f"📄 最后一页日期 {last_item_date} 在最近3天内，继续翻页")
+                    self.logger.info(f"📄 最后一页日期 {last_item_date} 在最近30天内，继续翻页")
                 else:
-                    self.logger.info(f"🛑 最后一页日期 {last_item_date} 不在最近3天内，停止翻页")
+                    self.logger.info(f"🛑 最后一页日期 {last_item_date} 不在最近30天内，停止翻页")
             except:
                 self.logger.warning(f"⚠️ 无法解析最后一页日期: {last_item_date}")
 
@@ -435,7 +414,7 @@ class JiningGetSpider(scrapy.Spider):
                 self.logger.info(f"🛑 没有找到下一页链接")
         else:
             if not found_recent_data:
-                self.logger.info(f"🛑 当前页没有最近3天的数据，停止翻页")
+                self.logger.info(f"🛑 当前页没有最近30天的数据，停止翻页")
             elif not should_continue:
                 self.logger.info(f"🛑 最后一页日期不在最近3天内，停止翻页")
 
