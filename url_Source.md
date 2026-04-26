@@ -55,7 +55,7 @@ url_configs = [
   ]
 }
 
-祥情页：https://www.jnsggzy.cn/JiNing/Posts/Detail?id=3a20c67f-5625-1910-2d47-80943759f47e
+新祥情页：https://www.jnsggzy.cn/JiNing/Posts/Detail?id=3a20c67f-5625-1910-2d47-80943759f47e
 
 
             {'url_get': 'https://www.jnsggzy.cn/Tenants/JiNing/Posts/503000/newest.json?t=1777163973688', 'region': '济宁市',

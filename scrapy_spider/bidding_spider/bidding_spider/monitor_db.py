@@ -280,7 +280,80 @@ class SpiderMonitorDB:
         except Exception as e:
             logger.error(f"[MonitorDB] 记录超时日志失败: {e}")
             return False
-    
+
+    def log_interface_warning(self, spider_name: str, url: str, warning_type: str,
+                             response_status: int = None, item_count: int = 0,
+                             error_message: str = None, spider_run_id: int = None):
+        """
+        记录接口异常警告（用于检测接口变更）
+
+        Args:
+            spider_name: 爬虫名称
+            url: 请求的URL
+            warning_type: 警告类型 (no_data/json_error/http_error/empty_response)
+            response_status: HTTP响应状态码
+            item_count: 返回的数据项数量
+            error_message: 错误信息
+            spider_run_id: 关联的运行记录ID（可选）
+        """
+        if not self._ensure_connection():
+            return False
+
+        if spider_run_id is None:
+            spider_run_id = self.current_run_id
+
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO spider_timeout_logs
+                    (spider_run_id, spider_name, url, timeout_seconds, retry_count,
+                     error_message, occurred_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                """, (spider_run_id, spider_name, url, warning_type,
+                      response_status or 0, f"item_count:{item_count} {error_message or ''}"))
+
+                self.connection.commit()
+                return True
+
+        except Exception as e:
+            logger.error(f"[MonitorDB] 记录接口警告失败: {e}")
+            return False
+
+    def get_recent_interface_warnings(self, spider_name: str = None, days: int = 7) -> List[Dict]:
+        """
+        获取最近N天的接口异常警告
+
+        Args:
+            spider_name: 爬虫名称（可选，不指定则查所有）
+            days: 查询天数
+
+        Returns:
+            警告列表
+        """
+        if not self._ensure_connection():
+            return []
+
+        try:
+            with self.connection.cursor() as cursor:
+                sql = """
+                    SELECT * FROM spider_timeout_logs
+                    WHERE occurred_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+                """
+                params = [days]
+
+                if spider_name:
+                    sql += " AND spider_name = %s"
+                    params.append(spider_name)
+
+                sql += " ORDER BY occurred_at DESC LIMIT 100"
+
+                cursor.execute(sql, params)
+                return cursor.fetchall()
+
+        except Exception as e:
+            logger.error(f"[MonitorDB] 查询接口警告失败: {e}")
+            return []
+
     def increment_items_stored(self, run_id: int, count: int = 1):
         """
         增加入库数量（用于pipeline中每插入一条就更新）

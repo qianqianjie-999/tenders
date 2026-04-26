@@ -503,6 +503,15 @@
             <a href="#section-logs" class="nav-link"><i class="fas fa-file-alt"></i>日志查看</a>
         </div>
 
+        <!-- 接口异常警告提示 -->
+        <div id="interface-warning-banner" class="alert alert-danger alert-dismissible fade show d-none" role="alert" style="display: none;">
+            <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> 接口异常警告</h5>
+            <p id="interface-warning-text">检测到接口异常，可能是网站更换了接口！</p>
+            <hr>
+            <p class="mb-0 small">请检查爬虫日志确认接口变更情况。</p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
         <!-- 今日概览 -->
         <div id="section-overview" class="section-anchor monitor-card mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
             <div class="monitor-card-header" style="border-bottom-color: rgba(255,255,255,0.2);">
@@ -843,6 +852,7 @@
         // 加载所有数据
         function loadAllData() {
             loadOverview();
+            loadInterfaceWarnings();
             loadResources();
             loadSpiders();
             loadProcesses();
@@ -888,7 +898,45 @@
                 if (_el('overview-running')) _el('overview-running').textContent = '-';
             }
         }
-        
+
+        // 加载接口异常警告
+        async function loadInterfaceWarnings() {
+            const banner = document.getElementById('interface-warning-banner');
+            const text = document.getElementById('interface-warning-text');
+            if (!banner || !text) return;
+
+            try {
+                const response = await fetch("{{ url_for('monitor.api_interface_warnings') }}?days=7&limit=10");
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const data = await response.json();
+
+                if (data.success && data.warnings && data.warnings.length > 0) {
+                    const warnings = data.warnings;
+                    const jsonErrors = warnings.filter(w => w.warning_type === 'json_error').length;
+                    const emptyResponses = warnings.filter(w => w.warning_type === 'empty_response').length;
+
+                    let message = `最近7天内检测到 ${warnings.length} 次接口异常`;
+                    if (jsonErrors > 0) {
+                        message += `（JSON解析失败: ${jsonErrors}次，可能接口已变更）`;
+                    }
+                    if (emptyResponses > 0) {
+                        message += `（空响应: ${emptyResponses}次）`;
+                    }
+
+                    text.textContent = message;
+                    banner.classList.remove('d-none');
+                    banner.style.display = 'block';
+                } else {
+                    banner.classList.add('d-none');
+                    banner.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('加载接口警告失败:', error);
+                banner.classList.add('d-none');
+                banner.style.display = 'none';
+            }
+        }
+
         // 加载超时日志
         async function loadTimeoutLogs() {
             const spiderName = document.getElementById('timeout-spider-filter').value;

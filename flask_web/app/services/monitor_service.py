@@ -769,6 +769,83 @@ class MonitorService:
                 cursor.close()
 
     @classmethod
+    def get_interface_warnings(cls, spider_name=None, days=7, limit=50):
+        """
+        获取接口异常警告（用于检测网站是否更换接口）
+
+        警告类型说明：
+        - json_error: JSON解析失败（接口可能变成了HTML）
+        - empty_response: 返回空数据（接口可能已失效）
+        - no_data: 连续多次请求无新数据
+        """
+        cursor = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            start_date = date.today() - timedelta(days=days)
+
+            if spider_name:
+                cursor.execute("""
+                    SELECT
+                        id,
+                        spider_name,
+                        url,
+                        timeout_seconds as warning_type,
+                        retry_count as response_status,
+                        error_message,
+                        occurred_at,
+                        resolved
+                    FROM spider_timeout_logs
+                    WHERE spider_name = %s
+                    AND occurred_at >= %s
+                    AND timeout_seconds IN ('json_error', 'empty_response', 'no_data')
+                    ORDER BY occurred_at DESC
+                    LIMIT %s
+                """, (spider_name, start_date, limit))
+            else:
+                cursor.execute("""
+                    SELECT
+                        id,
+                        spider_name,
+                        url,
+                        timeout_seconds as warning_type,
+                        retry_count as response_status,
+                        error_message,
+                        occurred_at,
+                        resolved
+                    FROM spider_timeout_logs
+                    WHERE occurred_at >= %s
+                    AND timeout_seconds IN ('json_error', 'empty_response', 'no_data')
+                    ORDER BY occurred_at DESC
+                    LIMIT %s
+                """, (start_date, limit))
+
+            logs = cursor.fetchall()
+
+            formatted_logs = []
+            for log in logs:
+                error_msg = log['error_message'] or ''
+                formatted_logs.append({
+                    'id': log['id'],
+                    'spider_name': log['spider_name'],
+                    'url': log['url'],
+                    'warning_type': log['warning_type'],
+                    'response_status': log['response_status'],
+                    'error_message': error_msg[:200] if error_msg else None,
+                    'occurred_at': log['occurred_at'].strftime('%Y-%m-%d %H:%M:%S') if log['occurred_at'] else None,
+                    'resolved': bool(log['resolved']),
+                    'is_interface_issue': True
+                })
+
+            return {'success': True, 'warnings': formatted_logs, 'count': len(formatted_logs)}
+        except Exception as e:
+            return {'success': False, 'message': str(e)}
+        finally:
+            if cursor:
+                cursor.close()
+
+    @classmethod
     def get_spider_run_history(cls, spider_name=None, days=7):
         """获取爬虫运行历史"""
         try:

@@ -209,13 +209,23 @@ def api_resolve_timeout(log_id):
         affected = cursor.rowcount
         cursor.close()
         conn.close()
-        
+
         if affected > 0:
             return jsonify({'success': True, 'message': '已标记为已解决'})
         else:
             return jsonify({'success': False, 'message': '记录不存在'}), 404
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@monitor_bp.route('/api/interface-warnings')
+def api_interface_warnings():
+    """API: 获取接口异常警告（用于检测网站是否更换接口）"""
+    spider_name = request.args.get('spider_name')
+    days = request.args.get('days', 7, type=int)
+    limit = request.args.get('limit', 50, type=int)
+    result = MonitorService.get_interface_warnings(spider_name, days, limit)
+    return jsonify(result)
 
 
 @monitor_bp.route('/api/run-history')
