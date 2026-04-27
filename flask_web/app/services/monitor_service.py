@@ -475,14 +475,15 @@ class MonitorService:
             timeout_result = cursor.fetchone()
             
             # 处理数据
-            all_spiders = ['jining_get', 'sd_post', 'jinan_post', 'taian_post', 'zibo_post', 'jiangsu_post']
+            all_spiders = ['jining_get', 'sd_post', 'jinan_post', 'taian_post', 'zibo_post', 'jiangsu_post', 'zhejiang_post']
             spider_info = {
                 'jining_get': {'name': '济宁公共资源', 'desc': '济宁市及12区县招标信息'},
                 'sd_post': {'name': '山东省政府采购', 'desc': '全省17地市采购公告'},
                 'jinan_post': {'name': '济南公共资源', 'desc': '济南市区县招标信息'},
                 'taian_post': {'name': '泰安公共资源', 'desc': '泰安市区县招标信息'},
                 'zibo_post': {'name': '淄博公共资源', 'desc': '淄博市区县招标信息'},
-                'jiangsu_post': {'name': '江苏省公共资源', 'desc': '江苏省公共资源交易中心'}
+                'jiangsu_post': {'name': '江苏省公共资源', 'desc': '江苏省公共资源交易中心'},
+                'zhejiang_post': {'name': '浙江省公共资源', 'desc': '浙江省公共资源交易中心'}
             }
             
             stats = {
@@ -586,14 +587,15 @@ class MonitorService:
             if not logs_dir.exists():
                 return {'success': True, 'stats': stats}
             
-            all_spiders = ['jining_get', 'sd_post', 'jinan_post', 'taian_post', 'zibo_post', 'jiangsu_post']
+            all_spiders = ['jining_get', 'sd_post', 'jinan_post', 'taian_post', 'zibo_post', 'jiangsu_post', 'zhejiang_post']
             spider_info = {
                 'jining_get': {'name': '济宁公共资源', 'desc': '济宁市及12区县招标信息'},
                 'sd_post': {'name': '山东省政府采购', 'desc': '全省17地市采购公告'},
                 'jinan_post': {'name': '济南公共资源', 'desc': '济南市区县招标信息'},
                 'taian_post': {'name': '泰安公共资源', 'desc': '泰安市区县招标信息'},
                 'zibo_post': {'name': '淄博公共资源', 'desc': '淄博市区县招标信息'},
-                'jiangsu_post': {'name': '江苏省公共资源', 'desc': '江苏省公共资源交易中心'}
+                'jiangsu_post': {'name': '江苏省公共资源', 'desc': '江苏省公共资源交易中心'},
+                'zhejiang_post': {'name': '浙江省公共资源', 'desc': '浙江省公共资源交易中心'}
             }
             
             today = datetime.now().strftime('%Y%m%d')
