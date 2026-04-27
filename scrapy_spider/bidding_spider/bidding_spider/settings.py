@@ -35,7 +35,7 @@ ROBOTSTXT_OBEY = False
 CONCURRENT_REQUESTS = 16
 
 # Configure a delay for requests for the same website (default: 0)
-DOWNLOAD_DELAY = 3
+DOWNLOAD_DELAY = 8
 
 # The download delay setting will honor only one of:
 CONCURRENT_REQUESTS_PER_DOMAIN = 1
@@ -77,9 +77,9 @@ AUTOTHROTTLE_DEBUG = False
 HTTPCACHE_ENABLED = False
 
 # Database settings
-DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_HOST = os.getenv('DB_HOST', '127.0.0.1')
 DB_USER = os.getenv('DB_USER', 'bidding_user')
-DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'your_password')
 DB_NAME = os.getenv('DB_NAME', 'bidding_db')
 DB_PORT = int(os.getenv('DB_PORT', 3306))
 

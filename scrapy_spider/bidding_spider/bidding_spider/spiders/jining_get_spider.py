@@ -272,12 +272,14 @@ class JiningGetSpider(scrapy.Spider):
                 meta=meta,
                 errback=self.handle_error,
                 headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                     'Accept': 'application/json, text/javascript, */*; q=0.01',
                     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
                     'Accept-Encoding': 'gzip, deflate, br',
                     'Connection': 'keep-alive',
                     'X-Requested-With': 'XMLHttpRequest',
+                    'Referer': 'https://www.jnsggzy.cn/',
+                    'Origin': 'https://www.jnsggzy.cn',
                 },
                 dont_filter=True,
                 priority=10
