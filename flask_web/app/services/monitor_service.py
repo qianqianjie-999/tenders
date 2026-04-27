@@ -534,9 +534,19 @@ class MonitorService:
                     run_info['error_msg'] = run['close_reason'] or '运行失败'
                     stats['failed_spiders'].append(run_info)
             
+            # 获取正在运行的进程
+            running_processes = []
+            try:
+                proc_result = cls.get_spider_processes()
+                if proc_result.get('success'):
+                    running_processes = [p['spider_name'] for p in proc_result.get('processes', [])]
+            except Exception:
+                pass
+            
             # 检查哪些爬虫今天没有运行记录
             for spider in all_spiders:
-                if spider not in spider_runs:
+                # 如果爬虫正在运行，即使没有数据库记录，也不标记为未运行
+                if spider not in spider_runs and spider not in running_processes:
                     stats['failed_spiders'].append({
                         'spider': spider,
                         'name': spider_info.get(spider, {}).get('name', spider),
@@ -608,16 +618,27 @@ class MonitorService:
             stats['total_errors'] = total_errors
             stats['total_warnings'] = total_warnings
             
+            # 获取正在运行的进程
+            running_processes = []
+            try:
+                proc_result = cls.get_spider_processes()
+                if proc_result.get('success'):
+                    running_processes = [p['spider_name'] for p in proc_result.get('processes', [])]
+            except Exception:
+                pass
+            
             # 检查未运行的爬虫
             for spider in all_spiders:
-                stats['failed_spiders'].append({
-                    'spider': spider,
-                    'name': spider_info.get(spider, {}).get('name', spider),
-                    'desc': spider_info.get(spider, {}).get('desc', ''),
-                    'status': 'not_run',
-                    'time': None,
-                    'error_msg': '今日尚未运行（数据库连接失败）'
-                })
+                # 如果爬虫正在运行，即使没有数据库记录，也不标记为未运行
+                if spider not in running_processes:
+                    stats['failed_spiders'].append({
+                        'spider': spider,
+                        'name': spider_info.get(spider, {}).get('name', spider),
+                        'desc': spider_info.get(spider, {}).get('desc', ''),
+                        'status': 'not_run',
+                        'time': None,
+                        'error_msg': '今日尚未运行（数据库连接失败）'
+                    })
             
             return {'success': True, 'stats': stats}
         except Exception as e:
