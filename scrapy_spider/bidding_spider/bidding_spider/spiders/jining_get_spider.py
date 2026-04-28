@@ -85,10 +85,11 @@ class JiningGetSpider(scrapy.Spider):
         # 记录爬虫运行开始
         if self.monitor:
             try:
-                # 构建日志文件路径
-                log_dir = Path('logs')
-                log_file = str(log_dir / f'bidding_spider_{self.name}_{time.strftime("%Y%m%d_%H%M%S")}.log')
-                stats_file = str(log_dir / f'spider_stats_{self.name}_{time.strftime("%Y%m%d_%H%M%S")}.json')
+                # 构建日志文件路径（使用绝对路径）
+                from bidding_spider.settings import LOG_DIR
+                current_time = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+                log_file = str(LOG_DIR / f'bidding_spider_{self.name}_{current_time}.log')
+                stats_file = str(LOG_DIR / f'spider_stats_{self.name}_{current_time}.json')
                 
                 self.monitor_run_id = self.monitor.start_run(self.name, log_file, stats_file)
                 self.logger.info(f"[Monitor] 运行记录ID: {self.monitor_run_id}")
@@ -417,7 +418,7 @@ class JiningGetSpider(scrapy.Spider):
 
                     yield Request(
                         next_page_url,
-                        callback=self.parse_list,
+                        callback=self.parse_json_list,
                         meta=meta,
                         errback=self.handle_error,
                         priority=5  # 翻页请求优先级较低
