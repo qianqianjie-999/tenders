@@ -18,7 +18,7 @@ from pathlib import Path
 CLEANUP_OPTIONS = {
     '1': {'type': 'log', 'days': 7, 'label': '清理 7 天前的日志文件'},
     '2': {'type': 'log', 'days': 15, 'label': '清理 15 天前的日志文件'},
-    '3': {'type': 'timeout_logs', 'days': 7, 'label': '清理 7 天前的超时日志（不含今日）'},
+    '3': {'type': 'timeout_logs', 'days': 1, 'label': '清理 1天前的超时日志（不含今日）'},
     '4': {'type': 'timeout_logs', 'days': 0, 'label': '清理所有超时日志和接口警告（含今日）'},
     '5': {'type': 'data', 'days': 30, 'label': '清理 30 天前的数据'},
     '6': {'type': 'data', 'days': 90, 'label': '清理 90 天前的数据'},
