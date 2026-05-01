@@ -907,7 +907,7 @@
             if (!banner || !text) return;
 
             try {
-                const response = await fetch("{{ url_for('monitor.api_interface_warnings') }}?days=7&limit=10");
+                const response = await fetch("{{ url_for('monitor.api_interface_warnings') }}?days=3&limit=10");
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 const data = await response.json();
 
@@ -916,7 +916,7 @@
                     const jsonErrors = warnings.filter(w => w.warning_type === 'json_error').length;
                     const emptyResponses = warnings.filter(w => w.warning_type === 'empty_response').length;
 
-                    let message = `最近7天内检测到 ${warnings.length} 次接口异常`;
+                    let message = `最近3天内检测到 ${warnings.length} 次接口异常`;
                     if (jsonErrors > 0) {
                         message += `（JSON解析失败: ${jsonErrors}次，可能接口已变更）`;
                     }
