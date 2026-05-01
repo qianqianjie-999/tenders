@@ -430,12 +430,6 @@ class TaianPostSpider(scrapy.Spider):
         if not result_data:
             error_msg = data.get('error', '未知错误')
             self.logger.error(f"API返回数据格式异常: {error_msg}")
-            if get_monitor and hasattr(self, 'monitor') and self.monitor:
-                self.monitor.log_interface_warning(
-                    self.name, response.url, 'empty_response',
-                    response_status=response.status,
-                    error_message=f"API返回数据格式异常: {error_msg}"
-                )
             return
 
         # 获取实际数据

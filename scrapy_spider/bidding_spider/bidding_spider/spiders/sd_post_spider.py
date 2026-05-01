@@ -242,12 +242,6 @@ class SdPostSpider(scrapy.Spider):
 
         if inner_code != 100:
             self.logger.error(f"API业务错误: {inner_data.get('message', '无错误信息')}, 错误码: {inner_code}")
-            if get_monitor and hasattr(self, 'monitor') and self.monitor:
-                self.monitor.log_interface_warning(
-                    self.name, response.url, 'api_error',
-                    response_status=response.status,
-                    error_message=f"API业务错误: {inner_data.get('message', '无错误信息')}, 错误码: {inner_code}"
-                )
             return
 
         # 获取数据
@@ -261,12 +255,6 @@ class SdPostSpider(scrapy.Spider):
 
         if not items:
             self.logger.info("本页没有数据，停止翻页")
-            if get_monitor and hasattr(self, 'monitor') and self.monitor:
-                self.monitor.log_interface_warning(
-                    self.name, response.url, 'empty_response',
-                    response_status=response.status,
-                    item_count=0
-                )
             return
 
         found_target_data = False

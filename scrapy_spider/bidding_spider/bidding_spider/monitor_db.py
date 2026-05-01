@@ -430,7 +430,7 @@ class SpiderMonitorDB:
                 sql = """
                     SELECT * FROM spider_timeout_logs
                     WHERE occurred_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
-                    AND warning_type IN ('no_data', 'json_error', 'http_error', 'empty_response')
+                    AND warning_type IN ('no_data', 'json_error', 'http_error')
                 """
                 params = [days]
 

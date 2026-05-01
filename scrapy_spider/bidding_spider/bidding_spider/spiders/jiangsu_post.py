@@ -207,12 +207,6 @@ class JiangsuPostSpider(scrapy.Spider):
         result = data.get('result', {})
         if not result:
             self.logger.warning("API 返回数据格式异常：缺少 result 字段")
-            if get_monitor and hasattr(self, 'monitor') and self.monitor:
-                self.monitor.log_interface_warning(
-                    self.name, response.url, 'empty_response',
-                    response_status=response.status,
-                    item_count=0
-                )
             return
 
         # 获取总数和列表数据

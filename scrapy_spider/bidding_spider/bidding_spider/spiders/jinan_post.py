@@ -241,12 +241,6 @@ class JinanPostSpider(scrapy.Spider):
         params = data.get('params', {})
         if not params:
             self.logger.error("API返回数据格式异常: 缺少params字段")
-            if get_monitor and hasattr(self, 'monitor') and self.monitor:
-                self.monitor.log_interface_warning(
-                    self.name, response.url, 'empty_response',
-                    response_status=response.status,
-                    error_message="API返回数据格式异常: 缺少params字段"
-                )
             return
 
         # 获取HTML内容和分页信息
