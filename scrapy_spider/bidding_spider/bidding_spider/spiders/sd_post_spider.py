@@ -4,7 +4,7 @@ import datetime
 import time
 from pathlib import Path
 from bidding_spider.items import BiddingItem
-from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError
+from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError, ConnectionRefusedError
 
 # 导入监控数据库模块
 try:
@@ -385,7 +385,7 @@ class SdPostSpider(scrapy.Spider):
         elif failure.check(DNSLookupError):
             self.dns_errors += 1
             self.logger.error("DNS解析失败")
-        elif failure.check(scrapy.exceptions.ConnectionRefusedError):
+        elif failure.check(ConnectionRefusedError):
             self.logger.error("连接被拒绝")
     
     def closed(self, reason):
