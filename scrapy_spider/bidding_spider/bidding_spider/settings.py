@@ -42,8 +42,8 @@ CONCURRENT_REQUESTS_PER_DOMAIN = 1
 # CONCURRENT_REQUESTS_PER_IP 已弃用，移除以兼容新版本 Scrapy
 # CONCURRENT_REQUESTS_PER_IP = 2
 
-# Disable cookies (enabled by default)
-COOKIES_ENABLED = False
+# Enable cookies (disabled by default)
+COOKIES_ENABLED = True
 
 # Enable or disable spider middlewares
 # SPIDER_MIDDLEWARES = {
