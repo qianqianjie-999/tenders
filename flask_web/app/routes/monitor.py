@@ -4,9 +4,7 @@
 """
 from flask import Blueprint, render_template, jsonify, request
 from app.services.monitor_service import MonitorService
-
-# 导入csrf对象
-from app.extensions import csrf
+from app.extensions import csrf, get_db_connection
 
 monitor_bp = Blueprint('monitor', __name__, url_prefix='/monitor')
 
