@@ -257,12 +257,6 @@ class JinanPostSpider(scrapy.Spider):
 
         if not html_str:
             self.logger.info("本页没有数据，停止翻页")
-            if get_monitor and hasattr(self, 'monitor') and self.monitor:
-                self.monitor.log_interface_warning(
-                    self.name, response.url, 'empty_response',
-                    response_status=response.status,
-                    item_count=0
-                )
             return
 
         # 解析HTML提取项目信息

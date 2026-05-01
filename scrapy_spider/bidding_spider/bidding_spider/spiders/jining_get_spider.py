@@ -322,12 +322,6 @@ class JiningGetSpider(scrapy.Spider):
         items = json_data.get('data', [])
         if not items:
             self.logger.warning(f"⚠️ 未找到列表项: {response.url}")
-            if get_monitor and self.monitor:
-                self.monitor.log_interface_warning(
-                    self.name, response.url, 'empty_response',
-                    response_status=response.status,
-                    item_count=0
-                )
             return
 
         self.logger.info(f"✅ 找到 {len(items)} 个列表项")

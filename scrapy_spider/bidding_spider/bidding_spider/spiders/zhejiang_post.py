@@ -254,12 +254,6 @@ class ZhejiangPostSpider(scrapy.Spider):
 
         if not records:
             self.logger.info("本页没有数据，停止翻页")
-            if get_monitor and hasattr(self, 'monitor') and self.monitor:
-                self.monitor.log_interface_warning(
-                    self.name, response.url, 'empty_response',
-                    response_status=response.status,
-                    item_count=0
-                )
             return
 
         found_today_data = False

@@ -275,12 +275,6 @@ class SdPostSpider(scrapy.Spider):
 
         if not items:
             self.logger.info("本页没有数据，停止翻页")
-            if get_monitor and hasattr(self, 'monitor') and self.monitor:
-                self.monitor.log_interface_warning(
-                    self.name, response.url, 'empty_response',
-                    response_status=response.status,
-                    item_count=0
-                )
             return
 
         found_target_data = False
