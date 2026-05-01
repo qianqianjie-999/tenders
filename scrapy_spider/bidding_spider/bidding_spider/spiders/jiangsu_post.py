@@ -115,11 +115,11 @@ class JiangsuPostSpider(scrapy.Spider):
         self.logger.info(f"共有 {len(configs)} 个配置项")
 
         for config in configs:
-            # 构建请求 Payload - 注意：sort/condition/time 应该是对象，不是JSON字符串
+            # 构建请求 Payload - 与浏览器格式一致
             payload = {
                 "token": "",
-                "pn": "0",
-                "rn": "20",
+                "pn": 0,
+                "rn": 10,
                 "sdt": "",
                 "edt": "",
                 "wd": "",
@@ -127,9 +127,9 @@ class JiangsuPostSpider(scrapy.Spider):
                 "exc_wd": "",
                 "fields": "title",
                 "cnum": "001",
-                "sort": {"infodatepx": "0"},
+                "sort": json.dumps({"infodatepx": "0"}),
                 "ssort": "title",
-                "cl": "200",
+                "cl": 200,
                 "terminal": "",
                 "condition": [
                     {"fieldName": "categorynum", "isLike": True, "likeType": 2, "equal": config['category_num']}
@@ -156,12 +156,11 @@ class JiangsuPostSpider(scrapy.Spider):
                 method='POST',
                 body=body_json,
                 headers={
-                    'Content-Type': 'application/json; charset=UTF-8',
+                    'Content-Type': 'application/json;charset=utf-8',
                     'Accept': 'application/json, text/javascript, */*; q=0.01',
-                    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-                    'Accept-Encoding': 'gzip, deflate',
+                    'Accept-Language': 'zh-CN,zh;q=0.9,zh-TW;q=0.8,zh-HK;q=0.7,en-US;q=0.6,en;q=0.5',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0',
                     'Origin': 'http://jsggzy.jszwfw.gov.cn',
                     'Referer': 'http://jsggzy.jszwfw.gov.cn/'
                 },
@@ -287,7 +286,7 @@ class JiangsuPostSpider(scrapy.Spider):
         if found_today_data:
             next_page = page_num + 1
             next_payload = payload.copy()
-            next_payload['pn'] = str(next_page * 20)  # pn 是偏移量
+            next_payload['pn'] = next_page * 10  # pn 是偏移量，每页10条
 
             self.logger.info(f"当前页有当天数据，继续翻页到第{next_page + 1}页")
 
@@ -299,12 +298,11 @@ class JiangsuPostSpider(scrapy.Spider):
                 method='POST',
                 body=next_body_json,
                 headers={
-                    'Content-Type': 'application/json; charset=UTF-8',
+                    'Content-Type': 'application/json;charset=utf-8',
                     'Accept': 'application/json, text/javascript, */*; q=0.01',
-                    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-                    'Accept-Encoding': 'gzip, deflate',
+                    'Accept-Language': 'zh-CN,zh;q=0.9,zh-TW;q=0.8,zh-HK;q=0.7,en-US;q=0.6,en;q=0.5',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0',
                     'Origin': 'http://jsggzy.jszwfw.gov.cn',
                     'Referer': 'http://jsggzy.jszwfw.gov.cn/'
                 },
