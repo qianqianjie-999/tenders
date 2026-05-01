@@ -16,12 +16,14 @@ from pathlib import Path
 
 # 预设选项
 CLEANUP_OPTIONS = {
-    '1': {'type': 'log', 'days': 7, 'label': '清理 7 天前的日志'},
-    '2': {'type': 'log', 'days': 15, 'label': '清理 15 天前的日志'},
-    '3': {'type': 'data', 'days': 30, 'label': '清理 30 天前的数据'},
-    '4': {'type': 'data', 'days': 90, 'label': '清理 90 天前的数据'},
-    '5': {'type': 'data', 'days': 180, 'label': '清理 180 天前的数据'},
-    '6': {'type': 'data', 'days': 365, 'label': '清理 1 年前的数据'},
+    '1': {'type': 'log', 'days': 7, 'label': '清理 7 天前的日志文件'},
+    '2': {'type': 'log', 'days': 15, 'label': '清理 15 天前的日志文件'},
+    '3': {'type': 'timeout_logs', 'days': 7, 'label': '清理 7 天前的超时日志（数据库）'},
+    '4': {'type': 'timeout_logs', 'days': 15, 'label': '清理 15 天前的超时日志（数据库）'},
+    '5': {'type': 'data', 'days': 30, 'label': '清理 30 天前的数据'},
+    '6': {'type': 'data', 'days': 90, 'label': '清理 90 天前的数据'},
+    '7': {'type': 'data', 'days': 180, 'label': '清理 180 天前的数据'},
+    '8': {'type': 'data', 'days': 365, 'label': '清理 1 年前的数据'},
 }
 
 
@@ -40,6 +42,54 @@ def show_menu():
     print("-" * 50)
     print("  0. 退出")
     print("=" * 50)
+
+
+def cleanup_timeout_logs(days_to_keep):
+    """专门清理超时日志（含接口警告）"""
+    db_config = {
+        'host': os.getenv('DB_HOST', 'localhost'),
+        'user': os.getenv('DB_USER', 'bidding_user'),
+        'password': os.getenv('DB_PASSWORD', ''),
+        'database': os.getenv('DB_NAME', 'bidding_db'),
+        'charset': 'utf8mb4',
+    }
+
+    # 验证密码是否已设置
+    if not db_config['password']:
+        print("❌ 错误：DB_PASSWORD 环境变量未设置")
+        return 0
+
+    print(f"\n开始清理超时日志和接口警告 ({days_to_keep}天前)...")
+
+    try:
+        conn = pymysql.connect(**db_config)
+        cursor = conn.cursor()
+
+        # 清理运行日志
+        cursor.execute("""
+            DELETE FROM spider_run_logs
+            WHERE run_date < DATE_SUB(CURDATE(), INTERVAL %s DAY)
+        """, (days_to_keep,))
+        run_logs_deleted = cursor.rowcount
+
+        # 清理超时日志和接口警告
+        cursor.execute("""
+            DELETE FROM spider_timeout_logs
+            WHERE occurred_at < DATE_SUB(NOW(), INTERVAL %s DAY)
+        """, (days_to_keep,))
+        timeout_logs_deleted = cursor.rowcount
+
+        conn.commit()
+        conn.close()
+
+        if run_logs_deleted > 0 or timeout_logs_deleted > 0:
+            print(f"✅ 清理完成：删除 {run_logs_deleted} 条运行日志，{timeout_logs_deleted} 条超时/警告日志")
+
+        return run_logs_deleted + timeout_logs_deleted
+
+    except Exception as e:
+        print(f"❌ 清理超时日志失败：{e}")
+        return 0
 
 
 def cleanup_database(days_to_keep):
@@ -183,14 +233,18 @@ def cleanup_old_data(days_to_keep, cleanup_type='all'):
 
     Args:
         days_to_keep: 保留最近多少天的数据
-        cleanup_type: 清理类型 ('data'=数据库数据，'log'=日志文件，'all'=全部)
+        cleanup_type: 清理类型 ('data'=数据库数据，'log'=日志文件，'timeout_logs'=超时日志，'all'=全部)
     """
     db_count = 0
     file_count = 0
     size_freed = 0
+    timeout_count = 0
 
     if cleanup_type in ('data', 'all'):
         db_count = cleanup_database(days_to_keep)
+
+    if cleanup_type in ('timeout_logs'):
+        timeout_count = cleanup_timeout_logs(days_to_keep)
 
     if cleanup_type in ('log', 'all'):
         file_count, size_freed = cleanup_log_files(days_to_keep)
@@ -200,6 +254,8 @@ def cleanup_old_data(days_to_keep, cleanup_type='all'):
     print(f"清理完成！")
     if cleanup_type in ('data', 'all'):
         print(f"  - 删除数据库记录：{db_count} 条")
+    if cleanup_type in ('timeout_logs'):
+        print(f"  - 删除超时/警告日志：{timeout_count} 条")
     if cleanup_type in ('log', 'all'):
         print(f"  - 删除日志文件：{file_count} 个")
         print(f"  - 释放空间：{size_freed/1024/1024:.2f}MB")
@@ -223,7 +279,7 @@ def main():
     while True:
         show_menu()
         try:
-            choice = input("\n请输入选项 (0-6): ").strip()
+            choice = input("\n请输入选项 (0-8): ").strip()
         except EOFError:
             print("\n检测到非交互模式，退出清理工具")
             break
