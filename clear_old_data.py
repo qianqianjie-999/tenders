@@ -18,8 +18,8 @@ from pathlib import Path
 CLEANUP_OPTIONS = {
     '1': {'type': 'log', 'days': 7, 'label': '清理 7 天前的日志文件'},
     '2': {'type': 'log', 'days': 15, 'label': '清理 15 天前的日志文件'},
-    '3': {'type': 'timeout_logs', 'days': 7, 'label': '清理 7 天前的超时日志（数据库）'},
-    '4': {'type': 'timeout_logs', 'days': 15, 'label': '清理 15 天前的超时日志（数据库）'},
+    '3': {'type': 'timeout_logs', 'days': 0, 'label': '清理所有超时日志和接口警告（含今日）'},
+    '4': {'type': 'timeout_logs', 'days': 0, 'label': '清理所有超时日志和接口警告（含今日）'},
     '5': {'type': 'data', 'days': 30, 'label': '清理 30 天前的数据'},
     '6': {'type': 'data', 'days': 90, 'label': '清理 90 天前的数据'},
     '7': {'type': 'data', 'days': 180, 'label': '清理 180 天前的数据'},
@@ -36,8 +36,12 @@ def show_menu():
     print("-" * 50)
 
     for key, option in CLEANUP_OPTIONS.items():
-        cutoff = (datetime.date.today() - datetime.timedelta(days=option['days'])).strftime('%Y-%m-%d')
-        print(f"  {key}. {option['label']} ({cutoff} 之前)")
+        if option['days'] == 0:
+            # days=0 时表示清理所有，不显示日期范围
+            print(f"  {key}. {option['label']}")
+        else:
+            cutoff = (datetime.date.today() - datetime.timedelta(days=option['days'])).strftime('%Y-%m-%d')
+            print(f"  {key}. {option['label']} ({cutoff} 之前)")
 
     print("-" * 50)
     print("  0. 退出")
@@ -59,25 +63,37 @@ def cleanup_timeout_logs(days_to_keep):
         print("❌ 错误：DB_PASSWORD 环境变量未设置")
         return 0
 
-    print(f"\n开始清理超时日志和接口警告 ({days_to_keep}天前)...")
+    if days_to_keep == 0:
+        print(f"\n开始清理所有超时日志和接口警告...")
+    else:
+        print(f"\n开始清理超时日志和接口警告 ({days_to_keep}天前)...")
 
     try:
         conn = pymysql.connect(**db_config)
         cursor = conn.cursor()
 
-        # 清理运行日志
-        cursor.execute("""
-            DELETE FROM spider_run_logs
-            WHERE run_date < DATE_SUB(CURDATE(), INTERVAL %s DAY)
-        """, (days_to_keep,))
-        run_logs_deleted = cursor.rowcount
+        if days_to_keep == 0:
+            # 清理所有运行日志
+            cursor.execute("DELETE FROM spider_run_logs")
+            run_logs_deleted = cursor.rowcount
 
-        # 清理超时日志和接口警告
-        cursor.execute("""
-            DELETE FROM spider_timeout_logs
-            WHERE occurred_at < DATE_SUB(NOW(), INTERVAL %s DAY)
-        """, (days_to_keep,))
-        timeout_logs_deleted = cursor.rowcount
+            # 清理所有超时日志和接口警告
+            cursor.execute("DELETE FROM spider_timeout_logs")
+            timeout_logs_deleted = cursor.rowcount
+        else:
+            # 清理运行日志
+            cursor.execute("""
+                DELETE FROM spider_run_logs
+                WHERE run_date < DATE_SUB(CURDATE(), INTERVAL %s DAY)
+            """, (days_to_keep,))
+            run_logs_deleted = cursor.rowcount
+
+            # 清理超时日志和接口警告
+            cursor.execute("""
+                DELETE FROM spider_timeout_logs
+                WHERE occurred_at < DATE_SUB(NOW(), INTERVAL %s DAY)
+            """, (days_to_keep,))
+            timeout_logs_deleted = cursor.rowcount
 
         conn.commit()
         conn.close()
