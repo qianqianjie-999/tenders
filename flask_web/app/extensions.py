@@ -40,7 +40,3 @@ def get_db_connection():
         init_db_pool()
     return connection_pool.connection()
 
-def close_db(e=None):
-    """关闭数据库连接"""
-    # 连接池会自动管理连接，不需要手动关闭
-    pass

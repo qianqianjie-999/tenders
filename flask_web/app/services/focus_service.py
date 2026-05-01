@@ -42,9 +42,9 @@ class FocusService:
 
             cursor.close()
             return rows, total, stats
-        except Exception as e:
+        except Exception:
             cursor.close()
-            raise e
+            raise
 
     @staticmethod
     def add(data):
@@ -58,6 +58,7 @@ class FocusService:
             """, (data['project_name'], data['publish_date'], data['project_source']))
 
             if cursor.fetchone():
+                cursor.close()
                 return False, '该项目已在关注列表中'
 
             cursor.execute("""
@@ -73,9 +74,9 @@ class FocusService:
             focus_id = cursor.lastrowid
             cursor.close()
             return True, focus_id
-        except Exception as e:
+        except Exception:
             cursor.close()
-            raise e
+            raise
 
     @staticmethod
     def update_status(focus_id, status, remark=None):
@@ -96,9 +97,9 @@ class FocusService:
             affected = cursor.rowcount
             cursor.close()
             return affected > 0
-        except Exception as e:
+        except Exception:
             cursor.close()
-            raise e
+            raise
 
     @staticmethod
     def delete(focus_id):
@@ -111,9 +112,9 @@ class FocusService:
             affected = cursor.rowcount
             cursor.close()
             return affected > 0
-        except Exception as e:
+        except Exception:
             cursor.close()
-            raise e
+            raise
 
     @staticmethod
     def get_tracks(focus_id):
@@ -128,9 +129,9 @@ class FocusService:
             rows = cursor.fetchall()
             cursor.close()
             return rows
-        except Exception as e:
+        except Exception:
             cursor.close()
-            raise e
+            raise
 
     @staticmethod
     def add_track(focus_id, content, record_type='其他', operator='系统'):
@@ -147,9 +148,9 @@ class FocusService:
             track_id = cursor.lastrowid
             cursor.close()
             return track_id
-        except Exception as e:
+        except Exception:
             cursor.close()
-            raise e
+            raise
 
     @staticmethod
     def check_exists(project_keys):
@@ -169,6 +170,7 @@ class FocusService:
                     params.extend(parts)
 
             if not conditions:
+                cursor.close()
                 return []
 
             cursor.execute(f"""
@@ -178,6 +180,6 @@ class FocusService:
             rows = cursor.fetchall()
             cursor.close()
             return [row['pk'] for row in rows]
-        except Exception as e:
+        except Exception:
             cursor.close()
-            raise e
+            raise

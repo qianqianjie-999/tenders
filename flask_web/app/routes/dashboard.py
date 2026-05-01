@@ -85,7 +85,8 @@ def api_dashboard():
 
         # 4. 济宁公共资源统计 (从bidding_info表查询)
         from flask import current_app
-        keywords = current_app.config.get('HIGHLIGHT_KEYWORDS', ['济宁', '济南'])
+        from app.services.keyword_service import KeywordService
+        keywords = KeywordService.get_all_keywords()
 
         # 修复：使用参数化查询避免%冲突
         cursor.execute("""

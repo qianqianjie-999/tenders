@@ -65,7 +65,7 @@ def api_data():
         total: int = result[1]
 
         # 处理高亮显示...
-        keywords: List[str] = current_app.config['HIGHLIGHT_KEYWORDS']
+        keywords: List[str] = KeywordService.get_all_keywords()
         processed_data: List[Dict[str, Any]] = []
         for item in data:
             item['original_name'] = item['project_name']
@@ -298,7 +298,8 @@ def api_export():
 
         if highlight_only == 'true':
             highlight_conditions: List[str] = []
-            for kw in current_app.config['HIGHLIGHT_KEYWORDS']:
+            keywords_for_filter: List[str] = KeywordService.get_all_keywords()
+            for kw in keywords_for_filter:
                 highlight_conditions.append("project_name LIKE %s")
                 params.append(f'%{kw}%')
             if highlight_conditions:
@@ -335,7 +336,7 @@ def api_export():
 
         for idx, row in enumerate(rows, 1):
             project_name: str = row['project_name']
-            has_keyword: bool = any(kw in project_name for kw in current_app.config['HIGHLIGHT_KEYWORDS'])
+            has_keyword: bool = any(kw in project_name for kw in KeywordService.get_all_keywords())
 
             writer.writerow([
                 idx,
@@ -431,7 +432,7 @@ def api_keyword_projects():
         cursor.close()
 
         # 处理数据...
-        keywords: List[str] = current_app.config['HIGHLIGHT_KEYWORDS']
+        keywords: List[str] = KeywordService.get_all_keywords()
         processed_data: List[Dict[str, Any]] = []
 
         for row in rows:

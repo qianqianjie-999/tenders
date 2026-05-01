@@ -1,30 +1,6 @@
 import logging
 import time
 from scrapy import signals
-from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError
-from scrapy.downloadermiddlewares.retry import RetryMiddleware
-from scrapy.utils.response import response_status_message
-from scrapy.exceptions import IgnoreRequest
-
-
-class TimeoutRetryMiddleware(RetryMiddleware):
-    """
-    超时重试中间件 - 专门处理超时错误
-    """
-
-    def __init__(self, settings):
-        super().__init__(settings)
-        self.logger = logging.getLogger('timeout_middleware')
-        self.timeout_threshold = settings.getint('DOWNLOAD_TIMEOUT', 30)
-
-    @classmethod
-    def from_crawler(cls, crawler):
-        return cls(crawler.settings)
-
-    def process_exception(self, request, exception, spider):
-        """处理异常"""
-        # 让父类处理重试逻辑
-        return super().process_exception(request, exception, spider)
 
 
 class RequestStatsMiddleware:

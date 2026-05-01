@@ -55,7 +55,6 @@ COOKIES_ENABLED = True
 
 # Enable or disable downloader middlewares
 DOWNLOADER_MIDDLEWARES = {
-    'bidding_spider.middlewares.TimeoutRetryMiddleware': 550,
     'bidding_spider.middlewares.RequestStatsMiddleware': 600,
 }
 

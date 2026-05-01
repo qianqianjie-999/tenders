@@ -184,7 +184,7 @@ def cleanup_database(days_to_keep):
         if run_logs_deleted > 0 or timeout_logs_deleted > 0:
             print(f"✅ 日志表清理完成：删除 {run_logs_deleted} 条运行日志，{timeout_logs_deleted} 条超时日志")
 
-        return shandong_count + jiangsu_count + run_logs_deleted + timeout_logs_deleted
+        return shandong_deleted + jiangsu_deleted + zhejiang_deleted + run_logs_deleted + timeout_logs_deleted
 
     except Exception as e:
         print(f"❌ 数据库清理失败：{e}")

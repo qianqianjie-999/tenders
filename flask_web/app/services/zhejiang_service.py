@@ -41,7 +41,7 @@ class ZhejiangService:
             params.append(f'%{keyword}%')
 
         if highlight_only:
-            keywords = KeywordService.get_all_keywords() or current_app.config.get('HIGHLIGHT_KEYWORDS', [])
+            keywords = KeywordService.get_all_keywords()
             if keywords:
                 highlight_conditions = []
                 for kw in keywords:
@@ -70,7 +70,7 @@ class ZhejiangService:
         processed = []
         keywords = KeywordService.get_all_keywords()
         if not keywords:
-            keywords = current_app.config.get('HIGHLIGHT_KEYWORDS', [])
+            keywords = KeywordService.get_all_keywords()
         category_rules = current_app.config.get('CATEGORY_RULES', {})
 
         for row in rows:
@@ -100,7 +100,7 @@ class ZhejiangService:
 
         keywords = KeywordService.get_all_keywords()
         if not keywords:
-            keywords = current_app.config.get('HIGHLIGHT_KEYWORDS', [])
+            keywords = KeywordService.get_all_keywords()
 
         # 总数
         cursor.execute("""
@@ -134,11 +134,6 @@ class ZhejiangService:
 
         # 使用 KeywordService 动态获取关键词（支持缓存）
         keywords = KeywordService.get_all_keywords()
-
-        # 如果数据库获取失败，fallback 到静态配置
-        if not keywords:
-            keywords = current_app.config.get('HIGHLIGHT_KEYWORDS', [])
-            print(f"[ZhejiangService] 使用 fallback 关键词列表，共{len(keywords)}个")
 
         # 总数
         cursor.execute("SELECT COUNT(*) as total FROM zhejiang_bidding_info WHERE publish_date = %s", (query_date,))

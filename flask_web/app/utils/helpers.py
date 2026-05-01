@@ -14,7 +14,7 @@ def format_date_for_display(date_str: object) -> str:
             dt = datetime.strptime(date_str, '%Y-%m-%d')
             return dt.strftime('%Y-%m-%d')
         return str(date_str)
-    except:
+    except (ValueError, TypeError):
         return str(date_str)
 
 
@@ -23,17 +23,17 @@ def highlight_keywords(text: str, keywords: list) -> str:
     if not text:
         return text
 
-    # 过滤掉太短的关键词，避免匹配到HTML标签内部
     filtered_keywords = [kw for kw in keywords if len(kw) >= 2]
     if not filtered_keywords:
         return text
 
     sorted_keywords = sorted(filtered_keywords, key=len, reverse=True)
-    
-    # 直接替换关键词，不使用正则表达式，避免转义问题
-    for keyword in sorted_keywords:
-        if keyword and keyword in text:
-            text = text.replace(keyword, f'<span class="highlight-keyword" title="相关关键词: {keyword}">{keyword}</span>')
+
+    def replace_once(match):
+        return f'<span class="highlight-keyword" title="相关关键词: {match.group(0)}">{match.group(0)}</span>'
+
+    pattern = '|'.join(re.escape(kw) for kw in sorted_keywords)
+    text = re.sub(pattern, replace_once, text, flags=re.IGNORECASE)
     return text
 
 

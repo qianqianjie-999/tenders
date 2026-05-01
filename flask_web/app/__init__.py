@@ -4,7 +4,7 @@ from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from app.config import Config
-from app.extensions import close_db, init_db_pool, csrf
+from app.extensions import init_db_pool, csrf
 from app.routes.design import design_bp
 from app.routes.audit import audit_bp
 from app.utils.exceptions import BaseAPIException
@@ -114,8 +114,6 @@ def create_app():
     csrf.exempt(api_delete)
     csrf.exempt(api_add_track)
     csrf.exempt(api_move_to_analysis)
-
-    app.teardown_appcontext(close_db)
 
     return app
 

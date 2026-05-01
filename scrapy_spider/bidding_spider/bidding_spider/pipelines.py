@@ -297,7 +297,7 @@ class MariaDBPipeline:
             logger.warning(f"加载现有项目键失败: {e}")
             import traceback
             logger.debug(traceback.format_exc())
-            self.seen_keys = set()
+            self.seen_keys = ScalableBloomFilter(initial_capacity=10000, error_rate=0.001)
 
     def close_spider(self, spider):
         """
