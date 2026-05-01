@@ -48,42 +48,74 @@ class KeywordService:
         获取关键词及其统计信息（关联项目数量）
         :return: 包含关键词和统计的字典列表
         """
+        conn = None
+        cursor = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
 
-            # 获取所有关键词
-            cursor.execute("""
-                SELECT keyword, category, created_time 
-                FROM highlight_keywords 
+            keywords_query = """
+                SELECT keyword, category, created_time
+                FROM highlight_keywords
                 ORDER BY category, created_time DESC
-            """)
+            """
+            cursor.execute(keywords_query)
             keywords = cursor.fetchall()
 
-            # 统计每个关键词关联的项目数（近30天）
+            if not keywords:
+                cursor.close()
+                return []
+
+            # 批量查询所有关键词的统计（避免N+1查询）
+            keyword_list = [kw['keyword'] for kw in keywords]
+            placeholders = ','.join(['%s'] * len(keyword_list))
+            
+            cursor.execute(f"""
+                SELECT project_name,
+                       COUNT(*) as total_count,
+                       SUM(CASE WHEN publish_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as recent_count
+                FROM bidding_info
+                WHERE {' OR '.join(['project_name LIKE %s' for _ in keyword_list])}
+            """, [f'%{kw}%' for kw in keyword_list])
+            
+            stats_rows = cursor.fetchall()
+
+            kw_stats = {}
+            for row in stats_rows:
+                for kw in keyword_list:
+                    if kw in row['project_name']:
+                        if kw not in kw_stats:
+                            kw_stats[kw] = {'total': 0, 'recent': 0}
+                        kw_stats[kw]['total'] += 1
+                        if row.get('recent_count', 0) > 0:
+                            kw_stats[kw]['recent'] = row['recent_count']
+
+            cursor.close()
+            cursor = None
+
             result = []
             for kw in keywords:
-                cursor.execute("""
-                    SELECT COUNT(*) as count 
-                    FROM bidding_info 
-                    WHERE project_name LIKE %s 
-                    AND publish_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                """, (f'%{kw["keyword"]}%',))
-                stat = cursor.fetchone()
-
+                kw_name = kw['keyword']
+                stats = kw_stats.get(kw_name, {'total': 0, 'recent': 0})
                 result.append({
-                    'keyword': kw['keyword'],
+                    'keyword': kw_name,
                     'category': kw['category'],
-                    'project_count': stat['count'] if stat else 0,
+                    'project_count': stats.get('recent', 0),
                     'created_time': kw['created_time'].strftime('%Y-%m-%d') if kw['created_time'] else ''
                 })
 
-            cursor.close()
             return result
 
         except Exception as e:
             print(f"[KeywordService] 获取关键词统计失败: {e}")
+            import traceback
+            traceback.print_exc()
             return []
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     @classmethod
     def add_keyword(cls, keyword, category='general'):
@@ -105,29 +137,28 @@ class KeywordService:
         if category not in valid_categories:
             category = 'general'
 
+        conn = None
+        cursor = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
 
-            # 检查是否已存在
             cursor.execute(
                 "SELECT id FROM highlight_keywords WHERE keyword = %s",
                 (keyword,)
             )
             if cursor.fetchone():
-                cursor.close()
                 return False, f"关键词 '{keyword}' 已存在"
 
-            # 插入新关键词（包含分类）
             cursor.execute("""
-                INSERT INTO highlight_keywords (keyword, category) 
+                INSERT INTO highlight_keywords (keyword, category)
                 VALUES (%s, %s)
             """, (keyword, category))
 
             conn.commit()
             cursor.close()
+            cursor = None
 
-            # 使缓存失效
             cls._cache_valid = False
 
             print(f"[KeywordService] 成功添加关键词: {keyword} (分类: {category})")
@@ -135,7 +166,14 @@ class KeywordService:
 
         except Exception as e:
             print(f"[KeywordService] 添加关键词失败: {e}")
+            import traceback
+            traceback.print_exc()
             return False, f"添加失败: {str(e)}"
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     @classmethod
     def delete_keyword(cls, keyword):
@@ -144,6 +182,8 @@ class KeywordService:
         :param keyword: 要删除的关键词
         :return: (success: bool, message: str)
         """
+        conn = None
+        cursor = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -154,16 +194,14 @@ class KeywordService:
             )
 
             if cursor.rowcount == 0:
-                cursor.close()
                 return False, f"关键词 '{keyword}' 不存在"
 
             conn.commit()
             cursor.close()
+            cursor = None
 
-            # 使缓存失效
             cls._cache_valid = False
 
-            # 同步更新内存配置
             if 'HIGHLIGHT_KEYWORDS' in current_app.config:
                 if keyword in current_app.config['HIGHLIGHT_KEYWORDS']:
                     current_app.config['HIGHLIGHT_KEYWORDS'].remove(keyword)
@@ -173,7 +211,14 @@ class KeywordService:
 
         except Exception as e:
             print(f"[KeywordService] 删除关键词失败: {e}")
+            import traceback
+            traceback.print_exc()
             return False, f"删除失败: {str(e)}"
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     @classmethod
     def update_keyword(cls, old_keyword, new_keyword, new_category=None):
@@ -191,50 +236,46 @@ class KeywordService:
         if len(new_keyword) > 100:
             return False, "关键词长度不能超过100个字符"
 
+        conn = None
+        cursor = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
 
-            # 检查原关键词是否存在
             cursor.execute(
                 "SELECT id FROM highlight_keywords WHERE keyword = %s",
                 (old_keyword,)
             )
             if not cursor.fetchone():
-                cursor.close()
                 return False, f"原关键词 '{old_keyword}' 不存在"
 
-            # 如果新旧不同，检查新关键词是否已存在
             if old_keyword != new_keyword:
                 cursor.execute(
                     "SELECT id FROM highlight_keywords WHERE keyword = %s",
                     (new_keyword,)
                 )
                 if cursor.fetchone():
-                    cursor.close()
                     return False, f"新关键词 '{new_keyword}' 已存在"
 
-            # 执行更新
             if new_category:
                 cursor.execute("""
-                    UPDATE highlight_keywords 
-                    SET keyword = %s, category = %s 
+                    UPDATE highlight_keywords
+                    SET keyword = %s, category = %s
                     WHERE keyword = %s
                 """, (new_keyword, new_category, old_keyword))
             else:
                 cursor.execute("""
-                    UPDATE highlight_keywords 
-                    SET keyword = %s 
+                    UPDATE highlight_keywords
+                    SET keyword = %s
                     WHERE keyword = %s
                 """, (new_keyword, old_keyword))
 
             conn.commit()
             cursor.close()
+            cursor = None
 
-            # 使缓存失效
             cls._cache_valid = False
 
-            # 同步更新内存配置
             if 'HIGHLIGHT_KEYWORDS' in current_app.config:
                 if old_keyword in current_app.config['HIGHLIGHT_KEYWORDS']:
                     idx = current_app.config['HIGHLIGHT_KEYWORDS'].index(old_keyword)
@@ -245,7 +286,14 @@ class KeywordService:
 
         except Exception as e:
             print(f"[KeywordService] 修改关键词失败: {e}")
+            import traceback
+            traceback.print_exc()
             return False, f"修改失败: {str(e)}"
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     @classmethod
     def get_categories(cls):

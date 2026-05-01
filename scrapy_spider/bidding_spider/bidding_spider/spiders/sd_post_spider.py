@@ -35,6 +35,7 @@ class SdPostSpider(scrapy.Spider):
         self.total_requests = 0
         self.successful_requests = 0
         self.items_crawled = 0
+        self.other_errors = 0
         
         # 初始化监控数据库
         self.monitor = None
@@ -319,6 +320,16 @@ class SdPostSpider(scrapy.Spider):
                         )
                         yield item
                         self.items_crawled += 1
+
+                        if self.monitor and self.monitor_run_id:
+                            try:
+                                self.monitor.log_item(
+                                    spider_name=self.name,
+                                    spider_run_id=self.monitor_run_id,
+                                    item=item
+                                )
+                            except Exception as e:
+                                self.logger.warning(f"[Monitor] 记录条目失败: {e}")
                     else:
                         self.logger.debug(
                             f"跳过非目标日期数据 [{item['publish_date']}]: {item['project_name'][:30]}..."
@@ -402,6 +413,21 @@ class SdPostSpider(scrapy.Spider):
             self.logger.error("DNS解析失败")
         elif failure.check(scrapy.exceptions.ConnectionRefusedError):
             self.logger.error("连接被拒绝")
+        else:
+            self.other_errors += 1
+            error_type = failure.type.__name__
+            self.logger.error(f"⚠️ 其他错误 #{self.other_errors} | 类型: {error_type} | URL: {url}")
+            if self.monitor:
+                try:
+                    self.monitor.log_error(
+                        spider_name=self.name,
+                        url=url,
+                        error_type=error_type,
+                        error_message=str(failure.value)[:500],
+                        spider_run_id=self.monitor_run_id
+                    )
+                except Exception as e:
+                    self.logger.warning(f"[Monitor] 记录错误日志失败: {e}")
     
     def closed(self, reason):
         """爬虫关闭时的处理"""
@@ -420,8 +446,7 @@ class SdPostSpider(scrapy.Spider):
                     run_id=self.monitor_run_id,
                     status=status,
                     items_crawled=self.items_crawled,
-                    # items_stored 不传，让数据库保持 Pipeline 累积的值
-                    error_count=self.timeout_errors + self.dns_errors,
+                    error_count=self.timeout_errors + self.dns_errors + self.other_errors,
                     warning_count=self.slow_requests,
                     timeout_count=self.timeout_errors,
                     close_reason=reason

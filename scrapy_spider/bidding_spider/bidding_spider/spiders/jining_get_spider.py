@@ -380,6 +380,16 @@ class JiningGetSpider(scrapy.Spider):
                         yield bidding_item
                         self.items_crawled += 1
 
+                        if self.monitor and self.monitor_run_id:
+                            try:
+                                self.monitor.log_item(
+                                    spider_name=self.name,
+                                    spider_run_id=self.monitor_run_id,
+                                    item=bidding_item
+                                )
+                            except Exception as e:
+                                self.logger.warning(f"[Monitor] 记录条目失败: {e}")
+
                 except Exception as e:
                     self.logger.warning(f"📅 日期处理失败: {publish_date}, 错误: {e}")
 

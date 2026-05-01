@@ -99,8 +99,8 @@ def api_data():
 
     except Exception as e:
         import traceback
-        print(f"API ERROR: {str(e)}")
-        print(traceback.format_exc())
+        import logging
+        logging.getLogger(__name__).error(f"API ERROR: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @main_bp.route('/api/categories')
@@ -110,8 +110,8 @@ def api_categories():
         return jsonify({'success': True, 'categories': categories})
     except Exception as e:
         import traceback
-        print(f"Categories ERROR: {str(e)}")
-        print(traceback.format_exc())
+        import logging
+        logging.getLogger(__name__).error(f"Categories ERROR: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
