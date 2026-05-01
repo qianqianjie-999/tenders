@@ -185,11 +185,13 @@ class ZhejiangPostSpider(scrapy.Spider):
                 body=body_json,
                 headers={
                     'Content-Type': 'application/json; charset=UTF-8',
-                    'Accept': 'application/json',
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                     'Origin': 'https://ggzy.zj.gov.cn',
-                    'Referer': 'https://ggzy.zj.gov.cn/'
+                    'Referer': 'https://ggzy.zj.gov.cn/inteligentsearch/'
                 },
                 callback=self.parse_api_response,
                 meta={
@@ -335,11 +337,13 @@ class ZhejiangPostSpider(scrapy.Spider):
                 body=next_body_json,
                 headers={
                     'Content-Type': 'application/json; charset=UTF-8',
-                    'Accept': 'application/json',
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                     'Origin': 'https://ggzy.zj.gov.cn',
-                    'Referer': 'https://ggzy.zj.gov.cn/'
+                    'Referer': 'https://ggzy.zj.gov.cn/inteligentsearch/'
                 },
                 callback=self.parse_api_response,
                 meta={
