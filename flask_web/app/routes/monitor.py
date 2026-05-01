@@ -201,7 +201,7 @@ def api_resolve_timeout(log_id):
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE spider_timeout_logs
-            SET resolved = TRUE, updated_time = NOW()
+            SET resolved = TRUE
             WHERE id = %s
         """, (log_id,))
         conn.commit()
