@@ -186,6 +186,16 @@ class MariaDBPipeline:
 
         except Exception as e:
             logger.error(f"数据库初始化失败: {e}")
+            if self.cursor:
+                try:
+                    self.cursor.close()
+                except Exception:
+                    pass
+            if self.conn:
+                try:
+                    self.conn.close()
+                except Exception:
+                    pass
             raise
 
     def create_table_if_not_exists(self):

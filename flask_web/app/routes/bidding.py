@@ -124,7 +124,7 @@ def api_list():
         })
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @bidding_bp.route('/api/convert/<int:analysis_id>', methods=['POST'])
@@ -179,7 +179,7 @@ def convert_from_analysis(analysis_id):
         })
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @bidding_bp.route('/api/detail/<int:bidding_id>')
@@ -229,7 +229,7 @@ def api_detail(bidding_id):
         })
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @bidding_bp.route('/api/update/<int:bidding_id>', methods=['PUT'])
@@ -237,12 +237,13 @@ def api_detail(bidding_id):
 @require_auth_write
 def api_update(bidding_id):
     """更新投标项目"""
+    conn = None
+    cursor = None
     try:
         data = request.get_json()
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 构造更新字段
         fields = []
         params = []
 
@@ -258,7 +259,6 @@ def api_update(bidding_id):
         for key, db_field in field_mapping.items():
             if key in data:
                 if key == 'bid_prices':
-                    # JSON 序列化报价信息
                     value = json.dumps(data[key], ensure_ascii=False) if data[key] else None
                 else:
                     value = data[key] if data[key] != '' else None
@@ -266,7 +266,6 @@ def api_update(bidding_id):
                 fields.append(f"{db_field} = %s")
                 params.append(value)
 
-        # 如果没有指定 operator，使用当前认证用户
         if 'operator' not in data and hasattr(request, 'auth_user') and request.auth_user:
             fields.append("operator = %s")
             params.append(request.auth_user)
@@ -283,7 +282,6 @@ def api_update(bidding_id):
         """, params)
         conn.commit()
         affected = cursor.rowcount
-        cursor.close()
 
         if affected > 0:
             return jsonify({'success': True, 'message': '更新成功'})
@@ -291,7 +289,12 @@ def api_update(bidding_id):
             return jsonify({'success': False, 'message': '记录不存在'}), 404
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 @bidding_bp.route('/api/verify', methods=['POST'])
@@ -318,4 +321,4 @@ def api_count():
         cursor.close()
         return jsonify({'success': True, 'count': count})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500

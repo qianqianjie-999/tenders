@@ -5,7 +5,8 @@ import re
 import time
 from pathlib import Path
 from bidding_spider.items import BiddingItem
-from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError
+from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError, ConnectionRefusedError
+from scrapy.exceptions import CloseSpider
 
 # 导入监控数据库模块
 try:
@@ -23,6 +24,7 @@ class JiangsuPostSpider(scrapy.Spider):
 
     # 详情页基础 URL
     DETAIL_BASE_URL = 'http://jsggzy.jszwfw.gov.cn'
+    MAX_TIMEOUT_ERRORS = 100
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -329,6 +331,11 @@ class JiangsuPostSpider(scrapy.Spider):
             self.timeout_errors += 1
             self.logger.error(f"⏰ 超时错误 #{self.timeout_errors} | URL: {url}")
 
+            if self.timeout_errors >= self.MAX_TIMEOUT_ERRORS:
+                raise CloseSpider(
+                    f"超时错误过多 ({self.timeout_errors}次)，停止爬虫以保护系统"
+                )
+
             # 记录到监控数据库
             if self.monitor:
                 try:
@@ -347,6 +354,26 @@ class JiangsuPostSpider(scrapy.Spider):
         elif failure.check(DNSLookupError):
             self.dns_errors += 1
             self.logger.error("DNS 解析失败")
+            if self.monitor:
+                try:
+                    self.monitor.log_interface_warning(
+                        self.name, url, 'dns_error',
+                        error_message=str(failure.value)[:500],
+                        spider_run_id=self.monitor_run_id
+                    )
+                except Exception as e:
+                    self.logger.warning(f"[Monitor] 记录 DNS 错误失败：{e}")
+        elif failure.check(ConnectionRefusedError):
+            self.logger.error("连接被拒绝")
+            if self.monitor:
+                try:
+                    self.monitor.log_interface_warning(
+                        self.name, url, 'connection_error',
+                        error_message=str(failure.value)[:500],
+                        spider_run_id=self.monitor_run_id
+                    )
+                except Exception as e:
+                    self.logger.warning(f"[Monitor] 记录连接拒绝错误失败：{e}")
 
     def closed(self, reason):
         """爬虫关闭时的处理"""

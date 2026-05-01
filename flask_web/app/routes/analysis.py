@@ -107,7 +107,7 @@ def api_list():
         })
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @analysis_bp.route('/api/detail/<int:analysis_id>')
@@ -144,7 +144,7 @@ def api_detail(analysis_id):
         })
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @analysis_bp.route('/api/update/<int:analysis_id>', methods=['PUT'])
@@ -199,7 +199,7 @@ def api_update(analysis_id):
             return jsonify({'success': False, 'message': '记录不存在'}), 404
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @analysis_bp.route('/api/delete/<int:analysis_id>', methods=['DELETE'])
@@ -220,7 +220,7 @@ def api_delete(analysis_id):
             return jsonify({'success': False, 'message': '记录不存在'}), 404
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 @analysis_bp.route('/api/verify', methods=['POST'])
 def verify_access_code():
@@ -246,4 +246,4 @@ def api_count():
         cursor.close()
         return jsonify({'success': True, 'count': count})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500

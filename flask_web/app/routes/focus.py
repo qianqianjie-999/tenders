@@ -53,7 +53,7 @@ def api_list():
             }
         })
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @focus_bp.route('/api/add', methods=['POST'])
@@ -71,7 +71,7 @@ def api_add():
         else:
             return jsonify({'success': False, 'message': result}), 400
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @focus_bp.route('/api/update/<int:focus_id>', methods=['PUT'])
@@ -90,7 +90,7 @@ def api_update(focus_id):
             return jsonify({'success': True, 'message': '更新成功'})
         return jsonify({'success': False, 'message': '项目不存在'}), 404
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @focus_bp.route('/api/delete', methods=['DELETE'])
@@ -107,7 +107,7 @@ def api_delete():
             return jsonify({'success': True, 'message': '已取消关注'})
         return jsonify({'success': False, 'message': '项目不存在'}), 404
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @focus_bp.route('/api/tracks/<int:focus_id>')
@@ -124,7 +124,7 @@ def api_tracks(focus_id):
         } for t in tracks]
         return jsonify({'success': True, 'data': data})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @focus_bp.route('/api/tracks/<int:focus_id>', methods=['POST'])
@@ -142,7 +142,7 @@ def api_add_track(focus_id):
         track_id = FocusService.add_track(focus_id, content, record_type)
         return jsonify({'success': True, 'message': '添加成功', 'id': track_id})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @focus_bp.route('/api/check')
@@ -154,7 +154,7 @@ def api_check():
         focused = FocusService.check_exists(keys)
         return jsonify({'success': True, 'focused': focused})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @focus_bp.route('/api/move-to-analysis', methods=['POST'])
@@ -236,18 +236,24 @@ def api_move_to_analysis():
     except Exception as e:
         import traceback
         current_app.logger.error(f"转入分析标书失败: {str(e)}")
-        return jsonify({'success': False, 'message': f'服务器错误: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @focus_bp.route('/api/count')
 def api_count():
     """获取重点关注项目总数"""
+    conn = None
+    cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) as count FROM focus_projects")
         count = cursor.fetchone()['count']
-        cursor.close()
         return jsonify({'success': True, 'count': count})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()

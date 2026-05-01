@@ -101,7 +101,7 @@ def api_data():
         import traceback
         import logging
         logging.getLogger(__name__).error(f"API ERROR: {str(e)}\n{traceback.format_exc()}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 @main_bp.route('/api/categories')
 def api_categories():
@@ -112,7 +112,7 @@ def api_categories():
         import traceback
         import logging
         logging.getLogger(__name__).error(f"Categories ERROR: {str(e)}\n{traceback.format_exc()}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @main_bp.route('/api/sources')
@@ -124,7 +124,7 @@ def api_sources():
         import traceback
         print(f"Sources ERROR: {str(e)}")
         print(traceback.format_exc())
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 
@@ -154,7 +154,7 @@ def api_keywords():
             import traceback
             print(f"[API] 获取关键词失败: {e}")
             print(traceback.format_exc())
-            return jsonify({'success': False, 'message': str(e)}), 500
+            return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
     elif request.method == 'POST':
         try:
@@ -178,7 +178,7 @@ def api_keywords():
             import traceback
             print(f"[API] 添加关键词失败: {e}")
             print(traceback.format_exc())
-            return jsonify({'success': False, 'message': str(e)}), 500
+            return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @main_bp.route('/api/keywords/<keyword>', methods=['PUT', 'DELETE'])
@@ -200,7 +200,7 @@ def api_keyword_detail(keyword: str):
             import traceback
             print(f"[API] 删除关键词失败: {e}")
             print(traceback.format_exc())
-            return jsonify({'success': False, 'message': str(e)}), 500
+            return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
     elif request.method == 'PUT':
         try:
@@ -226,7 +226,7 @@ def api_keyword_detail(keyword: str):
             import traceback
             print(f"[API] 修改关键词失败: {e}")
             print(traceback.format_exc())
-            return jsonify({'success': False, 'message': str(e)}), 500
+            return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @main_bp.route('/api/keyword-categories')
@@ -239,7 +239,7 @@ def api_keyword_categories():
             'categories': categories
         })
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @main_bp.route('/api/dates')
@@ -259,7 +259,7 @@ def api_dates():
         cursor.close()
         return jsonify({'success': True, 'dates': dates})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @main_bp.route('/api/export')
@@ -385,7 +385,7 @@ def api_export():
         import traceback
         print(f"Export ERROR: {str(e)}")
         print(traceback.format_exc())
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @main_bp.route('/api/keyword-projects')
@@ -467,4 +467,4 @@ def api_keyword_projects():
         import traceback
         print(f"[API] 获取关键词项目失败: {e}")
         print(traceback.format_exc())
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500

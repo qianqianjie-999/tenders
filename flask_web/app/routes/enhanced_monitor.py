@@ -113,7 +113,7 @@ def health_check():
     except Exception as e:
         return jsonify({
             'status': 'unhealthy',
-            'message': f'健康检查失败: {str(e)}'
+            'message': '健康检查失败'
         }), 503
 
 

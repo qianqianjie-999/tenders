@@ -94,7 +94,7 @@ def api_data():
         import traceback
         print(f"API ERROR: {str(e)}")
         print(traceback.format_exc())
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @zhejiang_bp.route('/api/categories')
@@ -107,7 +107,7 @@ def api_categories():
         import traceback
         print(f"Categories ERROR: {str(e)}")
         print(traceback.format_exc())
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @zhejiang_bp.route('/api/sources')
@@ -120,7 +120,7 @@ def api_sources():
         import traceback
         print(f"Sources ERROR: {str(e)}")
         print(traceback.format_exc())
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @zhejiang_bp.route('/api/export')
@@ -242,7 +242,7 @@ def api_export():
         import traceback
         print(f"Export ERROR: {str(e)}")
         print(traceback.format_exc())
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @zhejiang_bp.route('/api/keywords', methods=['GET'])
@@ -296,7 +296,7 @@ def api_keywords():
         import traceback
         print(f"[API] 获取关键词失败: {e}")
         print(traceback.format_exc())
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
 @zhejiang_bp.route('/api/keyword-projects')
@@ -380,4 +380,4 @@ def api_keyword_projects():
         import traceback
         print(f"[API] 获取关键词项目失败：{e}")
         print(traceback.format_exc())
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500

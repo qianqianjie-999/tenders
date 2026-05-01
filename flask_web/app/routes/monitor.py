@@ -213,7 +213,7 @@ def api_resolve_timeout(log_id):
         else:
             return jsonify({'success': False, 'message': '记录不存在'}), 404
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': '服务器内部错误'}), 500
     finally:
         if cursor:
             cursor.close()
