@@ -830,7 +830,7 @@ class MonitorService:
                     FROM spider_timeout_logs
                     WHERE spider_name = %s
                     AND occurred_at >= %s
-                    AND warning_type IN ('no_data', 'json_error', 'http_error', 'empty_response')
+                    AND warning_type IN ('json_error', 'http_error', 'api_error')
                     ORDER BY occurred_at DESC
                     LIMIT %s
                 """, (spider_name, start_date, limit))
@@ -847,7 +847,7 @@ class MonitorService:
                         resolved
                     FROM spider_timeout_logs
                     WHERE occurred_at >= %s
-                    AND warning_type IN ('no_data', 'json_error', 'http_error', 'empty_response')
+                    AND warning_type IN ('json_error', 'http_error', 'api_error')
                     ORDER BY occurred_at DESC
                     LIMIT %s
                 """, (start_date, limit))
