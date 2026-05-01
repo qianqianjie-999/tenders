@@ -32,10 +32,13 @@ NEWSPIDER_MODULE = 'bidding_spider.spiders'
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 16
+CONCURRENT_REQUESTS = 8
 
 # Configure a delay for requests for the same website (default: 0)
-DOWNLOAD_DELAY = 8
+DOWNLOAD_DELAY = 10
+
+# Randomize download delay between half and double of DOWNLOAD_DELAY
+RANDOMIZE_DOWNLOAD_DELAY = True
 
 # The download delay setting will honor only one of:
 CONCURRENT_REQUESTS_PER_DOMAIN = 1
