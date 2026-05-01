@@ -66,41 +66,20 @@ class KeywordService:
                 cursor.close()
                 return []
 
-            # 批量查询所有关键词的统计（避免N+1查询）
-            keyword_list = [kw['keyword'] for kw in keywords]
-            placeholders = ','.join(['%s'] * len(keyword_list))
-            
-            cursor.execute(f"""
-                SELECT project_name,
-                       COUNT(*) as total_count,
-                       SUM(CASE WHEN publish_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as recent_count
-                FROM bidding_info
-                WHERE {' OR '.join(['project_name LIKE %s' for _ in keyword_list])}
-            """, [f'%{kw}%' for kw in keyword_list])
-            
-            stats_rows = cursor.fetchall()
-
-            kw_stats = {}
-            for row in stats_rows:
-                for kw in keyword_list:
-                    if kw in row['project_name']:
-                        if kw not in kw_stats:
-                            kw_stats[kw] = {'total': 0, 'recent': 0}
-                        kw_stats[kw]['total'] += 1
-                        if row.get('recent_count', 0) > 0:
-                            kw_stats[kw]['recent'] = row['recent_count']
-
-            cursor.close()
-            cursor = None
-
+            # 统计每个关键词关联的项目数（近30天）
             result = []
             for kw in keywords:
-                kw_name = kw['keyword']
-                stats = kw_stats.get(kw_name, {'total': 0, 'recent': 0})
+                cursor.execute("""
+                    SELECT COUNT(*) as count
+                    FROM bidding_info
+                    WHERE project_name LIKE %s
+                    AND publish_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                """, (f'%{kw["keyword"]}%',))
+                stat = cursor.fetchone()
                 result.append({
-                    'keyword': kw_name,
+                    'keyword': kw['keyword'],
                     'category': kw['category'],
-                    'project_count': stats.get('recent', 0),
+                    'project_count': stat['count'] if stat else 0,
                     'created_time': kw['created_time'].strftime('%Y-%m-%d') if kw['created_time'] else ''
                 })
 
