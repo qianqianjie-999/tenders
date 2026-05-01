@@ -925,7 +925,9 @@
                         const typeLabels = {
                             'json_error': '<span class="badge bg-danger">JSON解析失败</span>',
                             'http_error': '<span class="badge bg-warning">HTTP错误</span>',
-                            'api_error': '<span class="badge bg-info">API业务错误</span>'
+                            'api_error': '<span class="badge bg-info">API业务错误</span>',
+                            'dns_error': '<span class="badge bg-warning">DNS解析失败</span>',
+                            'connection_error': '<span class="badge bg-warning">连接被拒绝</span>'
                         };
                         const typeLabel = typeLabels[w.warning_type] || `<span class="badge bg-secondary">${w.warning_type}</span>`;
                         html += `<li class="small"><strong>${w.spider_name}</strong>: <code>${urlDisplay}</code> ${typeLabel} <span class="text-muted">(${w.occurred_at || ''})</span></li>`;
@@ -969,9 +971,15 @@
                             `<button class="btn btn-sm btn-success" onclick="resolveTimeout(${log.id})" title="标记为已解决"><i class="fas fa-check"></i></button>` : 
                             '<span class="text-muted"><i class="fas fa-check-circle"></i></span>';
                         
-                        // 显示警告类型或超时时间
-                        const typeDisplay = log.warning_type ? 
-                            `<span class="badge bg-info">${log.warning_type === 'api_error' ? 'API业务错误' : log.warning_type}</span>` :
+                        const typeLabelsTable = {
+                            'json_error': '<span class="badge bg-danger">JSON解析失败</span>',
+                            'http_error': '<span class="badge bg-warning">HTTP错误</span>',
+                            'api_error': '<span class="badge bg-info">API业务错误</span>',
+                            'dns_error': '<span class="badge bg-warning">DNS解析失败</span>',
+                            'connection_error': '<span class="badge bg-warning">连接被拒绝</span>'
+                        };
+                        const typeDisplay = log.warning_type ?
+                            (typeLabelsTable[log.warning_type] || `<span class="badge bg-secondary">${log.warning_type}</span>`) :
                             `${log.timeout_seconds || '-'} 秒`;
                         
                         return `
