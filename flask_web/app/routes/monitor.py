@@ -196,8 +196,9 @@ def api_timeout_logs():
 @monitor_bp.route('/api/timeout-logs/<int:log_id>', methods=['PUT'])
 def api_resolve_timeout(log_id):
     """API: 标记超时日志为已解决"""
+    conn = None
+    cursor = None
     try:
-        from app.extensions import get_db_connection
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
@@ -207,8 +208,6 @@ def api_resolve_timeout(log_id):
         """, (log_id,))
         conn.commit()
         affected = cursor.rowcount
-        cursor.close()
-        conn.close()
 
         if affected > 0:
             return jsonify({'success': True, 'message': '已标记为已解决'})
@@ -216,6 +215,11 @@ def api_resolve_timeout(log_id):
             return jsonify({'success': False, 'message': '记录不存在'}), 404
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 @monitor_bp.route('/api/interface-warnings')

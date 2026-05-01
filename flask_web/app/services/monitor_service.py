@@ -359,6 +359,8 @@ class MonitorService:
             finally:
                 if cursor:
                     cursor.close()
+                if conn:
+                    conn.close()
 
             return {'success': True, 'logs': results, 'count': len(results)}
         except Exception as e:
@@ -426,6 +428,8 @@ class MonitorService:
     @classmethod
     def get_spider_stats(cls):
         """获取爬虫统计信息（从数据库读取）"""
+        conn = None
+        cursor = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -567,6 +571,8 @@ class MonitorService:
         finally:
             if cursor:
                 cursor.close()
+            if conn:
+                conn.close()
     
     @classmethod
     def _get_spider_stats_from_logs(cls):
@@ -790,6 +796,8 @@ class MonitorService:
         finally:
             if cursor:
                 cursor.close()
+            if conn:
+                conn.close()
 
     @classmethod
     def get_interface_warnings(cls, spider_name=None, days=7, limit=50):
@@ -923,14 +931,16 @@ class MonitorService:
                 formatted_runs.append(formatted_run)
             
             cursor.close()
-            
+
             return {'success': True, 'runs': formatted_runs, 'count': len(formatted_runs)}
         except Exception as e:
             return {'success': False, 'message': str(e)}
         finally:
             if cursor:
                 cursor.close()
-    
+            if conn:
+                conn.close()
+
     @classmethod
     def execute_spider(cls, spider_name, args=None):
         """执行爬虫命令"""
