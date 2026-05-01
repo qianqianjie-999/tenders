@@ -71,6 +71,31 @@ class ZhejiangPostSpider(scrapy.Spider):
 
         self.logger.info(f"抓取浙江省公共资源当天数据：{today_date}")
 
+        # 先访问搜索页面获取Cookie
+        search_page_url = 'https://ggzy.zj.gov.cn/jyxxgk/list.html?cate=%E6%94%BF%E5%BA%9C%E9%87%87%E8%B4%AD&catenum=002002'
+        yield scrapy.Request(
+            url=search_page_url,
+            method='GET',
+            callback=self.after_search_page,
+            meta={
+                'today_date': today_date,
+                'today_start': today_start,
+                'today_end': today_end,
+                'start_date': start_date,
+                'end_date': end_date
+            }
+        )
+
+    def after_search_page(self, response):
+        """访问搜索页面后，使用获取的Cookie发送POST请求"""
+        today_date = response.meta['today_date']
+        today_start = response.meta['today_start']
+        today_end = response.meta['today_end']
+        start_date = response.meta['start_date']
+        end_date = response.meta['end_date']
+
+        self.logger.info(f"搜索页面访问成功，Cookie已获取，开始抓取数据")
+
         # 各类别配置
         configs = [
     # 1. 采购公告
@@ -142,11 +167,11 @@ class ZhejiangPostSpider(scrapy.Spider):
         self.logger.info(f"共有 {len(configs)} 个配置项")
 
         for config in configs:
-            # 构建请求 Payload - 注意：sort/condition/time 应该是对象，不是JSON字符串
+            # 构建请求 Payload - 与浏览器格式一致
             payload = {
                 "token": "",
-                "pn": "0",
-                "rn": "20",
+                "pn": 0,
+                "rn": 12,
                 "sdt": "",
                 "edt": "",
                 "wd": "",
@@ -154,9 +179,9 @@ class ZhejiangPostSpider(scrapy.Spider):
                 "exc_wd": "",
                 "fields": "title",
                 "cnum": "001",
-                "sort": {"webdate": "0"},
+                "sort": json.dumps({"webdate": "0"}),
                 "ssort": "title",
-                "cl": "200",
+                "cl": 200,
                 "terminal": "",
                 "condition": [
                     {"fieldName": "categorynum", "isLike": True, "likeType": 2, "equal": config['category_num']},
@@ -184,12 +209,13 @@ class ZhejiangPostSpider(scrapy.Spider):
                 method='POST',
                 body=body_json,
                 headers={
-                    'Content-Type': 'application/json; charset=UTF-8',
-                    'Accept': 'application/json',
+                    'Content-Type': 'application/json;charset=utf-8',
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'Accept-Language': 'zh-CN,zh;q=0.9,zh-TW;q=0.8,zh-HK;q=0.7,en-US;q=0.6,en;q=0.5',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0',
                     'Origin': 'https://ggzy.zj.gov.cn',
-                    'Referer': 'https://ggzy.zj.gov.cn/'
+                    'Referer': 'https://ggzy.zj.gov.cn/jyxxgk/list.html?cate=%E6%94%BF%E5%BA%9C%E9%87%87%E8%B4%AD&catenum=002002'
                 },
                 callback=self.parse_api_response,
                 meta={
@@ -322,7 +348,7 @@ class ZhejiangPostSpider(scrapy.Spider):
         if found_today_data:
             next_page = page_num + 1
             next_payload = payload.copy()
-            next_payload['pn'] = str(next_page * 20)  # pn 是偏移量
+            next_payload['pn'] = next_page * 12  # pn 是偏移量，每页12条
 
             self.logger.info(f"当前页有当天数据，继续翻页到第{next_page + 1}页")
 
@@ -334,12 +360,13 @@ class ZhejiangPostSpider(scrapy.Spider):
                 method='POST',
                 body=next_body_json,
                 headers={
-                    'Content-Type': 'application/json; charset=UTF-8',
-                    'Accept': 'application/json',
+                    'Content-Type': 'application/json;charset=utf-8',
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'Accept-Language': 'zh-CN,zh;q=0.9,zh-TW;q=0.8,zh-HK;q=0.7,en-US;q=0.6,en;q=0.5',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0',
                     'Origin': 'https://ggzy.zj.gov.cn',
-                    'Referer': 'https://ggzy.zj.gov.cn/'
+                    'Referer': 'https://ggzy.zj.gov.cn/jyxxgk/list.html?cate=%E6%94%BF%E5%BA%9C%E9%87%87%E8%B4%AD&catenum=002002'
                 },
                 callback=self.parse_api_response,
                 meta={
