@@ -115,7 +115,7 @@ class JiangsuPostSpider(scrapy.Spider):
         self.logger.info(f"共有 {len(configs)} 个配置项")
 
         for config in configs:
-            # 构建请求 Payload
+            # 构建请求 Payload - 注意：sort/condition/time 应该是对象，不是JSON字符串
             payload = {
                 "token": "",
                 "pn": "0",
@@ -127,18 +127,22 @@ class JiangsuPostSpider(scrapy.Spider):
                 "exc_wd": "",
                 "fields": "title",
                 "cnum": "001",
-                "sort": '{"infodatepx":"0"}',
+                "sort": {"infodatepx": "0"},
                 "ssort": "title",
                 "cl": "200",
                 "terminal": "",
-                "condition": '[{"fieldName":"categorynum","isLike":true,"likeType":2,"equal":"' + config['category_num'] + '"}]',
-                "time": '[{"fieldName":"infodatepx","startTime":"' + today_start + '","endTime":"' + today_end + '"}]',
+                "condition": [
+                    {"fieldName": "categorynum", "isLike": True, "likeType": 2, "equal": config['category_num']}
+                ],
+                "time": [
+                    {"fieldName": "infodatepx", "startTime": today_start, "endTime": today_end}
+                ],
                 "highlights": "title",
-                "statistics": "null",
-                "unionCondition": "[]",
+                "statistics": None,
+                "unionCondition": [],
                 "accuracy": "",
                 "noParticiple": "1",
-                "searchRange": "null",
+                "searchRange": None,
                 "isBusiness": "1"
             }
 
