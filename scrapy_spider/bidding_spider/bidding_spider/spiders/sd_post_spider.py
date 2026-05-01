@@ -368,7 +368,7 @@ class SdPostSpider(scrapy.Spider):
             # 记录到监控数据库
             if self.monitor:
                 try:
-                    timeout_seconds = 60  # 默认超时时间
+                    timeout_seconds = int(request.meta.get('response_time', 0) / 1000) if request.meta.get('response_time') else 60  # 默认超时时间
                     error_message = str(failure.value)[:500]
                     self.monitor.log_timeout(
                         spider_name=self.name,
