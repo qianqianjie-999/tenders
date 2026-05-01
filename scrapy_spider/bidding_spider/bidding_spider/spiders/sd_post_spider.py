@@ -4,7 +4,7 @@ import datetime
 import time
 from pathlib import Path
 from bidding_spider.items import BiddingItem
-from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError, ConnectionRefusedError
+from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError
 
 # 导入监控数据库模块
 try:
@@ -35,7 +35,6 @@ class SdPostSpider(scrapy.Spider):
         self.total_requests = 0
         self.successful_requests = 0
         self.items_crawled = 0
-        self.other_errors = 0
         
         # 初始化监控数据库
         self.monitor = None
@@ -98,19 +97,8 @@ class SdPostSpider(scrapy.Spider):
             except Exception as e:
                 self.logger.warning(f"[Monitor] 记录运行开始失败: {e}")
         
-        # 先访问主页获取session
-        yield scrapy.Request(
-            url='http://www.ccgp-shandong.gov.cn:8087/',
-            callback=self._on_homepage_loaded,
-            dont_filter=True
-        )
-
-    def _on_homepage_loaded(self, response):
-        """主页加载完成后，开始创建API请求"""
-        self.logger.info("主页已加载，session已获取，开始创建API请求")
-
         target_date = self.target_date
-
+        
         # 开始时间和结束时间都是目标日期
         start_date = target_date
         end_date = target_date
@@ -195,15 +183,13 @@ class SdPostSpider(scrapy.Spider):
                 "homePage": 0,
                 "mergeType": 0,
                 "projectType": "",
-                "unitName": ""
+                "unitName": "",
+                "captchaUuid": "b4dab911da29139eb1937e3b867dc2ea"
             }),
             headers={
-                'Content-Type': 'application/json; charset=utf-8',
-                'Accept': 'application/json, text/javascript, */*; q=0.01',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Origin': 'http://www.ccgp-shandong.gov.cn:8087',
-                'Referer': 'http://www.ccgp-shandong.gov.cn:8087/',
-                'X-Requested-With': 'XMLHttpRequest'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             },
             callback=self.parse_api_response,
             meta={
@@ -275,6 +261,12 @@ class SdPostSpider(scrapy.Spider):
 
         if not items:
             self.logger.info("本页没有数据，停止翻页")
+            if get_monitor and hasattr(self, 'monitor') and self.monitor:
+                self.monitor.log_interface_warning(
+                    self.name, response.url, 'empty_response',
+                    response_status=response.status,
+                    item_count=0
+                )
             return
 
         found_target_data = False
@@ -314,16 +306,6 @@ class SdPostSpider(scrapy.Spider):
                         )
                         yield item
                         self.items_crawled += 1
-
-                        if self.monitor and self.monitor_run_id:
-                            try:
-                                self.monitor.log_item(
-                                    spider_name=self.name,
-                                    spider_run_id=self.monitor_run_id,
-                                    item=item
-                                )
-                            except Exception as e:
-                                self.logger.warning(f"[Monitor] 记录条目失败: {e}")
                     else:
                         self.logger.debug(
                             f"跳过非目标日期数据 [{item['publish_date']}]: {item['project_name'][:30]}..."
@@ -335,9 +317,9 @@ class SdPostSpider(scrapy.Spider):
 
         self.logger.info(f"本页共有 {target_count} 条目标日期({self.target_date})数据")
 
-        # 翻页逻辑 - 限制最大翻页数为5页，避免触发验证码
-        if found_target_data and current_page < total_pages and current_page < 5:
-            self.logger.info(f"继续翻页到第{current_page + 1}页 (最多翻到第5页)")
+        # 翻页逻辑
+        if found_target_data and current_page < total_pages:
+            self.logger.info(f"继续翻页到第{current_page + 1}页")
             yield self._create_request(
                 col_code=col_code,
                 area=area,
@@ -355,8 +337,6 @@ class SdPostSpider(scrapy.Spider):
                 self.logger.info("当前页无目标日期数据，停止翻页")
             elif current_page >= total_pages:
                 self.logger.info("已达到最后一页")
-            elif current_page >= 5:
-                self.logger.info("已达到最大翻页限制(5页)，停止翻页以避免触发验证码")
 
     def build_detail_url(self, item_data, config):
         """构建详情页URL"""
@@ -405,23 +385,8 @@ class SdPostSpider(scrapy.Spider):
         elif failure.check(DNSLookupError):
             self.dns_errors += 1
             self.logger.error("DNS解析失败")
-        elif failure.check(ConnectionRefusedError):
+        elif failure.check(scrapy.exceptions.ConnectionRefusedError):
             self.logger.error("连接被拒绝")
-        else:
-            self.other_errors += 1
-            error_type = failure.type.__name__
-            self.logger.error(f"⚠️ 其他错误 #{self.other_errors} | 类型: {error_type} | URL: {url}")
-            if self.monitor:
-                try:
-                    self.monitor.log_error(
-                        spider_name=self.name,
-                        url=url,
-                        error_type=error_type,
-                        error_message=str(failure.value)[:500],
-                        spider_run_id=self.monitor_run_id
-                    )
-                except Exception as e:
-                    self.logger.warning(f"[Monitor] 记录错误日志失败: {e}")
     
     def closed(self, reason):
         """爬虫关闭时的处理"""
@@ -440,7 +405,8 @@ class SdPostSpider(scrapy.Spider):
                     run_id=self.monitor_run_id,
                     status=status,
                     items_crawled=self.items_crawled,
-                    error_count=self.timeout_errors + self.dns_errors + self.other_errors,
+                    # items_stored 不传，让数据库保持 Pipeline 累积的值
+                    error_count=self.timeout_errors + self.dns_errors,
                     warning_count=self.slow_requests,
                     timeout_count=self.timeout_errors,
                     close_reason=reason
