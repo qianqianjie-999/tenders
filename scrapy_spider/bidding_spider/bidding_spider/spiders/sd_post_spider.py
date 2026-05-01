@@ -98,24 +98,8 @@ class SdPostSpider(scrapy.Spider):
             except Exception as e:
                 self.logger.warning(f"[Monitor] 记录运行开始失败: {e}")
         
-        # 先访问主页获取session
-        yield scrapy.Request(
-            url='http://www.ccgp-shandong.gov.cn:8087/',
-            callback=self._on_homepage_loaded,
-            dont_filter=True
-        )
-    
-    def _on_homepage_loaded(self, response):
-        """主页加载完成后，开始创建API请求"""
-        self.logger.info("主页已加载，session已获取，开始创建API请求")
-        
-        target_date = self.target_date
-        
-        # 开始时间和结束时间都是目标日期
-        start_date = target_date
-        end_date = target_date
-
-        self.logger.info(f"开始抓取日期: {target_date} 的数据")
+        # 直接开始创建API请求（不需要先访问主页）
+        self.logger.info(f"开始抓取日期: {self.target_date} 的数据")
 
         # 1. 省本级需求公示
         yield self._create_request(
