@@ -916,14 +916,14 @@
 
                     let html = `<strong>最近3天内检测到 ${warnings.length} 次接口异常：</strong><ul class="mb-0">`;
                     warnings.forEach(w => {
-                        const urlShort = w.url && w.url.length > 60 ? w.url.substring(0, 60) + '...' : (w.url || '-');
+                        const urlDisplay = w.url || '-';
                         const typeLabels = {
                             'json_error': '<span class="badge bg-danger">JSON解析失败</span>',
                             'http_error': '<span class="badge bg-warning">HTTP错误</span>',
                             'api_error': '<span class="badge bg-info">API业务错误</span>'
                         };
                         const typeLabel = typeLabels[w.warning_type] || `<span class="badge bg-secondary">${w.warning_type}</span>`;
-                        html += `<li class="small"><strong>${w.spider_name}</strong>: ${urlShort} ${typeLabel} <span class="text-muted">(${w.occurred_at || ''})</span></li>`;
+                        html += `<li class="small"><strong>${w.spider_name}</strong>: <code>${urlDisplay}</code> ${typeLabel} <span class="text-muted">(${w.occurred_at || ''})</span></li>`;
                     });
                     html += '</ul>';
                     text.innerHTML = html;
