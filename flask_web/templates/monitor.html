@@ -996,7 +996,10 @@
             try {
                 const response = await fetch(`{{ url_for('monitor.api_timeout_logs') }}/${logId}`, {
                     method: 'PUT',
-                    headers: {'Content-Type': 'application/json'}
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    }
                 });
                 const data = await response.json();
                 if (data.success) {
