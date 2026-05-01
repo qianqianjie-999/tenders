@@ -136,8 +136,8 @@ DOWNLOAD_MAXSIZE = 10485760  # 10MB
 DOWNLOAD_WARNSIZE = 1048576  # 1MB
 
 # Socket timeout
-DOWNLOAD_TIMEOUT = 60  # 60秒超时
-DOWNLOAD_TIMEOUT_LIMIT = 90  # 最大超时时间限制
+DOWNLOAD_TIMEOUT = 120  # 120秒超时（单个URL）
+DOWNLOAD_TIMEOUT_LIMIT = 180  # 最大超时时间限制
 
 # Disable redirect middleware to avoid unnecessary redirects
 REDIRECT_ENABLED = False
@@ -158,7 +158,7 @@ RETRY_TIMES = 4
 RETRY_HTTP_CODES = [500, 502, 503, 504, 408, 429]
 
 # 慢请求阈值（毫秒）
-SLOW_REQUEST_THRESHOLD = 60000  # 60秒以上的请求被认为是慢请求（适应随机延迟5-20秒+网站响应时间）
+SLOW_REQUEST_THRESHOLD = 120000  # 120秒以上的请求被认为是慢请求
 
 
 # ========== 运行时日志初始化（集成 logging_utils） ==========
