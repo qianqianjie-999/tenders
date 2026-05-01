@@ -71,11 +71,12 @@ class ZhejiangPostSpider(scrapy.Spider):
 
         self.logger.info(f"抓取浙江省公共资源当天数据：{today_date}")
 
-        # 先访问首页获取Cookie
+        # 先访问搜索列表页面获取Cookie和token
+        search_page_url = 'https://ggzy.zj.gov.cn/jyxxgk/list.html?cate=%E6%94%BF%E5%BA%9C%E9%87%87%E8%B4%AD&catenum=002002'
         yield scrapy.Request(
-            url='https://ggzy.zj.gov.cn/',
+            url=search_page_url,
             method='GET',
-            callback=self.after_homepage,
+            callback=self.after_search_page,
             meta={
                 'today_date': today_date,
                 'today_start': today_start,
@@ -85,15 +86,15 @@ class ZhejiangPostSpider(scrapy.Spider):
             }
         )
 
-    def after_homepage(self, response):
-        """访问首页后，使用获取的Cookie发送POST请求"""
+    def after_search_page(self, response):
+        """访问搜索页面后，使用获取的Cookie发送POST请求"""
         today_date = response.meta['today_date']
         today_start = response.meta['today_start']
         today_end = response.meta['today_end']
         start_date = response.meta['start_date']
         end_date = response.meta['end_date']
 
-        self.logger.info(f"首页访问成功，获取Cookie完成，开始抓取数据")
+        self.logger.info(f"搜索页面访问成功，Cookie已获取，开始抓取数据")
 
         # 各类别配置
         configs = [
