@@ -155,7 +155,7 @@ RETRY_TIMES = 4
 RETRY_HTTP_CODES = [500, 502, 503, 504, 408, 429]
 
 # 慢请求阈值（毫秒）
-SLOW_REQUEST_THRESHOLD = 5000  # 5秒以上的请求被认为是慢请求
+SLOW_REQUEST_THRESHOLD = 15000  # 15秒以上的请求被认为是慢请求
 
 
 # ========== 运行时日志初始化（集成 logging_utils） ==========
