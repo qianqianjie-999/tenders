@@ -681,6 +681,11 @@
                         <option value="zibo_post">淄博</option>
                         <option value="jiangsu_post">江苏</option>
                     </select>
+                    <select class="form-select form-select-sm" id="timeout-type-filter" style="width: auto;" onchange="loadTimeoutLogs()">
+                        <option value="">全部类型</option>
+                        <option value="timeout">超时日志</option>
+                        <option value="warning">接口警告</option>
+                    </select>
                     <button class="btn btn-sm btn-outline-primary" onclick="loadTimeoutLogs()" title="刷新">
                         <i class="fas fa-sync-alt"></i> 刷新
                     </button>
@@ -943,7 +948,13 @@
         // 加载超时日志
         async function loadTimeoutLogs() {
             const spiderName = document.getElementById('timeout-spider-filter').value;
-            const url = spiderName ? `/monitor/api/timeout-logs?spider_name=${spiderName}` : '/monitor/api/timeout-logs';
+            const logType = document.getElementById('timeout-type-filter').value;
+            
+            let url = '/monitor/api/timeout-logs';
+            const params = [];
+            if (spiderName) params.push(`spider_name=${spiderName}`);
+            if (logType) params.push(`log_type=${logType}`);
+            if (params.length > 0) url += '?' + params.join('&');
 
             try {
                 const response = await fetch(url);
@@ -957,12 +968,18 @@
                         const resolveBtn = !log.resolved ? 
                             `<button class="btn btn-sm btn-success" onclick="resolveTimeout(${log.id})" title="标记为已解决"><i class="fas fa-check"></i></button>` : 
                             '<span class="text-muted"><i class="fas fa-check-circle"></i></span>';
+                        
+                        // 显示警告类型或超时时间
+                        const typeDisplay = log.warning_type ? 
+                            `<span class="badge bg-info">${log.warning_type === 'api_error' ? 'API业务错误' : log.warning_type}</span>` :
+                            `${log.timeout_seconds || '-'} 秒`;
+                        
                         return `
                         <tr>
                             <td><small>${log.occurred_at || '-'}</small></td>
                             <td><span class="badge bg-secondary">${log.spider_name}</span></td>
                             <td title="${escapeHtml(log.url || '')}" style="max-width:280px;"><small class="text-break">${escapeHtml(urlDisplay)}</small></td>
-                            <td>${log.timeout_seconds || '-'} 秒</td>
+                            <td>${typeDisplay}</td>
                             <td>${log.retry_count}</td>
                             <td>
                                 ${log.resolved ?
@@ -977,7 +994,7 @@
                         <tr>
                             <td colspan="6" class="text-center text-muted py-4">
                                 <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
-                                <p>暂无超时记录</p>
+                                <p>暂无记录</p>
                             </td>
                         </tr>
                     `;

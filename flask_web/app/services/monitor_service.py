@@ -731,8 +731,14 @@ class MonitorService:
                 cursor.close()
 
     @classmethod
-    def get_timeout_logs(cls, spider_name=None, limit=50):
-        """获取超时日志列表"""
+    def get_timeout_logs(cls, spider_name=None, limit=50, log_type=None):
+        """获取超时日志列表
+        
+        Args:
+            spider_name: 爬虫名称（可选）
+            limit: 返回数量限制
+            log_type: 日志类型 ('timeout' 或 'warning', 可选)
+        """
         cursor = None
         try:
             conn = get_db_connection()
@@ -741,37 +747,109 @@ class MonitorService:
             today = date.today()
 
             if spider_name:
-                cursor.execute("""
-                    SELECT
-                        id,
-                        spider_name,
-                        url,
-                        timeout_seconds,
-                        retry_count,
-                        error_message,
-                        occurred_at,
-                        resolved
-                    FROM spider_timeout_logs
-                    WHERE spider_name = %s AND DATE(occurred_at) = %s
-                    ORDER BY occurred_at DESC
-                    LIMIT %s
-                """, (spider_name, today, limit))
+                if log_type == 'timeout':
+                    # 只查真正的超时（有timeout_seconds）
+                    cursor.execute("""
+                        SELECT
+                            id,
+                            spider_name,
+                            url,
+                            timeout_seconds,
+                            retry_count,
+                            error_message,
+                            occurred_at,
+                            resolved
+                        FROM spider_timeout_logs
+                        WHERE spider_name = %s AND DATE(occurred_at) = %s AND timeout_seconds IS NOT NULL
+                        ORDER BY occurred_at DESC
+                        LIMIT %s
+                    """, (spider_name, today, limit))
+                elif log_type == 'warning':
+                    # 只查接口警告（有warning_type）
+                    cursor.execute("""
+                        SELECT
+                            id,
+                            spider_name,
+                            url,
+                            timeout_seconds,
+                            retry_count,
+                            error_message,
+                            occurred_at,
+                            resolved,
+                            warning_type
+                        FROM spider_timeout_logs
+                        WHERE spider_name = %s AND DATE(occurred_at) = %s AND warning_type IS NOT NULL
+                        ORDER BY occurred_at DESC
+                        LIMIT %s
+                    """, (spider_name, today, limit))
+                else:
+                    cursor.execute("""
+                        SELECT
+                            id,
+                            spider_name,
+                            url,
+                            timeout_seconds,
+                            retry_count,
+                            error_message,
+                            occurred_at,
+                            resolved,
+                            warning_type
+                        FROM spider_timeout_logs
+                        WHERE spider_name = %s AND DATE(occurred_at) = %s
+                        ORDER BY occurred_at DESC
+                        LIMIT %s
+                    """, (spider_name, today, limit))
             else:
-                cursor.execute("""
-                    SELECT
-                        id,
-                        spider_name,
-                        url,
-                        timeout_seconds,
-                        retry_count,
-                        error_message,
-                        occurred_at,
-                        resolved
-                    FROM spider_timeout_logs
-                    WHERE DATE(occurred_at) = %s
-                    ORDER BY occurred_at DESC
-                    LIMIT %s
-                """, (today, limit))
+                if log_type == 'timeout':
+                    cursor.execute("""
+                        SELECT
+                            id,
+                            spider_name,
+                            url,
+                            timeout_seconds,
+                            retry_count,
+                            error_message,
+                            occurred_at,
+                            resolved
+                        FROM spider_timeout_logs
+                        WHERE DATE(occurred_at) = %s AND timeout_seconds IS NOT NULL
+                        ORDER BY occurred_at DESC
+                        LIMIT %s
+                    """, (today, limit))
+                elif log_type == 'warning':
+                    cursor.execute("""
+                        SELECT
+                            id,
+                            spider_name,
+                            url,
+                            timeout_seconds,
+                            retry_count,
+                            error_message,
+                            occurred_at,
+                            resolved,
+                            warning_type
+                        FROM spider_timeout_logs
+                        WHERE DATE(occurred_at) = %s AND warning_type IS NOT NULL
+                        ORDER BY occurred_at DESC
+                        LIMIT %s
+                    """, (today, limit))
+                else:
+                    cursor.execute("""
+                        SELECT
+                            id,
+                            spider_name,
+                            url,
+                            timeout_seconds,
+                            retry_count,
+                            error_message,
+                            occurred_at,
+                            resolved,
+                            warning_type
+                        FROM spider_timeout_logs
+                        WHERE DATE(occurred_at) = %s
+                        ORDER BY occurred_at DESC
+                        LIMIT %s
+                    """, (today, limit))
 
             logs = cursor.fetchall()
 
@@ -787,7 +865,8 @@ class MonitorService:
                     'retry_count': log['retry_count'],
                     'error_message': log['error_message'][:200] if log['error_message'] else None,
                     'occurred_at': log['occurred_at'].strftime('%Y-%m-%d %H:%M:%S') if log['occurred_at'] else None,
-                    'resolved': bool(log['resolved'])
+                    'resolved': bool(log['resolved']),
+                    'warning_type': log.get('warning_type')  # 新增警告类型
                 })
 
             return {'success': True, 'logs': formatted_logs, 'count': len(formatted_logs)}

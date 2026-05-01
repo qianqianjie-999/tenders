@@ -188,7 +188,8 @@ def api_timeout_logs():
     """API: 获取超时日志"""
     spider_name = request.args.get('spider_name')
     limit = request.args.get('limit', 50, type=int)
-    return jsonify(MonitorService.get_timeout_logs(spider_name, limit))
+    log_type = request.args.get('log_type')  # 新增类型筛选
+    return jsonify(MonitorService.get_timeout_logs(spider_name, limit, log_type))
 
 
 @monitor_bp.route('/api/timeout-logs/<int:log_id>', methods=['PUT'])
