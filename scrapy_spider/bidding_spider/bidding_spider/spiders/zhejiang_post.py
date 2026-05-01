@@ -46,7 +46,7 @@ class ZhejiangPostSpider(scrapy.Spider):
                 self.logger.warning(f"[Monitor] 监控数据库初始化失败：{e}")
 
     def start_requests(self):
-        """生成 POST 请求 - 只抓取系统当天的数据"""
+        """生成 POST 请求 - 先访问首页获取Cookie，再抓取当天数据"""
         # 记录爬虫运行开始
         if self.monitor:
             try:
@@ -70,6 +70,30 @@ class ZhejiangPostSpider(scrapy.Spider):
         end_date = today_date
 
         self.logger.info(f"抓取浙江省公共资源当天数据：{today_date}")
+
+        # 先访问首页获取Cookie
+        yield scrapy.Request(
+            url='https://ggzy.zj.gov.cn/',
+            method='GET',
+            callback=self.after_homepage,
+            meta={
+                'today_date': today_date,
+                'today_start': today_start,
+                'today_end': today_end,
+                'start_date': start_date,
+                'end_date': end_date
+            }
+        )
+
+    def after_homepage(self, response):
+        """访问首页后，使用获取的Cookie发送POST请求"""
+        today_date = response.meta['today_date']
+        today_start = response.meta['today_start']
+        today_end = response.meta['today_end']
+        start_date = response.meta['start_date']
+        end_date = response.meta['end_date']
+
+        self.logger.info(f"首页访问成功，获取Cookie完成，开始抓取数据")
 
         # 各类别配置
         configs = [
