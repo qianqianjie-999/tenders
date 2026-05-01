@@ -134,6 +134,7 @@ DOWNLOAD_WARNSIZE = 1048576  # 1MB
 
 # Socket timeout
 DOWNLOAD_TIMEOUT = 60  # 60秒超时
+DOWNLOAD_TIMEOUT_LIMIT = 90  # 最大超时时间限制
 
 # Disable redirect middleware to avoid unnecessary redirects
 REDIRECT_ENABLED = False
@@ -150,12 +151,8 @@ MEMUSAGE_NOTIFY_MAIL = []
 
 # Retry settings
 RETRY_ENABLED = True
-RETRY_TIMES = 2
+RETRY_TIMES = 4
 RETRY_HTTP_CODES = [500, 502, 503, 504, 408, 429]
-
-# Timeout settings
-DOWNLOAD_TIMEOUT = 30  # 30秒超时
-DOWNLOAD_TIMEOUT_LIMIT = 60  # 最大超时时间限制
 
 # 慢请求阈值（毫秒）
 SLOW_REQUEST_THRESHOLD = 5000  # 5秒以上的请求被认为是慢请求

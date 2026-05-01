@@ -176,6 +176,7 @@ class JiangsuPostSpider(scrapy.Spider):
     def parse_api_response(self, response):
         """解析 API 响应 - 只处理当天的数据"""
         self.logger.info(f"解析 API 响应，URL: {response.url}")
+        self.logger.debug(f"响应状态码: {response.status}, 响应内容: {response.text[:1000]}")
 
         today_date = response.meta['today_date']
         today_start = response.meta['today_start']

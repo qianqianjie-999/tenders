@@ -4,6 +4,81 @@ from pathlib import Path
 import sys
 import json
 from datetime import datetime
+from typing import Optional, Tuple
+
+
+# 日志文件命名规范
+LOG_FILE_PATTERN = '{prefix}_{spider_name}_{timestamp}.{ext}'
+STATS_FILE_PATTERN = 'spider_stats_{spider_name}_{timestamp}.json'
+DEFAULT_LOG_PREFIX = 'bidding_spider'
+
+
+def generate_log_file_path(log_dir: Path, spider_name: str, 
+                           timestamp: Optional[str] = None,
+                           prefix: str = DEFAULT_LOG_PREFIX) -> Path:
+    """
+    生成统一格式的日志文件路径
+    
+    Args:
+        log_dir: 日志目录路径
+        spider_name: 爬虫名称
+        timestamp: 时间戳字符串，默认自动生成
+        prefix: 文件名前缀，默认为 'bidding_spider'
+    
+    Returns:
+        日志文件完整路径
+    """
+    if timestamp is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = LOG_FILE_PATTERN.format(
+        prefix=prefix,
+        spider_name=spider_name,
+        timestamp=timestamp,
+        ext='log'
+    )
+    return log_dir / filename
+
+
+def generate_stats_file_path(log_dir: Path, spider_name: str,
+                             timestamp: Optional[str] = None) -> Path:
+    """
+    生成统一格式的统计文件路径
+    
+    Args:
+        log_dir: 日志目录路径
+        spider_name: 爬虫名称
+        timestamp: 时间戳字符串，默认自动生成
+    
+    Returns:
+        统计文件完整路径
+    """
+    if timestamp is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = STATS_FILE_PATTERN.format(
+        spider_name=spider_name,
+        timestamp=timestamp
+    )
+    return log_dir / filename
+
+
+def generate_log_paths(log_dir: Path, spider_name: str,
+                       timestamp: Optional[str] = None) -> Tuple[Path, Path]:
+    """
+    一次性生成日志文件和统计文件路径（使用相同时间戳保持一致性）
+    
+    Args:
+        log_dir: 日志目录路径
+        spider_name: 爬虫名称
+        timestamp: 时间戳字符串，默认自动生成
+    
+    Returns:
+        (日志文件路径, 统计文件路径)
+    """
+    if timestamp is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_path = generate_log_file_path(log_dir, spider_name, timestamp)
+    stats_path = generate_stats_file_path(log_dir, spider_name, timestamp)
+    return log_path, stats_path
 
 
 class JsonFormatter(logging.Formatter):

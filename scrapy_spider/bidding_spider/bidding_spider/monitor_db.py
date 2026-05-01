@@ -2,6 +2,7 @@
 爬虫监控数据库操作模块
 提供爬虫运行记录、超时日志等数据的写入功能
 所有爬虫统一使用此模块进行监控埋点
+支持连接池和实例生命周期管理
 """
 import os
 import sys
@@ -19,16 +20,67 @@ try:
 except Exception:
     setup_spider_logging = None
 
+# 尝试导入连接池（可选依赖）
+try:
+    from dbutils.pooled_db import PooledDB
+    HAS_POOLED_DB = True
+except ImportError:
+    HAS_POOLED_DB = False
+    logger.warning("[MonitorDB] DBUtils 未安装，将使用普通连接模式。建议安装: pip install DBUtils")
+
+
+# 全局连接池实例（懒加载）
+_global_db_pool = None
+
+
+def _get_db_pool(db_config: Dict[str, Any]) -> Optional[PooledDB]:
+    """
+    获取全局数据库连接池（单例模式）
+    
+    Args:
+        db_config: 数据库配置字典
+    
+    Returns:
+        连接池实例，如果不支持则返回 None
+    """
+    global _global_db_pool
+    
+    if not HAS_POOLED_DB:
+        return None
+    
+    if _global_db_pool is None:
+        try:
+            # 创建连接池，最小5个连接，最大20个连接
+            _global_db_pool = PooledDB(
+                creator=pymysql,
+                mincached=5,
+                maxcached=20,
+                maxshared=10,
+                maxconnections=50,
+                blocking=True,
+                maxusage=None,
+                setsession=[],
+                ping=0,  # 0 = 从不检查连接
+                **db_config
+            )
+            logger.info("[MonitorDB] 数据库连接池已初始化")
+        except Exception as e:
+            logger.error(f"[MonitorDB] 创建连接池失败: {e}")
+            return None
+    
+    return _global_db_pool
+
 
 class SpiderMonitorDB:
     """爬虫监控数据库操作类"""
     
-    def __init__(self, db_config: Optional[Dict[str, Any]] = None):
+    def __init__(self, db_config: Optional[Dict[str, Any]] = None, use_pool: bool = True):
         """
         初始化数据库连接
         
         Args:
             db_config: 数据库配置字典，默认从环境变量读取
+            use_pool: 是否使用连接池（默认启用）
         """
         if db_config is None:
             db_config = {
@@ -43,23 +95,47 @@ class SpiderMonitorDB:
             }
         
         self.db_config = db_config
+        self.use_pool = use_pool and HAS_POOLED_DB
         self.connection = None
         self.current_run_id = None
+        self._is_pool_connection = False  # 标记是否使用连接池连接
         
     def connect(self):
-        """建立数据库连接"""
+        """建立数据库连接（支持连接池模式）"""
         try:
-            self.connection = pymysql.connect(**self.db_config)
+            if self.use_pool:
+                pool = _get_db_pool(self.db_config)
+                if pool:
+                    self.connection = pool.connection()
+                    self._is_pool_connection = True
+                    logger.debug(f"[MonitorDB] 从连接池获取连接")
+                else:
+                    # 连接池不可用，降级为普通连接
+                    self.connection = pymysql.connect(**self.db_config)
+                    self._is_pool_connection = False
+            else:
+                self.connection = pymysql.connect(**self.db_config)
+                self._is_pool_connection = False
             return True
         except Exception as e:
             logger.error(f"[MonitorDB] 数据库连接失败: {e}")
             return False
     
     def close(self):
-        """关闭数据库连接"""
+        """关闭数据库连接（支持连接池模式）"""
         if self.connection:
-            self.connection.close()
+            if self._is_pool_connection:
+                # 连接池模式：归还连接到池中
+                try:
+                    self.connection.close()
+                    logger.debug(f"[MonitorDB] 连接已归还到连接池")
+                except Exception as e:
+                    logger.warning(f"[MonitorDB] 归还连接到池时出错: {e}")
+            else:
+                # 普通模式：直接关闭
+                self.connection.close()
             self.connection = None
+            self._is_pool_connection = False
     
     def _ensure_connection(self):
         """确保连接可用"""
@@ -69,7 +145,21 @@ class SpiderMonitorDB:
             self.connection.ping(reconnect=True)
             return True
         except:
+            # 连接失效，重新连接
+            self.close()
             return self.connect()
+    
+    def __del__(self):
+        """析构函数：确保连接被正确释放"""
+        self.close()
+    
+    def __enter__(self):
+        """支持上下文管理器"""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """支持上下文管理器：自动关闭连接"""
+        self.close()
     
     def start_run(self, spider_name: str, log_file: str = None, stats_file: str = None) -> int:
         """
@@ -391,6 +481,7 @@ class SpiderMonitorDB:
 # 全局监控实例缓存（按爬虫名缓存，避免单例模式导致的并发问题）
 _monitor_instances: Dict[str, SpiderMonitorDB] = {}
 
+
 def get_monitor(db_config: Optional[Dict[str, Any]] = None, spider_name: str = None) -> SpiderMonitorDB:
     """
     获取监控实例（按爬虫名独立实例）
@@ -414,16 +505,45 @@ def get_monitor(db_config: Optional[Dict[str, Any]] = None, spider_name: str = N
     if spider_name:
         if spider_name not in _monitor_instances:
             _monitor_instances[spider_name] = SpiderMonitorDB(db_config)
+            logger.info(f"[MonitorDB] 创建新监控实例: {spider_name}")
         return _monitor_instances[spider_name]
 
     # 向后兼容：未指定spider_name时，返回默认实例
     if 'default' not in _monitor_instances:
         _monitor_instances['default'] = SpiderMonitorDB(db_config)
+        logger.info("[MonitorDB] 创建默认监控实例")
     return _monitor_instances['default']
 
 
+def cleanup_monitor(spider_name: str) -> bool:
+    """
+    清理指定爬虫的监控实例（释放资源）
+
+    Args:
+        spider_name: 爬虫名称
+
+    Returns:
+        bool: 是否成功清理
+    """
+    global _monitor_instances
+
+    if spider_name in _monitor_instances:
+        try:
+            _monitor_instances[spider_name].close()
+            del _monitor_instances[spider_name]
+            logger.info(f"[MonitorDB] 已清理监控实例: {spider_name}")
+            return True
+        except Exception as e:
+            logger.error(f"[MonitorDB] 清理监控实例失败 {spider_name}: {e}")
+            return False
+    else:
+        logger.warning(f"[MonitorDB] 监控实例不存在: {spider_name}")
+        return False
+
+
 def reset_monitor(spider_name: str = None):
-    """重置监控实例（用于测试）
+    """
+    重置监控实例（用于测试或爬虫结束时清理）
 
     Args:
         spider_name: 指定爬虫名重置，若不指定则重置所有实例
@@ -434,7 +554,36 @@ def reset_monitor(spider_name: str = None):
         if spider_name in _monitor_instances:
             _monitor_instances[spider_name].close()
             del _monitor_instances[spider_name]
+            logger.info(f"[MonitorDB] 已重置监控实例: {spider_name}")
+        else:
+            logger.warning(f"[MonitorDB] 监控实例不存在: {spider_name}")
     else:
+        count = len(_monitor_instances)
         for monitor in _monitor_instances.values():
             monitor.close()
         _monitor_instances.clear()
+        logger.info(f"[MonitorDB] 已重置所有监控实例 ({count} 个)")
+
+
+def get_monitor_instances() -> Dict[str, SpiderMonitorDB]:
+    """
+    获取所有活跃的监控实例
+
+    Returns:
+        Dict[str, SpiderMonitorDB]: 实例字典（爬虫名 -> 实例）
+    """
+    return _monitor_instances
+
+
+def get_monitor_stats() -> Dict[str, int]:
+    """
+    获取监控实例统计信息
+
+    Returns:
+        Dict[str, int]: 统计信息字典
+    """
+    global _monitor_instances
+    return {
+        'active_instances': len(_monitor_instances),
+        'total_created': len(_monitor_instances)  # 简化统计，实际可扩展
+    }

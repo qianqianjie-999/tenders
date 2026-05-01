@@ -183,13 +183,15 @@ class SdPostSpider(scrapy.Spider):
                 "homePage": 0,
                 "mergeType": 0,
                 "projectType": "",
-                "unitName": "",
-                "captchaUuid": "b4dab911da29139eb1937e3b867dc2ea"
+                "unitName": ""
             }),
             headers={
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                'Content-Type': 'application/json; charset=utf-8',
+                'Accept': 'application/json, text/javascript, */*; q=0.01',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Origin': 'http://www.ccgp-shandong.gov.cn:8087',
+                'Referer': 'http://www.ccgp-shandong.gov.cn:8087/',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             callback=self.parse_api_response,
             meta={
@@ -317,9 +319,9 @@ class SdPostSpider(scrapy.Spider):
 
         self.logger.info(f"本页共有 {target_count} 条目标日期({self.target_date})数据")
 
-        # 翻页逻辑
-        if found_target_data and current_page < total_pages:
-            self.logger.info(f"继续翻页到第{current_page + 1}页")
+        # 翻页逻辑 - 限制最大翻页数为5页，避免触发验证码
+        if found_target_data and current_page < total_pages and current_page < 5:
+            self.logger.info(f"继续翻页到第{current_page + 1}页 (最多翻到第5页)")
             yield self._create_request(
                 col_code=col_code,
                 area=area,
@@ -337,6 +339,8 @@ class SdPostSpider(scrapy.Spider):
                 self.logger.info("当前页无目标日期数据，停止翻页")
             elif current_page >= total_pages:
                 self.logger.info("已达到最后一页")
+            elif current_page >= 5:
+                self.logger.info("已达到最大翻页限制(5页)，停止翻页以避免触发验证码")
 
     def build_detail_url(self, item_data, config):
         """构建详情页URL"""
