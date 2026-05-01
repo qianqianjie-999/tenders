@@ -913,22 +913,20 @@
 
                 if (data.success && data.warnings && data.warnings.length > 0) {
                     const warnings = data.warnings;
-                    const jsonErrors = warnings.filter(w => w.warning_type === 'json_error').length;
-                    const httpErrors = warnings.filter(w => w.warning_type === 'http_error').length;
-                    const apiErrors = warnings.filter(w => w.warning_type === 'api_error').length;
 
-                    let message = `最近3天内检测到 ${warnings.length} 次接口异常`;
-                    if (jsonErrors > 0) {
-                        message += `（JSON解析失败: ${jsonErrors}次，可能接口已变更）`;
-                    }
-                    if (httpErrors > 0) {
-                        message += `（HTTP错误: ${httpErrors}次）`;
-                    }
-                    if (apiErrors > 0) {
-                        message += `（API业务错误: ${apiErrors}次）`;
-                    }
-
-                    text.textContent = message;
+                    let html = `<strong>最近3天内检测到 ${warnings.length} 次接口异常：</strong><ul class="mb-0">`;
+                    warnings.forEach(w => {
+                        const urlShort = w.url && w.url.length > 60 ? w.url.substring(0, 60) + '...' : (w.url || '-');
+                        const typeLabels = {
+                            'json_error': '<span class="badge bg-danger">JSON解析失败</span>',
+                            'http_error': '<span class="badge bg-warning">HTTP错误</span>',
+                            'api_error': '<span class="badge bg-info">API业务错误</span>'
+                        };
+                        const typeLabel = typeLabels[w.warning_type] || `<span class="badge bg-secondary">${w.warning_type}</span>`;
+                        html += `<li class="small"><strong>${w.spider_name}</strong>: ${urlShort} ${typeLabel} <span class="text-muted">(${w.occurred_at || ''})</span></li>`;
+                    });
+                    html += '</ul>';
+                    text.innerHTML = html;
                     banner.classList.remove('d-none');
                     banner.style.display = 'block';
                 } else {
