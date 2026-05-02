@@ -33,7 +33,7 @@ except ImportError:
 _global_db_pool = None
 
 
-def _get_db_pool(db_config: Dict[str, Any]) -> Optional[PooledDB]:
+def _get_db_pool(db_config: Dict[str, Any]) -> 'Optional[PooledDB]':
     """
     获取全局数据库连接池（单例模式）
     

@@ -6,7 +6,7 @@ from bidding_spider.items import BiddingItem
 import re
 import logging
 from scrapy.exceptions import CloseSpider
-from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError
+from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError, ConnectionRefusedError
 import time
 import random
 from pathlib import Path
@@ -537,7 +537,6 @@ class JiningGetSpider(scrapy.Spider):
                     f"💥 已达到最大重试次数，放弃请求: {url}"
                 )
 
-        # 处理DNS错误
         elif failure.check(DNSLookupError):
             self.dns_errors += 1
 
@@ -549,7 +548,16 @@ class JiningGetSpider(scrapy.Spider):
 
             self.logger.error(f"❌ {error_msg}")
 
-            # 如果是DNS错误，可以尝试使用备用DNS或代理
+            if self.monitor:
+                try:
+                    self.monitor.log_interface_warning(
+                        self.name, url, 'dns_error',
+                        response_status=0,
+                        error_message=f"DNS解析失败: {failure.value}"
+                    )
+                except Exception as e:
+                    self.logger.warning(f"[Monitor] 记录DNS错误日志失败: {e}")
+
             if retry_count < max_retries:
                 self.logger.warning(f"🌐 DNS错误，尝试重试: {url}")
 
@@ -560,9 +568,20 @@ class JiningGetSpider(scrapy.Spider):
 
                 yield new_request
 
-        # 处理其他类型的错误
+        elif failure.check(ConnectionRefusedError):
+            self.logger.error(f"⚠️ 连接被拒绝 | URL: {url}")
+
+            if self.monitor:
+                try:
+                    self.monitor.log_interface_warning(
+                        self.name, url, 'connection_error',
+                        response_status=0,
+                        error_message=f"连接被拒绝: {failure.value}"
+                    )
+                except Exception as e:
+                    self.logger.warning(f"[Monitor] 记录连接错误日志失败: {e}")
+
         else:
-            # 修复这里：直接使用 failure.type.__name__ 而不是 failure.type().__name__
             error_type = failure.type.__name__
             self.logger.error(
                 f"⚠️ 其他错误 | URL: {url} | "

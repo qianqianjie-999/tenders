@@ -8,7 +8,7 @@ import random
 from pathlib import Path
 from urllib.parse import urljoin
 from bidding_spider.items import BiddingItem
-from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError
+from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError, ConnectionRefusedError
 
 # 导入监控数据库模块
 try:
@@ -348,17 +348,15 @@ class ZiboPostSpider(scrapy.Spider):
     def handle_error(self, failure):
         """处理请求错误"""
         self.logger.error(f"请求失败: {failure.value}")
-        
+
         request = failure.request
         url = request.url
         retry_count = request.meta.get('retry_count', 0)
-        
-        # 处理超时错误
+
         if failure.check(TimeoutError, TCPTimedOutError):
             self.timeout_errors += 1
             self.logger.error(f"⏰ 超时错误 #{self.timeout_errors} | URL: {url}")
-            
-            # 记录到监控数据库
+
             if self.monitor:
                 try:
                     timeout_seconds = int(request.meta.get('response_time', 0) / 1000) if request.meta.get('response_time') else 60
@@ -373,10 +371,34 @@ class ZiboPostSpider(scrapy.Spider):
                     )
                 except Exception as e:
                     self.logger.warning(f"[Monitor] 记录超时日志失败: {e}")
+
         elif failure.check(DNSLookupError):
             self.dns_errors += 1
-            self.logger.error("DNS解析失败")
-    
+            self.logger.error(f"DNS解析失败 | URL: {url}")
+
+            if self.monitor:
+                try:
+                    self.monitor.log_interface_warning(
+                        self.name, url, 'dns_error',
+                        response_status=0,
+                        error_message=f"DNS解析失败: {failure.value}"
+                    )
+                except Exception as e:
+                    self.logger.warning(f"[Monitor] 记录DNS错误日志失败: {e}")
+
+        elif failure.check(ConnectionRefusedError):
+            self.logger.error(f"连接被拒绝 | URL: {url}")
+
+            if self.monitor:
+                try:
+                    self.monitor.log_interface_warning(
+                        self.name, url, 'connection_error',
+                        response_status=0,
+                        error_message=f"连接被拒绝: {failure.value}"
+                    )
+                except Exception as e:
+                    self.logger.warning(f"[Monitor] 记录连接错误日志失败: {e}")
+
     def closed(self, reason):
         """爬虫关闭时的处理"""
         if self.monitor and self.monitor_run_id:
@@ -386,7 +408,6 @@ class ZiboPostSpider(scrapy.Spider):
                     run_id=self.monitor_run_id,
                     status=status,
                     items_crawled=self.items_crawled,
-                    # items_stored 不传，让数据库保持 Pipeline 累积的值
                     error_count=self.timeout_errors + self.dns_errors,
                     warning_count=self.slow_requests,
                     timeout_count=self.timeout_errors,
@@ -395,6 +416,3 @@ class ZiboPostSpider(scrapy.Spider):
                 self.logger.info(f"[Monitor] 运行记录已更新，ID: {self.monitor_run_id}")
             except Exception as e:
                 self.logger.warning(f"[Monitor] 记录运行结束失败: {e}")
-            self.logger.error("请求超时")
-        elif failure.check(scrapy.exceptions.TCPTimedOutError):
-            self.logger.error("TCP连接超时")

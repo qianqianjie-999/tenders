@@ -6,7 +6,7 @@ import random
 from pathlib import Path
 from urllib.parse import urlencode
 from bidding_spider.items import BiddingItem
-from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError
+from twisted.internet.error import TimeoutError, TCPTimedOutError, DNSLookupError, ConnectionRefusedError
 
 # 导入监控数据库模块
 try:
@@ -602,7 +602,30 @@ class TaianPostSpider(scrapy.Spider):
                     self.logger.warning(f"[Monitor] 记录超时日志失败: {e}")
         elif failure.check(DNSLookupError):
             self.dns_errors += 1
-            self.logger.error("DNS解析失败")
+            self.logger.error(f"DNS解析失败 | URL: {url}")
+
+            if self.monitor:
+                try:
+                    self.monitor.log_interface_warning(
+                        self.name, url, 'dns_error',
+                        response_status=0,
+                        error_message=f"DNS解析失败: {failure.value}"
+                    )
+                except Exception as e:
+                    self.logger.warning(f"[Monitor] 记录DNS错误日志失败: {e}")
+
+        elif failure.check(ConnectionRefusedError):
+            self.logger.error(f"连接被拒绝 | URL: {url}")
+
+            if self.monitor:
+                try:
+                    self.monitor.log_interface_warning(
+                        self.name, url, 'connection_error',
+                        response_status=0,
+                        error_message=f"连接被拒绝: {failure.value}"
+                    )
+                except Exception as e:
+                    self.logger.warning(f"[Monitor] 记录连接错误日志失败: {e}")
     
     def closed(self, reason):
         """爬虫关闭时的处理"""
