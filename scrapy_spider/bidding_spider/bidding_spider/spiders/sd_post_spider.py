@@ -354,16 +354,29 @@ class SdPostSpider(scrapy.Spider):
 
     def handle_error(self, failure):
         """处理请求错误"""
-        self.logger.error(f"请求失败: {failure.value}")
-        
         request = failure.request
         url = request.url
         retry_count = request.meta.get('retry_count', 0)
+        max_retry_times = 4  # 与settings中的RETRY_TIMES保持一致
+        
+        # 判断是否还在重试中（retry_count从0开始，小于max_retry_times表示还会继续重试）
+        is_retrying = retry_count < max_retry_times
+        
+        if is_retrying:
+            # 还在重试中，只记录WARNING
+            self.logger.warning(f"请求失败，正在重试({retry_count + 1}/{max_retry_times}): {failure.value} | URL: {url}")
+        else:
+            # 重试失败了，才记录ERROR
+            self.logger.error(f"重试失败，放弃请求: {failure.value} | URL: {url}")
         
         # 处理超时错误
         if failure.check(TimeoutError, TCPTimedOutError):
             self.timeout_errors += 1
-            self.logger.error(f"⏰ 超时错误 #{self.timeout_errors} | URL: {url}")
+            
+            if is_retrying:
+                self.logger.warning(f"⏰ 超时警告 #{self.timeout_errors} | URL: {url}")
+            else:
+                self.logger.error(f"⏰ 超时错误 #{self.timeout_errors} | URL: {url}")
 
             if self.timeout_errors >= self.MAX_TIMEOUT_ERRORS:
                 raise CloseSpider(
@@ -389,7 +402,10 @@ class SdPostSpider(scrapy.Spider):
         # 处理其他错误
         elif failure.check(DNSLookupError):
             self.dns_errors += 1
-            self.logger.error("DNS解析失败")
+            if is_retrying:
+                self.logger.warning("DNS解析失败，正在重试")
+            else:
+                self.logger.error("DNS解析失败")
             if self.monitor:
                 try:
                     self.monitor.log_interface_warning(
@@ -400,7 +416,10 @@ class SdPostSpider(scrapy.Spider):
                 except Exception as e:
                     self.logger.warning(f"[Monitor] 记录 DNS 错误失败: {e}")
         elif failure.check(ConnectionRefusedError):
-            self.logger.error("连接被拒绝")
+            if is_retrying:
+                self.logger.warning("连接被拒绝，正在重试")
+            else:
+                self.logger.error("连接被拒绝")
             if self.monitor:
                 try:
                     self.monitor.log_interface_warning(
