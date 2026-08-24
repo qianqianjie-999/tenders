@@ -206,3 +206,83 @@ url_configs = [
              'category': '微山县其他交易'},
         ]
 
+
+########山东爬虫（sd_post）
+##POST方法 - 山东省政府采购网
+##支持参数: -a target_date=YYYY-MM-DD（不指定则默认当天）
+
+# API配置【已修复：http -> https】
+API_URL = 'https://www.ccgp-shandong.gov.cn:8087/api/website/site/getListByCode'
+DETAIL_API_URL = 'https://www.ccgp-shandong.gov.cn:8087/api/website/site/getDetail'
+allowed_domains = ['ccgp-shandong.gov.cn']
+
+# 请求参数结构（POST body, JSON格式）
+{
+    "colCode": "0301",              # 栏目代码（见下方映射）
+    "area": "370000",              # 区域代码（370000=省级，3701-3717=地市）
+    "title": "",                   # 标题关键词
+    "projectCode": "",             # 项目代码
+    "currentPage": 1,              # 当前页码
+    "pageSize": 50,                # 每页条数
+    "buyKind": "",                 # 采购方式
+    "buyType": "",                 # 采购类型
+    "startTime": "2026-08-23 00:00:00",  # 开始时间（target_date 00:00:00）
+    "oldData": 0,
+    "endTime": "2026-08-23 23:59:59",    # 结束时间（target_date 23:59:59）
+    "homePage": 0,
+    "mergeType": 0,
+    "projectType": "",
+    "unitName": "",
+    "captchaUuid": "1e21a83a1a490738991d01beaa44147a"
+}
+
+# 栏目代码（colCode）映射
+##省本级
+- "2500" = 省本级需求公示
+- "0301" = 省本级采购公告
+
+##17个地市（遍历 area = 3701 ~ 3717）
+- "2504" = 地市需求公示
+- "0303" = 地市采购公告
+
+# 区域代码（area）映射
+city_codes = {
+    '370000': '省本级',
+    '3701': '济南市',
+    '3702': '青岛市',
+    '3703': '淄博市',
+    '3704': '枣庄市',
+    '3705': '东营市',
+    '3706': '烟台市',
+    '3707': '潍坊市',
+    '3708': '济宁市',
+    '3709': '泰安市',
+    '3710': '威海市',
+    '3711': '日照市',
+    '3712': '莱芜市',
+    '3713': '临沂市',
+    '3714': '德州市',
+    '3715': '聊城市',
+    '3716': '滨州市',
+    '3717': '菏泽市'
+}
+
+# 请求头配置
+headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'User-Agent': '随机轮换（Chrome/Firefox）',
+    'Referer': 'https://www.ccgp-shandong.gov.cn/',
+    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
+}
+
+# 抓取规则
+# - 共发起 2 + 2*17 = 36 个初始请求（省本级2个 + 17个地市各2个）
+# - 省本级 area="370000"，地市 area="3701"~"3717"
+# - 自动翻页：根据 total_pages 字段判断总页数
+# - 数据过滤：根据 publish_date 是否等于 target_date 来过滤
+
+# 运行命令示例
+# 抓取当天: scrapy crawl sd_post
+# 抓取指定日期: scrapy crawl sd_post -a target_date=2026-08-23
+
