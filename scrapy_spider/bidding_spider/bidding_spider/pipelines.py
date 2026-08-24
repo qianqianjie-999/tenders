@@ -278,7 +278,8 @@ class MariaDBPipeline:
                     strategy = self.spider_loading_strategies[spider.name]
                     # 对特定爬虫进行域名双重验证
                     if 'sd_post' == spider.name:
-                        if detail_url and 'http://www.ccgp-shandong.gov.cn' not in detail_url:
+                        # ==========【修改点1】兼容 http/https ==========
+                        if detail_url and 'www.ccgp-shandong.gov.cn' not in detail_url:
                             continue  # 跳过非指定域名的记录
                     elif 'taian_post' == spider.name:
                         if detail_url and 'http://www.taggzyjy.com.cn' not in detail_url:
@@ -365,7 +366,8 @@ class MariaDBPipeline:
             if spider and hasattr(spider, 'name'):
                 spider_name = spider.name
                 if spider_name == 'sd_post':
-                    if detail_url and 'http://www.ccgp-shandong.gov.cn' not in detail_url:
+                    # ==========【修改点2】兼容 http/https ==========
+                    if detail_url and 'www.ccgp-shandong.gov.cn' not in detail_url:
                         logger.info(f"sd_post爬虫跳过非指定域名: {detail_url}")
                         return item
                 elif spider_name == 'taian_post':
@@ -401,7 +403,7 @@ class MariaDBPipeline:
 
             # 步骤3：插入新数据
             self.insert_new_item(adapter, project_name, publish_date, project_source, detail_url, spider)
-            
+
             # 更新监控入库数量
             # 动态获取 monitor_run_id（因为它可能在 open_spider 之后才被设置）
             if self.monitor:
@@ -505,7 +507,7 @@ class MariaDBPipeline:
             table_name = 'bidding_info'
             if spider and hasattr(spider, 'name'):
                 table_name = self.spider_table_mapping.get(spider.name, 'bidding_info')
-            
+
             check_sql = f"""
             SELECT COUNT(*) FROM {table_name} 
             WHERE project_name = %s 
@@ -549,7 +551,7 @@ class MariaDBPipeline:
         table_name = 'bidding_info'
         if spider and hasattr(spider, 'name'):
             table_name = self.spider_table_mapping.get(spider.name, 'bidding_info')
-        
+
         sql = f"""
         INSERT INTO {table_name} (
             project_name, 

@@ -19,9 +19,9 @@ class SdPostSpider(scrapy.Spider):
     name = 'sd_post'
     allowed_domains = ['ccgp-shandong.gov.cn']
 
-    # API配置
-    API_URL = 'http://www.ccgp-shandong.gov.cn:8087/api/website/site/getListByCode'
-    DETAIL_API_URL = 'http://www.ccgp-shandong.gov.cn:8087/api/website/site/getDetail'
+    # API配置【已修复：http -> https】
+    API_URL = 'https://www.ccgp-shandong.gov.cn:8087/api/website/site/getListByCode'
+    DETAIL_API_URL = 'https://www.ccgp-shandong.gov.cn:8087/api/website/site/getDetail'
     MAX_TIMEOUT_ERRORS = 100
 
     def __init__(self, target_date=None, **kwargs):
@@ -187,7 +187,7 @@ class SdPostSpider(scrapy.Spider):
                 "mergeType": 0,
                 "projectType": "",
                 "unitName": "",
-                "captchaUuid": "46261fbc8651f80897ef3902c10d967e"
+                "captchaUuid": "1e21a83a1a490738991d01beaa44147a"
             }),
             headers={
                 'Content-Type': 'application/json',
@@ -200,7 +200,7 @@ class SdPostSpider(scrapy.Spider):
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
                 ]),
-                'Referer': 'http://www.ccgp-shandong.gov.cn/',
+                'Referer': 'https://www.ccgp-shandong.gov.cn/', #【修复】https协议
                 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             },
             callback=self.parse_api_response,
@@ -339,7 +339,7 @@ class SdPostSpider(scrapy.Spider):
                 self.logger.info("已达到最后一页")
 
     def build_detail_url(self, item_data, config):
-        """构建详情页URL"""
+        """构建详情页URL【修复为https】"""
         project_id = item_data.get('infoId', item_data.get('id', ''))
         
         # 根据配置确定colCode
@@ -349,7 +349,7 @@ class SdPostSpider(scrapy.Spider):
             col_code = "0303" if "省本级" not in config['name'] else "0301"
 
         if project_id:
-            return f'http://www.ccgp-shandong.gov.cn/detail?id={project_id}&colCode={col_code}&oldData=0'
+            return f'https://www.ccgp-shandong.gov.cn/detail?id={project_id}&colCode={col_code}&oldData=0'
         return ''
 
     def handle_error(self, failure):
