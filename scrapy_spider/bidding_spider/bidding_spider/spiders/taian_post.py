@@ -23,9 +23,13 @@ class TaianPostSpider(scrapy.Spider):
     LIST_API_URL = 'http://www.taggzyjy.com.cn/inteligentsearch/rest/esinteligentsearch/getFullTextDataNew'
     DETAIL_BASE_URL = 'http://www.taggzyjy.com.cn/projectInfo.html'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, target_date=None, *args, **kwargs):
+        """
+        初始化爬虫
+        :param target_date: 指定日期，格式为 'YYYY-MM-DD'，若不指定则默认为当天
+        """
         super().__init__(*args, **kwargs)
-        
+
         # 初始化统计信息
         self.timeout_errors = 0
         self.slow_requests = 0
@@ -33,7 +37,7 @@ class TaianPostSpider(scrapy.Spider):
         self.total_requests = 0
         self.successful_requests = 0
         self.items_crawled = 0
-        
+
         # 初始化监控数据库
         self.monitor = None
         self.monitor_run_id = None
@@ -44,8 +48,22 @@ class TaianPostSpider(scrapy.Spider):
             except Exception as e:
                 self.logger.warning(f"[Monitor] 监控数据库初始化失败: {e}")
 
+        # 处理目标日期
+        if target_date:
+            try:
+                datetime.datetime.strptime(target_date, '%Y-%m-%d')
+                self.target_date = target_date
+                self.logger.info(f"指定抓取日期: {self.target_date}")
+            except ValueError:
+                self.logger.error(f"日期格式错误: {target_date}，请使用 YYYY-MM-DD 格式")
+                raise ValueError(f"Invalid date format: {target_date}. Expected format: YYYY-MM-DD")
+        else:
+            # 默认为当天
+            self.target_date = datetime.datetime.now().strftime('%Y-%m-%d')
+            self.logger.info(f"未指定日期，默认抓取当天: {self.target_date}")
+
     def start_requests(self):
-        """生成POST请求 - 只抓取系统当天的数据"""
+        """生成POST请求 - 抓取指定日期的数据（默认为当天）"""
         # 记录爬虫运行开始
         if self.monitor:
             try:
@@ -53,19 +71,19 @@ class TaianPostSpider(scrapy.Spider):
                 log_dir.mkdir(exist_ok=True)
                 log_file = str(log_dir / f'bidding_spider_{self.name}_{time.strftime("%Y%m%d_%H%M%S")}.log')
                 stats_file = str(log_dir / f'spider_stats_{self.name}_{time.strftime("%Y%m%d_%H%M%S")}.json')
-                
+
                 self.monitor_run_id = self.monitor.start_run(self.name, log_file, stats_file)
                 self.logger.info(f"[Monitor] 运行记录ID: {self.monitor_run_id}")
             except Exception as e:
                 self.logger.warning(f"[Monitor] 记录运行开始失败: {e}")
-        
-        today_date = datetime.datetime.now().strftime('%Y-%m-%d')
 
-        # 开始时间和结束时间都是今天
+        today_date = self.target_date
+
+        # 开始时间和结束时间都是指定日期
         start_date = today_date + " 00:00:00"
         end_date = today_date + " 23:59:59"
 
-        self.logger.info(f"抓取泰安公共资源当天数据: {today_date}")
+        self.logger.info(f"抓取泰安公共资源指定日期数据: {today_date}")
 
         configs = [
             # 1. 建设工程招标计划

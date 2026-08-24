@@ -27,7 +27,11 @@ class ZhejiangPostSpider(scrapy.Spider):
     DETAIL_BASE_URL = 'https://ggzy.zj.gov.cn'
     MAX_TIMEOUT_ERRORS = 100
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, target_date=None, *args, **kwargs):
+        """
+        初始化爬虫
+        :param target_date: 指定日期，格式为 'YYYY-MM-DD'，若不指定则默认为当天
+        """
         super().__init__(*args, **kwargs)
 
         # 初始化统计信息
@@ -48,8 +52,23 @@ class ZhejiangPostSpider(scrapy.Spider):
             except Exception as e:
                 self.logger.warning(f"[Monitor] 监控数据库初始化失败：{e}")
 
+        # 处理目标日期
+        if target_date:
+            try:
+                datetime.datetime.strptime(target_date, '%Y-%m-%d')
+                self.target_date = target_date
+                self.logger.info(f"指定抓取日期: {self.target_date}")
+            except ValueError:
+                self.logger.error(f"日期格式错误: {target_date}，请使用 YYYY-MM-DD 格式")
+                raise ValueError(f"Invalid date format: {target_date}. Expected format: YYYY-MM-DD")
+        else:
+            # 默认为当天（使用东八区时间）
+            tz = datetime.timezone(datetime.timedelta(hours=8))
+            self.target_date = datetime.datetime.now(tz).strftime('%Y-%m-%d')
+            self.logger.info(f"未指定日期，默认抓取当天: {self.target_date}")
+
     def start_requests(self):
-        """生成 POST 请求 - 直接发送POST请求抓取当天数据"""
+        """生成 POST 请求 - 抓取指定日期的数据（默认为当天）"""
         # 记录爬虫运行开始
         if self.monitor:
             try:
@@ -63,16 +82,14 @@ class ZhejiangPostSpider(scrapy.Spider):
             except Exception as e:
                 self.logger.warning(f"[Monitor] 记录运行开始失败：{e}")
 
-        # 只抓取当天的数据
-        tz = datetime.timezone(datetime.timedelta(hours=8))
-        today = datetime.datetime.now(tz)
-        today_date = today.strftime('%Y-%m-%d')
+        # 使用 self.target_date（已在 __init__ 中处理）
+        today_date = self.target_date
         today_start = f'{today_date} 00:00:00'
         today_end = f'{today_date} 23:59:59'
         start_date = today_date
         end_date = today_date
 
-        self.logger.info(f"抓取浙江省公共资源当天数据：{today_date}")
+        self.logger.info(f"抓取浙江省公共资源指定日期数据：{today_date}")
 
         # 各类别配置
         configs = [
