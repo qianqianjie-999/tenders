@@ -32,3 +32,4 @@ Thumbs.db
 .coverage
 htmlcov/
 *.bak
+*.bak-*
