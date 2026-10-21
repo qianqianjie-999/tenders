@@ -2,9 +2,20 @@
 认证路由模块
 处理用户登录、登出等认证相关请求
 """
+import os as _os
+import sys as _sys
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 from flask_login import login_user, logout_user, login_required
 from app.models.user import User
+
+# 登录失败限流（2026-10-07 新增）：服务端、账号级、跨进程/跨 worker 共享。
+# 本架构下 frp 为 L4 透传，服务端拿不到真实客户端 IP，按 IP 限流无意义。
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from login_guard import LoginGuard
+
+_login_guard = LoginGuard('/var/lib/login_guard/tenders.db',
+                          max_fails=5, window=300, name='tenders')
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -31,78 +42,37 @@ def login():
             flash('请输入用户名和密码', 'warning')
             return render_template('auth/login.html')
 
-        # 登录失败限制
-        MAX_ATTEMPTS = 5
-        LOCKOUT_TIME = 300  # 5分钟
-        
-        # 检查是否被锁定
-        login_attempts = session.get('login_attempts', {})
-        user_attempts = login_attempts.get(username, {})
-        attempts = user_attempts.get('count', 0)
-        last_attempt = user_attempts.get('last_attempt', 0)
-        
-        import time
-        current_time = time.time()
-        
-        # 检查是否在锁定时间内
-        if attempts >= MAX_ATTEMPTS and current_time - last_attempt < LOCKOUT_TIME:
-            remaining_time = int(LOCKOUT_TIME - (current_time - last_attempt))
-            flash(f'登录失败次数过多，请 {remaining_time} 秒后再试', 'error')
-            return render_template('auth/login.html')
-        
-        # 如果过了锁定时间，重置失败次数
-        if current_time - last_attempt >= LOCKOUT_TIME:
-            user_attempts = {'count': 0, 'last_attempt': current_time}
-            login_attempts[username] = user_attempts
-            session['login_attempts'] = login_attempts
+        # 登录失败限流（2026-10-07 由 client session 计数迁移到服务端账号级计数）：
+        # 旧实现把失败次数写进 Flask session —— session 只签名不加密、且删掉该 cookie
+        # 即清零，攻击者换个会话就能无限重试，等于没有限流。
+        locked, wait = _login_guard.is_locked(username)
+        if locked:
+            flash(f'登录失败次数过多，请 {wait} 秒后再试', 'error')
+            return render_template('auth/login.html'), 429
 
         # 从配置中获取用户列表
         users = current_app.config.get('USERS', {})
 
-        if username in users:
+        if username in users and User.check_password(users.get(username, ''), password):
+            _login_guard.reset(username)
+
+            # 设置为会话级 Cookie（关闭浏览器失效）
+            session.permanent = False
             user = User(username, users[username])
-            if User.check_password(users[username], password):
-                # 登录成功，重置失败次数
-                if username in login_attempts:
-                    del login_attempts[username]
-                    session['login_attempts'] = login_attempts
-                
-                # 设置为会话级 Cookie（关闭浏览器失效）
-                session.permanent = False
-                login_user(user, remember=remember)
-                flash('登录成功', 'success')
-                # 跳转到来源页面或首页
-                next_page = request.args.get('next')
-                if next_page:
-                    return redirect(next_page)
-                return redirect(url_for('main.index'))
-            else:
-                # 登录失败，增加失败次数
-                user_attempts['count'] += 1
-                user_attempts['last_attempt'] = current_time
-                login_attempts[username] = user_attempts
-                session['login_attempts'] = login_attempts
-                
-                remaining_attempts = MAX_ATTEMPTS - user_attempts['count']
-                if remaining_attempts > 0:
-                    flash(f'用户名或密码错误，还有 {remaining_attempts} 次尝试机会', 'error')
-                else:
-                    flash('登录失败次数过多，请 5 分钟后再试', 'error')
+            login_user(user, remember=remember)
+            flash('登录成功', 'success')
+            # 跳转到来源页面或首页
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
+            return redirect(url_for('main.index'))
+
+        _login_guard.record_failure(username)
+        remaining_attempts = _login_guard.remaining_attempts(username)
+        if remaining_attempts > 0:
+            flash(f'用户名或密码错误，还有 {remaining_attempts} 次尝试机会', 'error')
         else:
-            # 登录失败，增加失败次数
-            if username not in login_attempts:
-                login_attempts[username] = {'count': 0, 'last_attempt': current_time}
-            user_attempts = login_attempts[username]
-            user_attempts['count'] += 1
-            user_attempts['last_attempt'] = current_time
-            login_attempts[username] = user_attempts
-            session['login_attempts'] = login_attempts
-            
-            remaining_attempts = MAX_ATTEMPTS - user_attempts['count']
-            if remaining_attempts > 0:
-                flash(f'用户名或密码错误，还有 {remaining_attempts} 次尝试机会', 'error')
-            else:
-                flash('登录失败次数过多，请 5 分钟后再试', 'error')
+            flash('登录失败次数过多，请 5 分钟后再试', 'error')
 
     return render_template('auth/login.html')
 

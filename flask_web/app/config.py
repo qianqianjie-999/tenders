@@ -20,9 +20,23 @@ except Exception:
     pass
 
 
+def _require_secret_key():
+    """SECRET_KEY 必须由部署注入；缺失或仍是占位常量时拒绝启动。"""
+    _bad = {
+        'dev-secret-key-change-in-production', 'change_me_secret',
+        'your_secret_key_here', 'your-secret-key-here',
+    }
+    _v = (os.environ.get('SECRET_KEY') or '').strip()
+    if not _v or _v in _bad:
+        raise RuntimeError('SECRET_KEY 未配置或仍为占位常量，拒绝启动（tenders）')
+    return _v
+
+
 class Config:
     # 安全配置
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    # 2026-10-07 修复：原兜底值是公开常量，环境变量缺失即静默降级 ⇒ fail-closed。
+    # （tenders.wsgi 会显式加载 tenders/.env，正常情况下一定有值）
+    SECRET_KEY = _require_secret_key()
     
     # 数据库配置
     DB_HOST = os.environ.get('DB_HOST', 'localhost')
