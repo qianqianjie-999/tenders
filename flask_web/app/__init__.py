@@ -98,19 +98,8 @@ def create_app():
     # 注册全局异常处理器
     register_error_handlers(app)
 
-    # 从环境变量加载用户配置到 config
-    users = {}
-    users_config = Config.USERS_CONFIG if hasattr(Config, 'USERS_CONFIG') else ''
-    if users_config:
-        for user_entry in users_config.split(';'):
-            if ':' in user_entry:
-                username, password_hash = user_entry.split(':', 1)
-                username = username.strip()
-                password_hash = password_hash.strip()
-                if username:
-                    users[username] = password_hash
-    app.config['USERS'] = users
-    app.config['USERS_CONFIG'] = users_config
+    # 2026-10-21：用户认证由 .env USERS_CONFIG 迁移至 bidding_db.users 表
+    # （登录/管理见 routes/auth.py 与 routes/admin.py），此处不再解析 env 账号。
 
     # 注册蓝图
     from app.routes.main import main_bp
@@ -122,6 +111,7 @@ def create_app():
     from app.routes.jiangsu import jiangsu_bp
     from app.routes.zhejiang import zhejiang_bp
     from app.routes.auth import auth_bp
+    from app.routes.admin import admin_bp
     from app.routes.enhanced_monitor import enhanced_monitor_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(focus_bp)
@@ -134,6 +124,7 @@ def create_app():
     app.register_blueprint(jiangsu_bp)
     app.register_blueprint(zhejiang_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
     app.register_blueprint(enhanced_monitor_bp)
 
     # 为分析模块的验证接口添加CSRF豁免

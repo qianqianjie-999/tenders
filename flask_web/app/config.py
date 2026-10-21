@@ -79,10 +79,9 @@ class Config:
     # 访问控制口令
     ANALYSIS_ACCESS_CODE = os.environ.get('ANALYSIS_ACCESS_CODE', 'kwd12345')
 
-    # 用户配置（从环境变量读取，用于登录认证）
-    # 格式：USERNAME1:PASSWORD_HASH1;USERNAME2:PASSWORD_HASH2
-    USERS_CONFIG = os.environ.get('USERS_CONFIG', '')
-    
+    # 2026-10-21：用户认证迁移至 bidding_db.users 表，USERS_CONFIG 已废弃
+    # （init_users.py 可读取旧 .env 中的 USERS_CONFIG 做一次性迁移）
+
     # 日志配置
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
     LOG_FORMAT = os.environ.get('LOG_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')

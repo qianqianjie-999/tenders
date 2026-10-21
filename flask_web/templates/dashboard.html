@@ -683,6 +683,17 @@
                     <p class="small mb-0">招标业务数据监控中心</p>
                 </div>
                 <div class="col-md-4 text-end">
+                    {% if current_user.is_authenticated %}
+                    <div class="mb-2" style="font-size: 0.85rem;">
+                        <i class="fas fa-user-circle me-1"></i>{{ current_user.full_name or current_user.username }}
+                        <span class="mx-1">·</span>
+                        <a href="{{ url_for('auth.change_password') }}" class="back-btn" style="padding: 2px 8px;">修改密码</a>
+                        {% if current_user.is_administrator() %}
+                        <a href="{{ url_for('admin.users') }}" class="back-btn" style="padding: 2px 8px;">用户管理</a>
+                        {% endif %}
+                        <a href="{{ url_for('auth.logout') }}" class="back-btn" style="padding: 2px 8px;">退出</a>
+                    </div>
+                    {% endif %}
                     <a href="{{ url_for('main.index') }}" class="back-btn">
                         <i class="fas fa-arrow-left"></i>返回列表
                     </a>

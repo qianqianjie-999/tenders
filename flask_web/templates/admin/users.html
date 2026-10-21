@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>用户管理 - 招投标信息展示系统</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/font-awesome.min.css') }}">
+    <style>
+        :root {
+            --police-blue: #1e40af;
+            --police-blue-dark: #1e3a8a;
+        }
+
+        body {
+            background: #f1f5f9;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, var(--police-blue) 0%, #3b82f6 100%);
+            color: #fff;
+            padding: 1.5rem 0;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25);
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .page-header .subtitle {
+            opacity: 0.85;
+            font-size: 0.9rem;
+        }
+
+        .back-link {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-link:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-bottom: 1px solid #e2e8f0;
+            border-radius: 12px 12px 0 0 !important;
+            font-weight: 600;
+        }
+
+        .table thead th {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #64748b;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .table tbody tr:hover {
+            background: rgba(30, 64, 175, 0.04);
+        }
+
+        .badge-role-admin {
+            background: rgba(220, 38, 38, 0.1);
+            color: #dc2626;
+        }
+
+        .badge-role-user {
+            background: rgba(100, 116, 139, 0.12);
+            color: #475569;
+        }
+
+        .badge-active {
+            background: rgba(22, 163, 74, 0.12);
+            color: #16a34a;
+        }
+
+        .badge-inactive {
+            background: rgba(217, 119, 6, 0.12);
+            color: #d97706;
+        }
+
+        .btn-police {
+            background: var(--police-blue);
+            color: #fff;
+            border: none;
+        }
+
+        .btn-police:hover {
+            background: var(--police-blue-dark);
+            color: #fff;
+        }
+
+        .text-police {
+            color: var(--police-blue) !important;
+        }
+
+        @media (max-width: 768px) {
+            .hide-on-mobile {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="page-header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <h1><i class="fas fa-users me-2"></i>用户管理</h1>
+                <div class="subtitle">共 {{ users|length }} 位用户 · 仅管理员可见</div>
+            </div>
+            <a href="{{ url_for('main.index') }}" class="back-link">
+                <i class="fas fa-arrow-left me-1"></i>返回首页
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- 添加新用户 -->
+    <div class="card mb-4">
+        <div class="card-header py-3">
+            <i class="fas fa-user-plus text-success me-2"></i>添加新用户
+        </div>
+        <div class="card-body">
+            <form id="addUserForm">
+                <div class="row g-3">
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                        <label class="form-label fw-semibold"><span class="text-danger">*</span> 用户名</label>
+                        <input type="text" class="form-control form-control-sm" name="username" required
+                               placeholder="3-20 个字符" minlength="3" maxlength="20">
+                    </div>
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                        <label class="form-label fw-semibold">姓名</label>
+                        <input type="text" class="form-control form-control-sm" name="full_name" placeholder="真实姓名">
+                    </div>
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                        <label class="form-label fw-semibold">邮箱（选填）</label>
+                        <input type="email" class="form-control form-control-sm" name="email" placeholder="user@example.com">
+                    </div>
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                        <label class="form-label fw-semibold"><span class="text-danger">*</span> 初始密码</label>
+                        <input type="password" class="form-control form-control-sm" name="password" required
+                               placeholder="至少 6 位" minlength="6">
+                    </div>
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                        <label class="form-label fw-semibold">部门</label>
+                        <input type="text" class="form-control form-control-sm" name="department" placeholder="部门名称">
+                    </div>
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                        <label class="form-label fw-semibold">角色</label>
+                        <select class="form-select form-select-sm" name="role">
+                            <option value="user">普通用户</option>
+                            <option value="admin">管理员</option>
+                        </select>
+                    </div>
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-success btn-sm w-100">
+                            <i class="fas fa-plus-circle me-1"></i>添加用户
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 用户列表 -->
+    <div class="card">
+        <div class="card-header py-3">
+            <i class="fas fa-list text-police me-2"></i>用户列表
+        </div>
+        <div class="card-body p-0">
+            {% if users %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>用户名</th>
+                        <th class="hide-on-mobile">姓名</th>
+                        <th class="hide-on-mobile">部门</th>
+                        <th>角色</th>
+                        <th>状态</th>
+                        <th class="hide-on-mobile">创建时间</th>
+                        <th class="text-center pe-4">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td class="ps-4">{{ user.id }}</td>
+                        <td><strong class="text-police">{{ user.username }}</strong></td>
+                        <td class="hide-on-mobile">{{ user.full_name or '-' }}</td>
+                        <td class="hide-on-mobile">{{ user.department or '-' }}</td>
+                        <td>
+                            {% if user.role == 'admin' %}
+                                <span class="badge badge-role-admin"><i class="fas fa-crown me-1"></i>管理员</span>
+                            {% else %}
+                                <span class="badge badge-role-user">普通用户</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="badge badge-active"><i class="fas fa-check-circle me-1"></i>启用</span>
+                            {% else %}
+                                <span class="badge badge-inactive"><i class="fas fa-ban me-1"></i>禁用</span>
+                            {% endif %}
+                        </td>
+                        <td class="hide-on-mobile">
+                            <span class="text-muted small">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '' }}</span>
+                        </td>
+                        <td class="text-center pe-4">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary edit-user-btn" data-user-id="{{ user.id }}" title="编辑">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button>
+                                {% if user.id != current_user.id %}
+                                <button class="btn btn-outline-warning reset-password-btn"
+                                        data-user-id="{{ user.id }}" data-username="{{ user.username }}" title="重置密码">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                                <button class="btn btn-outline-danger delete-user-btn"
+                                        data-user-id="{{ user.id }}" data-username="{{ user.username }}" title="删除">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-users text-muted" style="font-size: 3rem; opacity: .25;"></i>
+                <h5 class="text-muted mt-3">暂无用户数据</h5>
+                <p class="text-muted small">点击上方"添加新用户"创建第一个用户</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 编辑用户模态框 -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-cog text-police me-2"></i>编辑用户</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="edit_user_id">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">用户名</label>
+                            <input type="text" class="form-control" id="edit_username" readonly>
+                            <div class="form-text">用户名不可修改</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">姓名</label>
+                            <input type="text" class="form-control" id="edit_full_name">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">邮箱（选填）</label>
+                            <input type="email" class="form-control" id="edit_email">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">部门</label>
+                            <input type="text" class="form-control" id="edit_department">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-block">角色</label>
+                            <div class="btn-group w-100">
+                                <input type="radio" class="btn-check" name="edit_role" id="edit_role_user" value="user">
+                                <label class="btn btn-outline-secondary" for="edit_role_user">
+                                    <i class="fas fa-user me-1"></i>普通用户
+                                </label>
+                                <input type="radio" class="btn-check" name="edit_role" id="edit_role_admin" value="admin">
+                                <label class="btn btn-outline-danger" for="edit_role_admin">
+                                    <i class="fas fa-crown me-1"></i>管理员
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-block">状态</label>
+                            <div class="btn-group w-100">
+                                <input type="radio" class="btn-check" name="edit_status" id="edit_status_active" value="true">
+                                <label class="btn btn-outline-success" for="edit_status_active">
+                                    <i class="fas fa-check-circle me-1"></i>启用
+                                </label>
+                                <input type="radio" class="btn-check" name="edit_status" id="edit_status_inactive" value="false">
+                                <label class="btn btn-outline-warning" for="edit_status_inactive">
+                                    <i class="fas fa-ban me-1"></i>禁用
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold"><i class="fas fa-key me-1"></i>新密码</label>
+                            <input type="password" class="form-control" id="edit_new_password" placeholder="留空不修改密码（至少 6 位）">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-police" id="saveEditUserBtn">
+                    <i class="fas fa-save me-1"></i>保存修改
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 重置密码模态框 -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-warning"><i class="fas fa-key me-2"></i>重置密码</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    即将重置用户 <strong id="reset_username"></strong> 的密码，重置后原密码立即失效。
+                </div>
+                <input type="hidden" id="reset_user_id">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">新密码</label>
+                        <input type="password" class="form-control" id="reset_new_password" minlength="6">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">确认密码</label>
+                        <input type="password" class="form-control" id="reset_confirm_password" minlength="6">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-warning" id="saveResetPasswordBtn">
+                    <i class="fas fa-redo me-1"></i>重置密码
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script>
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+}
+
+function showToast(type, title, message) {
+    const cls = {
+        success: 'alert-success', error: 'alert-danger',
+        warning: 'alert-warning', info: 'alert-info'
+    }[type] || 'alert-info';
+    const icon = {
+        success: 'fa-check-circle', error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle', info: 'fa-info-circle'
+    }[type] || 'fa-info-circle';
+
+    const toast = document.createElement('div');
+    toast.className = `alert ${cls} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+    toast.style.cssText = 'z-index: 9999; max-width: 360px; min-width: 280px;';
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="me-3"><i class="fas ${icon} fs-4"></i></div>
+            <div class="flex-grow-1">
+                <h6 class="alert-heading mb-1">${title}</h6>
+                <p class="mb-0 small">${message}</p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+    document.body.appendChild(toast);
+    setTimeout(() => bootstrap.Alert.getOrCreateInstance(toast).close(), 3000);
+}
+
+async function api(url, method, body) {
+    const opts = { method, headers: { 'X-CSRFToken': getCsrfToken() } };
+    if (body !== undefined) {
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(body);
+    }
+    const resp = await fetch(url, opts);
+    return resp.json();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    // ---------- 添加用户 ----------
+    document.getElementById('addUserForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(this));
+        try {
+            const result = await api('/admin/users/create', 'POST', data);
+            if (result.success) {
+                showToast('success', '添加成功', result.message);
+                this.reset();
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                showToast('error', '添加失败', result.message || '未知错误');
+            }
+        } catch (err) {
+            showToast('error', '网络错误', '请稍后重试');
+        }
+    });
+
+    // ---------- 编辑用户 ----------
+    document.querySelectorAll('.edit-user-btn').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const userId = this.dataset.userId;
+            try {
+                const result = await api(`/admin/users/${userId}`, 'GET');
+                if (!result.success) {
+                    showToast('error', '获取失败', result.message || '无法获取用户信息');
+                    return;
+                }
+                const u = result.user;
+                document.getElementById('edit_user_id').value = u.id;
+                document.getElementById('edit_username').value = u.username;
+                document.getElementById('edit_full_name').value = u.full_name || '';
+                document.getElementById('edit_email').value = u.email || '';
+                document.getElementById('edit_department').value = u.department || '';
+                document.getElementById(u.role === 'admin' ? 'edit_role_admin' : 'edit_role_user').checked = true;
+                document.getElementById(u.is_active ? 'edit_status_active' : 'edit_status_inactive').checked = true;
+                document.getElementById('edit_new_password').value = '';
+                new bootstrap.Modal(document.getElementById('editUserModal')).show();
+            } catch (err) {
+                showToast('error', '网络错误', '请稍后重试');
+            }
+        });
+    });
+
+    document.getElementById('saveEditUserBtn').addEventListener('click', async function () {
+        const userId = document.getElementById('edit_user_id').value;
+        const data = {
+            full_name: document.getElementById('edit_full_name').value,
+            email: document.getElementById('edit_email').value,
+            department: document.getElementById('edit_department').value,
+            role: document.querySelector('input[name="edit_role"]:checked').value,
+            is_active: document.querySelector('input[name="edit_status"]:checked').value === 'true'
+        };
+        const newPwd = document.getElementById('edit_new_password').value;
+        if (newPwd) data.new_password = newPwd;
+        try {
+            const result = await api(`/admin/users/${userId}`, 'PUT', data);
+            if (result.success) {
+                showToast('success', '更新成功', result.message);
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                showToast('error', '更新失败', result.message || '未知错误');
+            }
+        } catch (err) {
+            showToast('error', '网络错误', '请稍后重试');
+        }
+    });
+
+    // ---------- 重置密码 ----------
+    document.querySelectorAll('.reset-password-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.getElementById('reset_user_id').value = this.dataset.userId;
+            document.getElementById('reset_username').textContent = this.dataset.username;
+            document.getElementById('reset_new_password').value = '';
+            document.getElementById('reset_confirm_password').value = '';
+            new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+        });
+    });
+
+    document.getElementById('saveResetPasswordBtn').addEventListener('click', async function () {
+        const newPwd = document.getElementById('reset_new_password').value;
+        const confirmPwd = document.getElementById('reset_confirm_password').value;
+        if (newPwd !== confirmPwd) {
+            showToast('warning', '密码不一致', '两次输入的密码不一致');
+            return;
+        }
+        if (newPwd.length < 6) {
+            showToast('warning', '密码过短', '密码长度至少 6 位');
+            return;
+        }
+        const userId = document.getElementById('reset_user_id').value;
+        try {
+            const result = await api(`/admin/users/${userId}/reset-password`, 'POST', { new_password: newPwd });
+            if (result.success) {
+                showToast('success', '重置成功', result.message);
+                bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal')).hide();
+            } else {
+                showToast('error', '重置失败', result.message || '未知错误');
+            }
+        } catch (err) {
+            showToast('error', '网络错误', '请稍后重试');
+        }
+    });
+
+    // ---------- 删除用户 ----------
+    document.querySelectorAll('.delete-user-btn').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const userId = this.dataset.userId;
+            const username = this.dataset.username;
+            if (!confirm(`确定要删除用户 "${username}" 吗？\n\n此操作不可撤销；如仅需暂停使用，建议改用「禁用」。`)) return;
+            try {
+                const result = await api(`/admin/users/${userId}`, 'DELETE');
+                if (result.success) {
+                    showToast('success', '删除成功', result.message);
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    showToast('error', '删除失败', result.message || '未知错误');
+                }
+            } catch (err) {
+                showToast('error', '网络错误', '请稍后重试');
+            }
+        });
+    });
+});
+</script>
+</body>
+</html>
