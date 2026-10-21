@@ -76,7 +76,7 @@ def api_add():
         if not all(k in data for k in ['project_name', 'publish_date', 'project_source']):
             return jsonify({'success': False, 'message': '缺少必要字段'}), 400
 
-        success, result = FocusService.add(data, focused_by=current_user.id)
+        success, result = FocusService.add(data, focused_by=current_user.username)
         if success:
             return jsonify({'success': True, 'message': '添加成功', 'id': result})
         else:
