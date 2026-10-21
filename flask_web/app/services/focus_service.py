@@ -8,7 +8,7 @@ class FocusService:
 
     # 公告/需求分类规则（2026-10-21 与用户确认）：
     # 类别含「需求」或「计划」=> 需求类；其余 => 公告类
-    _DEMAND_COND = "(project_category LIKE '%需求%' OR project_category LIKE '%计划%')"
+    # 注意：关键词必须走 %s 参数化（连接未声明 utf8mb4 时中文裸写进 SQL 会编码报错）
 
     @staticmethod
     def get_list(status='all', keyword='', page=1, page_size=20, notice_type='all'):
@@ -16,6 +16,9 @@ class FocusService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
+            demand_cond = "(project_category LIKE %s OR project_category LIKE %s)"
+            demand_params = ['%需求%', '%计划%']
+
             conditions = ["1=1"]
             params = []
 
@@ -28,9 +31,11 @@ class FocusService:
                 params.append(f'%{keyword}%')
 
             if notice_type == 'demand':
-                conditions.append(FocusService._DEMAND_COND)
+                conditions.append(demand_cond)
+                params += demand_params
             elif notice_type == 'notice':
-                conditions.append(f"NOT {FocusService._DEMAND_COND}")
+                conditions.append(f"NOT {demand_cond}")
+                params += demand_params
 
             where_clause = " AND ".join(conditions)
             offset = (page - 1) * page_size
@@ -52,10 +57,10 @@ class FocusService:
             # 公告/需求分类统计（用于页签数量展示）
             cursor.execute(f"""
                 SELECT
-                    SUM(CASE WHEN {FocusService._DEMAND_COND} THEN 1 ELSE 0 END) AS demand,
-                    SUM(CASE WHEN NOT {FocusService._DEMAND_COND} THEN 1 ELSE 0 END) AS notice
+                    SUM(CASE WHEN {demand_cond} THEN 1 ELSE 0 END) AS demand,
+                    SUM(CASE WHEN NOT {demand_cond} THEN 1 ELSE 0 END) AS notice
                 FROM focus_projects
-            """)
+            """, demand_params * 2)
             type_stats = cursor.fetchone()
 
             cursor.close()
