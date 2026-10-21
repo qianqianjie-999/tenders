@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
+from flask_login import login_required, current_user
 from app.services.focus_service import FocusService
 from app.utils.helpers import format_date_for_display
 from app.extensions import get_db_connection
@@ -14,28 +15,33 @@ def index():
 
 @focus_bp.route('/api/list')
 def api_list():
-    """API: 获取关注列表"""
+    """API: 获取关注列表。notice_type: all / notice(公告) / demand(需求)"""
     try:
         status = request.args.get('status', 'all')
         keyword = request.args.get('keyword', '')
         page = int(request.args.get('page', 1))
         page_size = int(request.args.get('page_size', 20))
+        notice_type = request.args.get('notice_type', 'all')
 
-        rows, total, stats = FocusService.get_list(status, keyword, page, page_size)
+        rows, total, stats, type_stats = FocusService.get_list(
+            status, keyword, page, page_size, notice_type)
 
         data = []
         for row in rows:
+            cat = row['project_category'] or '未分类'
             data.append({
                 'id': row['id'],
                 'project_name': row['project_name'],
                 'publish_date': format_date_for_display(row['publish_date']),
                 'project_source': row['project_source'],
-                'project_category': row['project_category'] or '未分类',
+                'project_category': cat,
+                'notice_type': 'demand' if ('需求' in cat or '计划' in cat) else 'notice',
                 'detail_url': row['detail_url'],
                 'focus_time': row['focus_time'].strftime('%Y-%m-%d %H:%M') if row['focus_time'] else '',
                 'status': row['status'],
                 'status_text': current_app.config['PROJECT_STATUS'].get(row['status'], '未知'),
-                'remark': row['remark'] or ''
+                'remark': row['remark'] or '',
+                'focused_by': row.get('focused_by') or '未知'
             })
 
         return jsonify({
@@ -49,7 +55,11 @@ def api_list():
             },
             'statistics': {
                 'total': total,
-                'by_status': stats
+                'by_status': stats,
+                'by_type': {
+                    'notice': type_stats.get('notice') or 0,
+                    'demand': type_stats.get('demand') or 0,
+                }
             }
         })
     except Exception as e:
@@ -57,15 +67,16 @@ def api_list():
 
 
 @focus_bp.route('/api/add', methods=['POST'])
+@login_required
 def api_add():
-    """API: 添加关注"""
+    """API: 添加关注（需登录，记录操作人）"""
 
     try:
         data = request.get_json()
         if not all(k in data for k in ['project_name', 'publish_date', 'project_source']):
             return jsonify({'success': False, 'message': '缺少必要字段'}), 400
 
-        success, result = FocusService.add(data)
+        success, result = FocusService.add(data, focused_by=current_user.id)
         if success:
             return jsonify({'success': True, 'message': '添加成功', 'id': result})
         else:

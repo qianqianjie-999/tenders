@@ -6,9 +6,13 @@ from datetime import datetime
 class FocusService:
     """重点关注业务逻辑"""
 
+    # 公告/需求分类规则（2026-10-21 与用户确认）：
+    # 类别含「需求」或「计划」=> 需求类；其余 => 公告类
+    _DEMAND_COND = "(project_category LIKE '%需求%' OR project_category LIKE '%计划%')"
+
     @staticmethod
-    def get_list(status='all', keyword='', page=1, page_size=20):
-        """获取关注列表"""
+    def get_list(status='all', keyword='', page=1, page_size=20, notice_type='all'):
+        """获取关注列表。notice_type: all / notice(公告) / demand(需求)"""
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
@@ -22,6 +26,11 @@ class FocusService:
             if keyword:
                 conditions.append("project_name LIKE %s")
                 params.append(f'%{keyword}%')
+
+            if notice_type == 'demand':
+                conditions.append(FocusService._DEMAND_COND)
+            elif notice_type == 'notice':
+                conditions.append(f"NOT {FocusService._DEMAND_COND}")
 
             where_clause = " AND ".join(conditions)
             offset = (page - 1) * page_size
@@ -40,15 +49,24 @@ class FocusService:
             cursor.execute("SELECT status, COUNT(*) as count FROM focus_projects GROUP BY status")
             stats = {row['status']: row['count'] for row in cursor.fetchall()}
 
+            # 公告/需求分类统计（用于页签数量展示）
+            cursor.execute(f"""
+                SELECT
+                    SUM(CASE WHEN {FocusService._DEMAND_COND} THEN 1 ELSE 0 END) AS demand,
+                    SUM(CASE WHEN NOT {FocusService._DEMAND_COND} THEN 1 ELSE 0 END) AS notice
+                FROM focus_projects
+            """)
+            type_stats = cursor.fetchone()
+
             cursor.close()
-            return rows, total, stats
+            return rows, total, stats, type_stats
         except Exception:
             cursor.close()
             raise
 
     @staticmethod
-    def add(data):
-        """添加关注"""
+    def add(data, focused_by=None):
+        """添加关注。focused_by: 操作人用户名（2026-10-21 新增）"""
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
@@ -63,12 +81,12 @@ class FocusService:
 
             cursor.execute("""
                 INSERT INTO focus_projects
-                (project_name, publish_date, project_source, project_category, detail_url, focus_time, status, remark)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                (project_name, publish_date, project_source, project_category, detail_url, focus_time, status, remark, focused_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 data['project_name'], data['publish_date'], data['project_source'],
                 data.get('project_category', '未分类'), data.get('detail_url', ''),
-                datetime.now(), 'active', data.get('remark', '')
+                datetime.now(), 'active', data.get('remark', ''), focused_by
             ))
             conn.commit()
             focus_id = cursor.lastrowid
