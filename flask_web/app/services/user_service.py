@@ -33,6 +33,23 @@ class UserService:
             cursor.close()
 
     @staticmethod
+    def get_full_name_map(usernames):
+        """批量取 用户名 -> 姓名 映射（姓名缺失则不收录，调用方回退用户名）"""
+        usernames = [u for u in set(usernames) if u]
+        if not usernames:
+            return {}
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            placeholders = ','.join(['%s'] * len(usernames))
+            cursor.execute(
+                f"SELECT username, full_name FROM users WHERE username IN ({placeholders})",
+                usernames)
+            return {r['username']: r['full_name'] for r in cursor.fetchall() if r['full_name']}
+        finally:
+            cursor.close()
+
+    @staticmethod
     def list_all():
         conn = get_db_connection()
         cursor = conn.cursor()

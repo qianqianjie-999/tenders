@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app.services.focus_service import FocusService
+from app.services.user_service import UserService
 from app.utils.helpers import format_date_for_display
 from app.extensions import get_db_connection
 
@@ -26,9 +27,14 @@ def api_list():
         rows, total, stats, type_stats = FocusService.get_list(
             status, keyword, page, page_size, notice_type)
 
+        # 关注人显示姓名而非登录名：批量解析 username -> full_name（缺失回退用户名）
+        name_map = UserService.get_full_name_map(
+            [r.get('focused_by') for r in rows])
+
         data = []
         for row in rows:
             cat = row['project_category'] or '未分类'
+            focused_by = row.get('focused_by') or ''
             data.append({
                 'id': row['id'],
                 'project_name': row['project_name'],
@@ -41,7 +47,7 @@ def api_list():
                 'status': row['status'],
                 'status_text': current_app.config['PROJECT_STATUS'].get(row['status'], '未知'),
                 'remark': row['remark'] or '',
-                'focused_by': row.get('focused_by') or '未知'
+                'focused_by': name_map.get(focused_by) or focused_by or '未知'
             })
 
         return jsonify({
