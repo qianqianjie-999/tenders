@@ -113,6 +113,7 @@ def create_app():
     from app.routes.auth import auth_bp
     from app.routes.admin import admin_bp
     from app.routes.enhanced_monitor import enhanced_monitor_bp
+    from app.routes.ai_analysis import ai_analysis_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(focus_bp)
     app.register_blueprint(dashboard_bp)
@@ -126,6 +127,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(enhanced_monitor_bp)
+    app.register_blueprint(ai_analysis_bp)
 
     # 为分析模块的验证接口添加CSRF豁免
     from app.routes.analysis import verify_access_code
