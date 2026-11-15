@@ -48,7 +48,7 @@ class ClassifyErrorTests(unittest.TestCase):
 
 class HealthProbeTests(unittest.TestCase):
     def test_unreachable_result(self):
-        with mock.patch.object(ai.requests, 'get', side_effect=Exception('down')):
+        with mock.patch.object(ai._MODEL_SESSION, 'get', side_effect=Exception('down')):
             h = ai.check_model_health(force=True, timeout=0.1)
         self.assertFalse(h['reachable'])
         self.assertEqual(h['status'], 'unavailable')
@@ -58,7 +58,7 @@ class HealthProbeTests(unittest.TestCase):
     def test_reachable_result_and_cache(self):
         class Resp(object):
             status_code = 200
-        with mock.patch.object(ai.requests, 'get', return_value=Resp()) as m:
+        with mock.patch.object(ai._MODEL_SESSION, 'get', return_value=Resp()) as m:
             h = ai.check_model_health(force=True, timeout=0.1)
             ai.check_model_health(timeout=0.1)  # 命中缓存，不应再次请求
         self.assertTrue(h['reachable'])
@@ -74,7 +74,7 @@ class BatchSkipTests(unittest.TestCase):
     """A8：接口不可用时批量任务保持 pending、不写 failed。"""
 
     def test_down_host_skips_whole_batch(self):
-        with mock.patch.object(ai.requests, 'get', side_effect=Exception('down')), \
+        with mock.patch.object(ai._MODEL_SESSION, 'get', side_effect=Exception('down')), \
              mock.patch.object(ai, 'save_analysis') as save, \
              mock.patch.object(ai, 'ensure_columns') as cols:
             n = ai.run_batch(['bidding_info'], 1, 20, '', False, True, True)

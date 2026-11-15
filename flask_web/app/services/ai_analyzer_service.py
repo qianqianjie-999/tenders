@@ -22,6 +22,14 @@ import requests
 
 from app.extensions import get_db_connection
 
+# 模型服务是本机/内网直连，必须绕开环境代理：requests 默认 trust_env=True，
+# 会读 HTTP_PROXY/HTTPS_PROXY；本机 NO_PROXY 未包含 127.0.0.1，代理一旦不转发
+# 本地地址（或代理进程退出），模型明明在线也会被健康检查判成 unavailable，
+# 批量分析整批永久跳过。实测把 http_proxy 指向不可用端口后，
+# requests.get('http://127.0.0.1:...') 抛 ProxyError，设置后恢复直连。
+_MODEL_SESSION = requests.Session()
+_MODEL_SESSION.trust_env = False
+
 # 3 张表 -> 详情页域名前缀（仅用于页面展示时拼链接，不参与请求）
 TABLE_PROJECTS = {
     'bidding_info': '山东',
@@ -139,7 +147,7 @@ def check_model_health(force: bool = False, ttl: float = 60.0,
         'checked_at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     }
     try:
-        resp = requests.get(url, timeout=timeout)
+        resp = _MODEL_SESSION.get(url, timeout=timeout)
         if resp.status_code < 400:
             result.update(reachable=True, status='ok', message='模型服务在线')
         else:
@@ -339,7 +347,7 @@ def _call_model(user_prompt: str, max_tokens: int = 2000) -> Tuple[Optional[Dict
     url = f"{cfg['base_url']}/chat/completions"
 
     def _post(p):
-        return requests.post(url, json=p, headers=headers, timeout=cfg['timeout'])
+        return _MODEL_SESSION.post(url, json=p, headers=headers, timeout=cfg['timeout'])
 
     try:
         resp = _post(payload)
