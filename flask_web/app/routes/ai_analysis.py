@@ -2,16 +2,63 @@
 """AI 分析页面与接口"""
 import json
 import os
+import re
+import sys
+from pathlib import Path
 
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import login_required
 
 from app.extensions import get_db_connection
+from app.decorators import require_auth_write
 from app.services import ai_analyzer_service as ai
+from app.services import analysis_bridge_service as bridge
 
 ai_analysis_bp = Blueprint('ai_analysis', __name__, url_prefix='/ai-analysis')
 
 TABLE_LIST = list(ai.TABLE_PROJECTS.keys())
+
+# G2 人工上传：只存解析文本，不落盘原件（绕开 /static 被 Apache Alias 直出
+# 绕过鉴权、以及生产 apache 用户对附件目录写权限两个坑）
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+
+
+def _document_parsers():
+    """惰性加载 tools/fetch_detail_content.py 的解析函数（不重复实现）。"""
+    root = Path(__file__).resolve().parents[3]
+    tools = str(root / 'tools')
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    import fetch_detail_content as fdc
+    return fdc
+
+
+def _safe_filename(name):
+    """文件名仅用于展示；去掉路径与标签字符，不用于落盘。"""
+    base = os.path.basename(name or '').replace('\\', '/').split('/')[-1]
+    return re.sub(r'[<>\r\n\t]', '', base)[:120]
+
+
+def _bytes_to_text(body, filename):
+    """按文件头判定格式，不信任扩展名。返回 (text, kind)。"""
+    fdc = _document_parsers()
+    if body[:4] == b'%PDF':
+        return fdc._pdf_to_text(body), 'pdf'
+    lower = filename.lower()
+    if body[:2] == b'PK':
+        suffix = '.docx' if lower.endswith('.docx') else '.xlsx'
+        return fdc._doc_to_text(body, suffix), 'office'
+    if body[:4] == b'\xd0\xcf\x11\xe0':
+        suffix = '.doc' if re.search(r'\.doc$', lower) else '.xls'
+        return fdc._doc_to_text(body, suffix), 'office'
+    # 纯文本兜底：便于直接上传已复制的公告正文
+    try:
+        text = body.decode('utf-8')
+    except UnicodeDecodeError:
+        text = body.decode('gbk', errors='ignore')
+    if text.lstrip().startswith('<') or '\x00' in text[:200]:
+        return '', 'unsupported'
+    return text.strip(), 'text'
 
 
 def _parse_json_field(v):
@@ -64,7 +111,8 @@ def api_stats():
         cur.close()
         return jsonify({'success': True, 'data': result,
                         'task': ai.get_task_state(),
-                        'model': ai.ai_config()['model']})
+                        'model': ai.ai_config()['model'],
+                        'model_status': ai.check_model_health()})
     except Exception as e:
         return jsonify({'success': False, 'message': f'统计失败: {e}'}), 500
 
@@ -254,6 +302,16 @@ def api_analyze():
     if status == 'all':
         status = ''  # 空串表示不限制正文有无
 
+    # G3：关机时直接拒绝，不启动线程、不写 failed，避免 180s 空等
+    health = ai.check_model_health(force=True)
+    if not health['reachable']:
+        return jsonify({
+            'success': False,
+            'message': '模型主机关机，本次批量未启动；待分析记录保持 pending（%s）'
+                       % health['message'],
+            'model_status': health,
+        }), 503
+
     # 只分析「当日发布 + 命中关键词」的记录
     ok = ai.start_batch_async(tables, 1, limit, status, force,
                               today_only=True, keywords_only=True)
@@ -266,7 +324,16 @@ def api_analyze():
 @ai_analysis_bp.route('/api/task')
 @login_required
 def api_task():
-    return jsonify({'success': True, 'task': ai.get_task_state()})
+    return jsonify({'success': True, 'task': ai.get_task_state(),
+                    'model_status': ai.check_model_health()})
+
+
+@ai_analysis_bp.route('/api/model-health')
+@login_required
+def api_model_health():
+    """G3：显式健康检查；force=1 跳过缓存立即探测。"""
+    force = request.args.get('force') in ('1', 'true', 'yes')
+    return jsonify({'success': True, 'health': ai.check_model_health(force=force)})
 
 
 @ai_analysis_bp.route('/api/analyze-one/<table>/<int:rid>', methods=['POST'])
@@ -288,6 +355,14 @@ def api_analyze_one(table, rid):
         if not (r['detail_content'] or '').strip():
             return jsonify({'success': False,
                             'message': '该记录还没有正文，请先抓取详情页正文'}), 400
+        # G3：同步单条接口不能为主机关机空等 AI_TIMEOUT(180s)
+        health = ai.check_model_health(force=True)
+        if not health['reachable']:
+            return jsonify({
+                'success': False,
+                'message': '模型主机关机，单条分析未执行（%s）' % health['message'],
+                'model_status': health,
+            }), 503
         result, err = ai.analyze_and_save(t, rid)
         if result is None:
             return jsonify({'success': False, 'message': err or '分析失败'}), 500
@@ -381,3 +456,74 @@ def api_fetch_detail():
     return jsonify({'success': True,
                     'message': f'已启动正文抓取（{",".join(tables)}，仅当日发布且标题命中关键词，最多 {limit} 条/表）',
                     'log': str(log_path)})
+
+
+@ai_analysis_bp.route('/api/upload-source/<int:analysis_id>', methods=['POST'])
+@require_auth_write
+def api_upload_source(analysis_id):
+    """G2：人工上传公告正文/附件，只把解析文本追加进 analysis_content。
+
+    不调用模型、不抓外网、不落盘原件 —— 模型主机关机期间唯一可用输入。
+    """
+    import logging
+
+    upload = request.files.get('file')
+    if upload is None:
+        return jsonify({'success': False, 'message': '请选择文件'}), 400
+    filename = _safe_filename(upload.filename)
+    body = upload.read(MAX_UPLOAD_BYTES + 1)
+    if not body:
+        return jsonify({'success': False, 'message': '文件为空'}), 400
+    if len(body) > MAX_UPLOAD_BYTES:
+        return jsonify({'success': False, 'message': '文件超过 20 MB 上限'}), 413
+
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT analysis_content FROM analysis_projects WHERE id = %s",
+                    (analysis_id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'success': False, 'message': '分析记录不存在'}), 404
+
+        text, kind = _bytes_to_text(body, filename)
+        if kind == 'unsupported':
+            return jsonify({'success': False,
+                            'message': '不支持的文件格式（仅 PDF / Word / Excel / 纯文本）'}), 400
+        if not text.strip():
+            return jsonify({'success': False,
+                            'message': '未能提取文本（扫描件需 OCR，当前不支持）'}), 400
+
+        existing = row.get('analysis_content') or ''
+        merged = bridge.append_uploaded_text(existing, text, filename)
+        cur.execute(
+            "UPDATE analysis_projects SET analysis_content = %s, operator = %s, "
+            "updated_time = NOW() WHERE id = %s",
+            (merged, getattr(request, 'auth_user', None) or '人工上传', analysis_id))
+        conn.commit()
+
+        combined = len(text.encode('utf-8')) + len(existing.encode('utf-8'))
+        return jsonify({
+            'success': True,
+            'message': '附件解析文本已追加到分析结论',
+            'data': {
+                'filename': filename,
+                'kind': kind,
+                'extracted_chars': len(text),
+                'stored_bytes': len(merged.encode('utf-8')),
+                'truncated': combined > bridge.MAX_CONTENT_BYTES,
+            },
+        })
+    except RuntimeError as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    except Exception as e:
+        logging.getLogger(__name__).exception('G2 upload-source failed: %s', analysis_id)
+        return jsonify({'success': False,
+                        'message': '上传解析失败: %s' % type(e).__name__}), 500
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()

@@ -1,7 +1,8 @@
-# G1 / G2 / G3 实现规格（实现前评审稿）
+# G1 / G2 / G3 实现规格（v3 已实现）
 
 - 日期：2026-11-15
-- 状态：**实现规格，待评审；本文不含任何可执行的 Python / JS / SQL 实现代码**
+- 状态：**已实现**（G2 → G1 → G3），源码与测试在 worktree 分支；业务数据零改动。实现期实测发现与验收结果见 **§8**
+- v2 状态：实现规格，待评审，不含实现代码
 - 上位文档：`docs/AI_ANALYSIS_DESIGN_SPEC.md` v2.3（设计规格，含实测基线与风险表）
 - 前提：领导四项决策不变（① 正文+附件+人工上传 ② 内网本地、接口暂不通 ③ 复用 `analysis_content` ④ 转入分析时触发）
 - 本轮新增事实：Ollama **是主机关机、属预期停机**（非服务故障）；当前会话模型 `hy4free` 无本地 OpenAI 兼容端点
@@ -132,7 +133,7 @@
 - 不做模型版本 / 置信度 / 历史版本表；若要「AI 结果可回滚、可采纳」，需另开一轮设计。
 - 不做 OCR：扫描件 / 图片型 PDF 不在现有能力内。
 - 不实现详情页逐站抓取改造（现有 3 adapter 覆盖率待核，属设计规格 R8）。
-- **不写任何实现代码**。
+- ~~不写任何实现代码~~ —— v3 已解除，实现清单见 §8.1。
 
 ---
 
@@ -174,3 +175,57 @@
 - 另两张地区表各 20 条 AI 结果的字段覆盖率（本轮只统计了 `bidding_info` 的 20 条）。
 - 真实招标站点 PDF 附件（设计规格 §0.2 用的是 soffice 生成的中文样本）。
 - 主工作目录剩余 32 个变更的实现完成度与测试状态（本轮只做分类与脱敏扫描，未提交代码类改动）。
+
+---
+
+## 8. 实现结果 v3（2026-11-15，领导选「1 按 G2→G1→G3 开始实现」）
+
+### 8.1 改动清单
+
+| 文件 | 动作 |
+|---|---|
+| `app/services/analysis_bridge_service.py` | **新建**：反查 / 金额归一化 / 结论拼接 / 字节限长 / 追加（G1+G2 共用，可离线单测） |
+| `app/routes/focus.py` | 补 `require_auth_write`、同事务 `SAVEPOINT` 反查回填、独立异常降级、`finally` 关连接 |
+| `templates/focus.html` | 转单口令模态框 + `X-Access-Code` + 按 `ai_fill` 给结果提示 |
+| `app/routes/ai_analysis.py` | G2 上传接口 `/api/upload-source/<id>`；G3 健康检查接口、批量/单条前置探测与 503 |
+| `app/services/ai_analyzer_service.py` | G3 `check_model_health` / `classify_error` / 批量跳过与中途中止 / `model_status` |
+| `templates/analysis.html` | 上传入口 + 全部文本字段 `escapeHtml`、URL `safeHttpUrl`（A4） |
+| `templates/ai_analysis.html` | 停机 banner + 模型状态标签 |
+| `tools/fetch_detail_content.py` | `_doc_to_text` 的 LibreOffice profile 移入 `TemporaryDirectory` |
+| `tests/test_*.py` | 4 个文件 / **49 条** stdlib unittest（本机 pytest 不可用） |
+
+### 8.2 实现期实测发现（推翻规格 5 处假设）
+
+| # | 发现 | 证据 | 处置 |
+|---|---|---|---|
+| F1 | **G1 反查命中率 0** | `analysis_projects` 0/158、`focus_projects` 0/447；按 `detail_url`、按 (项目名, 发布日期) 均为 0 | 保留反查能力，页面显式提示「暂无 AI 结果」 |
+| F2 | 根因是**数据断层**不是逻辑错 | 主表 `publish_date` 11-10~11-14；focus 1-15~11-06；analysis 2-28~10-21；`detail_url` 重叠 0。`bidding_info` 同域名 ccgp-shandong 仍有 856 条 → **新关注项目可命中** | 不修数据，如实报命中率；不夸大 G1 效果 |
+| F3 | **跨表 collation 冲突** | analysis/focus `utf8mb4_general_ci` vs 三主表 `utf8mb4_unicode_ci`；跨表 `JOIN detail_url=` 报 **1267** | 改参数化单表查询（列 vs 字面量不冲突），表名走白名单 |
+| F4 | `project_source` 是地市名（"济宁市"/"苏州"/"省本级"），不是省份 | 只读 `GROUP BY project_source` | 取消「按表前缀分派」，三表逐个反查 + (项目名, 发布日期) 兜底 |
+| F5 | 补鉴权会废掉转单 | `focus.html:1072` 原请求不带 `X-Access-Code` | 前端同步加口令模态框（5 分钟缓存） |
+
+### 8.3 九条验收判据逐条结果
+
+| 判据 | 结果 | 证据 |
+|---|---|---|
+| A1 转单秒回、请求内不调模型 | PASS | 单测 `requests.post` 调用 0 次；SAVEPOINT 内仅本地 SELECT/UPDATE |
+| A2 唯一金额写入 / 多标段 NULL | PASS | `20万元`→`200000.00`；三标段 / 区间 / 详见 / 无单位一律 NULL |
+| A3 人工结论不被覆盖 | PASS | `test_manual_content_not_overwritten` + G2 追加语义 |
+| A4 AI 文本含标签不执行 | PASS | `analysis.html` 10 个文本字段全部 `escapeHtml`，URL 走 `safeHttpUrl`，模板编译通过 |
+| A5 单次写入 < 60,000 B | PASS | `truncate_utf8` 字节级截断 + 多条断言 |
+| A6 双门槛鉴权 | PASS | 真实 HTTP **401**（非 CSRF 400）+ 3 条装饰器单测 |
+| A7 中文 PDF 提取文本 | PASS | 36 KB 中文 PDF → 154 字，`汶上县` / `210000` 全命中 |
+| A8 关机不刷 `failed` | PASS | 真实探测 `unavailable`；批量整批跳过 / 中途中止，`save_analysis` 0 调用 |
+| A9 `agency` 不误填 `tenderer` | PASS | 单测断言 `tenderer == purchaser != agency` |
+
+`python -m unittest discover -s tests -v` → **49 tests OK**；真实 `create_app()` 启动成功、14 蓝图、4 条新路由、3 个模板编译通过。
+只读复核：三张主表 `failed` 全 0、`analysis_projects` 仍 158 行，**业务数据零改动**。
+
+### 8.4 没验成的 / 部署注意
+
+- 真实浏览器里的口令模态框交互、上传按钮点击未做 UI 实测（只验到路由、模板编译与 `url_for` 目标）。
+- 模型 `POST /v1/chat/completions` 成功响应仍未实测（主机仍关机）；G3 只验到不可达路径。
+- Word / Excel 的 `_doc_to_text` 未实测（本轮只测 PDF 与纯文本）。
+- **部署前必须**：`TMPDIR` 指向大分区（`/tmp` 是 10 MB tmpfs，大附件转换会失败）；worktree 分支需 ff 同步到 `optimization`，改动才在生产目录生效。
+- `analysis.html` 的 XSS 转义与主工作目录安全加固改动**同源但独立**，合并时会产生冲突，需人工对齐。
+- 本轮提交为本地 commit，**未 push**。

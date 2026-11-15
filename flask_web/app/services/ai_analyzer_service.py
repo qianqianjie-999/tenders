@@ -103,6 +103,71 @@ def ai_config() -> Dict[str, Any]:
     }
 
 
+# ----------------------------------------------------------------- G3 健康检查 / 错误分类
+_UNAVAILABLE_HINTS = (
+    'ConnectionError', 'ConnectTimeout', 'ReadTimeout', 'Timeout',
+    'ConnectionRefused', 'NameResolutionError', 'Max retries',
+    'NewConnectionError', 'ProtocolError', 'RemoteDisconnected',
+)
+_health_cache: Dict[str, Any] = {'at': 0.0, 'value': None}
+
+
+def _health_url() -> str:
+    """AI_BASE_URL 的 /v1 前缀换成 Ollama 的轻量 /api/tags 端点。"""
+    base = ai_config()['base_url']
+    return base.rsplit('/v1', 1)[0].rstrip('/') + '/api/tags'
+
+
+def check_model_health(force: bool = False, ttl: float = 60.0,
+                       timeout: float = 3.0) -> Dict[str, Any]:
+    """短超时探测模型主机；结果缓存 ttl 秒，避免页面每次请求都等 3 秒。
+
+    不新增配置项：探测超时是固定短值，批量分析仍用 AI_TIMEOUT。
+    """
+    now = time.time()
+    if (not force and _health_cache['value'] is not None
+            and now - _health_cache['at'] < ttl):
+        return dict(_health_cache['value'])
+
+    url = _health_url()
+    result: Dict[str, Any] = {
+        'reachable': False,
+        'status': 'unavailable',
+        'message': '',
+        'url': url,
+        'model': ai_config()['model'],
+        'checked_at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+    }
+    try:
+        resp = requests.get(url, timeout=timeout)
+        if resp.status_code < 400:
+            result.update(reachable=True, status='ok', message='模型服务在线')
+        else:
+            result.update(status='failed',
+                          message='健康检查 HTTP %s' % resp.status_code)
+    except Exception as e:
+        result['message'] = '模型主机关机或服务不可达（%s）' % type(e).__name__
+
+    _health_cache['at'] = now
+    _health_cache['value'] = result
+    try:
+        _set_state(model_status=result['status'])
+    except Exception:
+        pass
+    return dict(result)
+
+
+def classify_error(err: Optional[str]) -> str:
+    """unavailable（可重试，不写 failed） / bad_request / failed。"""
+    s = str(err or '')
+    if any(h in s for h in _UNAVAILABLE_HINTS):
+        return 'unavailable'
+    m = re.search(r'\b([45]\d{2})\b', s)
+    if m:
+        return 'bad_request' if m.group(1).startswith('4') else 'failed'
+    return 'failed'
+
+
 # ----------------------------------------------------------------- 解析
 _FENCE_RE = re.compile(r'^```(?:json)?\s*|\s*```$', re.IGNORECASE)
 
@@ -702,6 +767,7 @@ _task_state: Dict[str, Any] = {
     'started_at': None,
     'finished_at': None,
     'message': '',
+    'model_status': 'unknown',
 }
 
 
@@ -722,6 +788,17 @@ def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
 
     today_only=True 只分析当日发布；keywords_only=True 只分析命中后台关键词的。
     """
+    # G3：开机探测。主机关机时整批跳过，一条 failed 都不写，
+    # 避免一次停机把全部 pending 污染成 failed（failed=0 掩盖停机的老问题）。
+    health = check_model_health()
+    if not health['reachable']:
+        _set_state(running=False, current='',
+                   finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                   message='模型主机关机，跳过本次批量；待分析记录保持 pending（%s）'
+                           % health['message'],
+                   model_status=health['status'])
+        return 0
+
     valid = [t for t in tables if t in VALID_TABLES]
     for t in valid:
         ensure_columns(t)
@@ -741,16 +818,23 @@ def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
 
     _set_state(running=True, total=total, done=0, ok=0, failed=0, deep_ok=0, current='',
                started_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-               finished_at=None, message='开始分析')
+               finished_at=None, message='开始分析', model_status='ok')
 
     ok_cnt = 0
     fail_cnt = 0
     deep_cnt = 0
+    aborted = False
     for t, rows in rows_by_table.items():
         for r in rows:
             _set_state(current=f"{t}#{r['id']} {r['project_name'][:40]}")
             content = r.get('detail_content') or ''
             result, err = analyze_text(r['project_name'], content)
+            # G3：运行中途主机不可达 -> 立即中止，剩余记录保持 pending
+            if result is None and classify_error(err) == 'unavailable':
+                _set_state(message='模型服务不可达，中止批量；未处理记录保持 pending',
+                           model_status='unavailable')
+                aborted = True
+                break
             # 命中后台关键词 -> 追加深入分析（资格/评分 vs 我方资质）
             if result is not None:
                 matched = match_keywords(f"{r['project_name']}\n{content[:4000]}", keywords)
@@ -774,6 +858,14 @@ def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
             _set_state(done=ok_cnt + fail_cnt, ok=ok_cnt, failed=fail_cnt, deep_ok=deep_cnt)
             # 本地 27B 模型连续跑，留一点喘息
             time.sleep(0.3)
+        if aborted:
+            break
+
+    if aborted:
+        _set_state(running=False, current='',
+                   finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                   message='已中止：模型主机关机，成功 %d 条，其余保持 pending' % ok_cnt)
+        return ok_cnt
 
     _set_state(running=False, current='',
                finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),

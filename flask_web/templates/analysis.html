@@ -706,16 +706,64 @@
         </div>
     </div>
 
+    <!-- 人工上传附件（G2）：只保存解析文本，不落盘原件 -->
+    <div class="modal fade" id="uploadModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-file-upload me-2"></i>上传公告附件</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">
+                        支持 PDF / Word / Excel / 纯文本。系统只把解析出的文本追加到「标书分析情况」，
+                        不保存原件；模型主机关机期间仍可使用。扫描件需 OCR，当前不支持。
+                    </p>
+                    <input type="file" class="form-control" id="upload-file"
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
+                    <div id="upload-status" class="small mt-3"></div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary-gradient" onclick="submitUpload()">
+                        <i class="fas fa-upload me-2"></i>解析并追加
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 隐藏字段 -->
     <input type="hidden" id="current-action" value="">
     <input type="hidden" id="convert-id" value="">
+    <input type="hidden" id="upload-id" value="">
 
     <script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 
     <script>
+        // AI 生成文本会进入 analysis_content，必须先转义再插入模板字符串（A4）
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+
+        function safeHttpUrl(value) {
+            if (!value) return '';
+            try {
+                const url = new URL(value, window.location.origin);
+                return ['http:', 'https:'].includes(url.protocol)
+                    ? escapeHtml(url.href)
+                    : '';
+            } catch (error) {
+                return '';
+            }
+        }
+
         const API_BASE = "{{ url_for('analysis.api_list') }}".replace('/list', '');
         const BIDDING_API_BASE = "{{ url_for('bidding.api_list') }}".replace('/list', '');
+        const AI_UPLOAD_API = "{{ url_for('ai_analysis.api_stats') }}".replace('/api/stats', '/api/upload-source');
         let currentPage = 1;
         let currentEditId = null;
         let verifiedCode = null;
@@ -788,8 +836,18 @@
             }
 
             data.forEach(item => {
-                const decisionClass = item.decision;
-                const decisionText = item.decision_text;
+                // 后端内容（含 AI 回填文本）必须先转义，再进入模板字符串
+                const projectName = escapeHtml(item.project_name);
+                const projectSource = escapeHtml(item.project_source);
+                const publishDate = escapeHtml(item.publish_date);
+                const bidOpenDate = escapeHtml(item.bid_open_date || '待定');
+                const tenderer = escapeHtml(item.tenderer || '');
+                const operator = escapeHtml(item.operator || '');
+                const decisionReason = escapeHtml(item.decision_reason || '');
+                const analysisContent = escapeHtml(item.analysis_content || '');
+                const detailUrl = safeHttpUrl(item.detail_url);
+                const decisionClass = escapeHtml(item.decision);
+                const decisionText = escapeHtml(item.decision_text);
 
                 const priceDisplay = item.control_price ?
                     `<span class="price-tag">¥${item.control_price.toFixed(2)}万</span>` :
@@ -804,6 +862,9 @@
                     `;
                 }
                 actionButtons += `
+                    <button class="btn-action btn-outline-custom w-100 mb-2 justify-content-center" onclick="openUpload(${item.id})" title="上传公告附件并追加解析文本">
+                        <i class="fas fa-file-upload"></i> 上传附件
+                    </button>
                     <button class="btn-action btn-edit w-100" onclick="openEdit(${item.id})">
                         <i class="fas fa-edit"></i> 编辑分析
                     </button>
@@ -813,46 +874,46 @@
                     <div class="project-card decision-${decisionClass}">
                         <div class="row align-items-start">
                             <div class="col-lg-8 mb-3 mb-lg-0">
-                                <div class="project-title">${item.project_name}</div>
+                                <div class="project-title">${projectName}</div>
                                 <div class="mb-2 mt-2">
                                     <div class="meta-item">
                                         <i class="fas fa-building"></i>
-                                        <span>${item.project_source}</span>
+                                        <span>${projectSource}</span>
                                     </div>
                                     <div class="meta-item">
                                         <i class="fas fa-calendar"></i>
-                                        <span>发布: ${item.publish_date}</span>
+                                        <span>发布: ${publishDate}</span>
                                     </div>
                                     <div class="meta-item">
                                         <i class="fas fa-gavel"></i>
-                                        <span>开标: ${item.bid_open_date || '待定'}</span>
+                                        <span>开标: ${bidOpenDate}</span>
                                     </div>
                                 </div>
                                 <div class="d-flex align-items-center flex-wrap gap-2">
                                     <span class="decision-badge decision-${decisionClass}">${decisionText}</span>
-                                    ${item.tenderer ? `<span class="badge bg-light text-dark border"><i class="fas fa-user me-1"></i>${item.tenderer}</span>` : ''}
-                                    ${item.operator ? `<span class="badge bg-light text-dark border"><i class="fas fa-user-edit me-1"></i>${item.operator}</span>` : ''}
+                                    ${tenderer ? `<span class="badge bg-light text-dark border"><i class="fas fa-user me-1"></i>${tenderer}</span>` : ''}
+                                    ${operator ? `<span class="badge bg-light text-dark border"><i class="fas fa-user-edit me-1"></i>${operator}</span>` : ''}
                                 </div>
-                                ${item.decision_reason ? `
+                                ${decisionReason ? `
                                     <div class="remark-box">
                                         <i class="fas fa-comment-alt me-1 text-primary"></i>
-                                        ${item.decision_reason}
+                                        ${decisionReason}
                                     </div>
                                 ` : ''}
-                                ${item.analysis_content ? `
+                                ${analysisContent ? `
                                     <div class="analysis-box">
-                                        <span class="analysis-label">标书分析情况：</span>${item.analysis_content}
+                                        <span class="analysis-label">标书分析情况：</span>${analysisContent}
                                     </div>
                                 ` : ''}
                             </div>
                             <div class="col-lg-2 text-center mb-3 mb-lg-0">
                                 <div class="mb-2 text-muted small fw-bold">招标控制价</div>
                                 <div class="mb-2">${priceDisplay}</div>
-                                ${item.operator ? `<div class="small text-muted"><i class="fas fa-user-edit me-1"></i>操作人: ${item.operator}</div>` : ''}
+                                ${operator ? `<div class="small text-muted"><i class="fas fa-user-edit me-1"></i>操作人: ${operator}</div>` : ''}
                             </div>
                             <div class="col-lg-2 ps-lg-3">
-                                ${item.detail_url ? `
-                                    <a href="${item.detail_url}" target="_blank" class="btn-action btn-outline-custom w-100 mb-2 justify-content-center">
+                                ${detailUrl ? `
+                                    <a href="${detailUrl}" target="_blank" rel="noopener noreferrer" class="btn-action btn-outline-custom w-100 mb-2 justify-content-center">
                                         <i class="fas fa-external-link-alt"></i> 查看原文
                                     </a>
                                 ` : ''}
@@ -909,6 +970,70 @@
                 $('html, body').animate({ scrollTop: 0 }, 300);
             }
             return false;
+        }
+
+        // G2：人工上传附件（模型关机期唯一可用输入）。复用 5 分钟内的口令缓存。
+        function openUpload(id) {
+            $('#upload-id').val(id);
+            $('#upload-file').val('');
+            $('#upload-status').text('').removeClass('text-danger');
+
+            if (verifiedCode && window.lastVerifyTime && (Date.now() - window.lastVerifyTime < 300000)) {
+                $('#uploadModal').modal('show');
+                return;
+            }
+            $('#current-action').val('upload');
+            $('#code-hint').text('请输入访问口令以上传附件');
+            $('#access-code').val('');
+            $('#code-error').hide();
+            $('#codeModal').modal('show');
+            setTimeout(() => $('#access-code').focus(), 500);
+        }
+
+        function submitUpload() {
+            const id = $('#upload-id').val();
+            const fileEl = $('#upload-file')[0];
+            const file = fileEl && fileEl.files ? fileEl.files[0] : null;
+            if (!file) {
+                $('#upload-status').text('请先选择文件').addClass('text-danger');
+                return;
+            }
+            const fd = new FormData();
+            fd.append('file', file);
+            $('#upload-status').removeClass('text-danger').text('正在解析，请稍候...');
+
+            $.ajax({
+                url: AI_UPLOAD_API + '/' + id,
+                method: 'POST',
+                data: fd,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-Access-Code': verifiedCode,
+                    'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(res) {
+                    if (res.success) {
+                        $('#uploadModal').modal('hide');
+                        const d = res.data || {};
+                        showToast('已追加 ' + (d.extracted_chars || 0) + ' 字解析文本'
+                                  + (d.truncated ? '（超出上限已截断）' : ''), 'success');
+                        loadData(currentPage);
+                    } else {
+                        $('#upload-status').text(res.message || '上传失败').addClass('text-danger');
+                    }
+                },
+                error: function(xhr) {
+                    let msg = '上传失败，请重试';
+                    if (xhr.status === 401) {
+                        msg = '口令失效，请重新验证';
+                        verifiedCode = null;
+                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    $('#upload-status').text(msg).addClass('text-danger');
+                }
+            });
         }
 
         function openEdit(id) {
@@ -1008,6 +1133,8 @@
 
                         if (action === 'convert' && convertId) {
                             doConvert(convertId);
+                        } else if (action === 'upload') {
+                            $('#uploadModal').modal('show');
                         } else {
                             loadDetailAndShow();
                         }

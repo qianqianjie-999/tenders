@@ -134,6 +134,12 @@
 </div>
 
 <div class="container pb-5">
+    <!-- G3：模型主机停机提示（默认隐藏） -->
+    <div id="modelAlert" class="alert alert-warning mt-3 mb-0" style="display:none;" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <span id="modelAlertText"></span>
+    </div>
+
     <!-- 统计 -->
     <div class="row g-3 mb-2" id="statsRow"></div>
 
@@ -331,6 +337,24 @@
         try {
             const res = await api('/ai-analysis/api/stats');
             $('modelLabel').textContent = '本地模型：' + res.model;
+            // G3：让停机可见，不再靠 failed=0 掩盖
+            const ms = res.model_status || {};
+            const alertBox = $('modelAlert');
+            if (ms.reachable === false) {
+                $('modelAlertText').textContent =
+                    '模型主机关机 / 服务不可达，批量分析已暂停，待分析记录保持 pending。'
+                    + (ms.message ? '（' + ms.message + '）' : '')
+                    + ' 人工上传附件仍可使用。';
+                alertBox.className = 'alert alert-warning mt-3 mb-0';
+                alertBox.style.display = 'block';
+                $('modelLabel').textContent = '本地模型：' + res.model + '（离线）';
+            } else if (ms.status === 'failed') {
+                $('modelAlertText').textContent = '模型服务响应异常：' + (ms.message || '请检查服务');
+                alertBox.className = 'alert alert-danger mt-3 mb-0';
+                alertBox.style.display = 'block';
+            } else {
+                alertBox.style.display = 'none';
+            }
             const html = Object.keys(res.data).map(t => {
                 const d = res.data[t];
                 return `<div class="col-12 col-md-4">

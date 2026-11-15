@@ -681,6 +681,29 @@
         </div>
     </div>
 </div>
+    <!-- 转入分析前的安全验证（G1：转单接口已补登录 + 访问口令双门槛） -->
+    <div class="modal fade" id="transferCodeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-lock me-2"></i>安全验证</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <p class="text-muted small">转入分析需同时满足「已登录 + 访问口令」</p>
+                    <input type="password" class="form-control" id="transfer-code"
+                           placeholder="访问口令" maxlength="20">
+                    <div id="transfer-code-error" class="text-danger small mt-2"
+                         style="display:none;">口令错误，请重试</div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="verifyTransferCode()">验证</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 脚本 -->
     <script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
@@ -689,6 +712,12 @@
         // API基础路径
         const FOCUS_API = "{{ url_for('focus.api_list') }}".replace('/list', '');
         // ⭐ FIXED: 移除未使用的 ANALYSIS_API
+
+        // G1：转单接口补了 require_auth_write，前端必须带访问口令（5 分钟内复用）
+        const TRANSFER_VERIFY_API = "{{ url_for('analysis.verify_access_code') }}";
+        let transferVerifiedCode = null;
+        let transferVerifyTime = 0;
+        let pendingTransfer = null;
 
         let currentPage = 1;
         let currentFocusId = null;
@@ -1063,7 +1092,50 @@ function confirmDelete() {
         // ⭐ FIXED: 修复 event 未定义 + 按钮状态未恢复 + XSS 转义
         function moveToAnalysis(btn, projectId) {
             if (!confirm('确定要将该项目转入"分析标书"模块吗？\n\n转入后：\n1. 项目将存入分析标书列表\n2. 可在分析标书页面继续处理')) return;
+            pendingTransfer = { btn: btn, id: projectId };
+            ensureTransferCode();
+        }
 
+        function ensureTransferCode() {
+            if (transferVerifiedCode && (Date.now() - transferVerifyTime < 300000)) {
+                doMoveToAnalysis(pendingTransfer.btn, pendingTransfer.id);
+                return;
+            }
+            $('#transfer-code').val('');
+            $('#transfer-code-error').hide();
+            $('#transferCodeModal').modal('show');
+            setTimeout(() => $('#transfer-code').focus(), 500);
+        }
+
+        function verifyTransferCode() {
+            const code = $('#transfer-code').val().trim();
+            if (!code) {
+                $('#transfer-code-error').show();
+                return;
+            }
+            $.ajax({
+                url: TRANSFER_VERIFY_API,
+                method: 'POST',
+                contentType: 'application/json',
+                headers: { 'X-CSRFToken': $('meta[name="csrf-token"]').attr('content') },
+                data: JSON.stringify({ access_code: code }),
+                success: function(res) {
+                    if (res.success) {
+                        transferVerifiedCode = code;
+                        transferVerifyTime = Date.now();
+                        $('#transferCodeModal').modal('hide');
+                        doMoveToAnalysis(pendingTransfer.btn, pendingTransfer.id);
+                    } else {
+                        $('#transfer-code-error').show();
+                    }
+                },
+                error: function() {
+                    $('#transfer-code-error').text('验证失败，请重试').show();
+                }
+            });
+        }
+
+        function doMoveToAnalysis(btn, projectId) {
             const originalHtml = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
             btn.disabled = true;
@@ -1072,6 +1144,7 @@ function confirmDelete() {
                 url: `${FOCUS_API}/move-to-analysis`,
                 method: 'POST',
                 headers: {
+                    'X-Access-Code': transferVerifiedCode,
                     'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
                 },
                 contentType: 'application/json',
@@ -1082,7 +1155,12 @@ function confirmDelete() {
                 success: function(response) {
                     if (response.success) {
                         loadFocusData(currentPage);
-                        showToast('已成功转入分析标书模块', 'success');
+                        const fill = response.ai_fill || {};
+                        if (fill.filled) {
+                            showToast('已转入，并自动回填 AI 分析结果', 'success');
+                        } else {
+                            showToast('已转入；暂无 AI 结果（该公告未分析或早于 AI 数据起始日）', 'warning');
+                        }
                     } else {
                         // 如果项目已存在，显示友好提示
                         if (response.message && (response.message.includes('已在分析标书列表中') || response.message.includes('已存在'))) {
@@ -1093,7 +1171,10 @@ function confirmDelete() {
                     }
                 },
                 error: function(xhr) {
-                    if (xhr.status === 404) {
+                    if (xhr.status === 401) {
+                        transferVerifiedCode = null;
+                        showToast('登录状态或访问口令失效，请重新验证', 'error');
+                    } else if (xhr.status === 404) {
                         showToast('分析标书模块接口尚未开发，请联系管理员', 'error');
                     } else if (xhr.status === 400) {
                         try {

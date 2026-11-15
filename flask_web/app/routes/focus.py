@@ -2,8 +2,11 @@ from flask import Blueprint, render_template, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app.services.focus_service import FocusService
 from app.services.user_service import UserService
+from app.services import analysis_bridge_service as bridge
+from app.services import ai_analyzer_service as ai_service
 from app.utils.helpers import format_date_for_display
 from app.extensions import get_db_connection
+from app.decorators import require_auth_write
 
 focus_bp = Blueprint('focus', __name__, url_prefix='/focus')
 
@@ -175,9 +178,17 @@ def api_check():
 
 
 @focus_bp.route('/api/move-to-analysis', methods=['POST'])
+@require_auth_write
 def api_move_to_analysis():
-    """将关注项目转入分析标书表（默认复制模式，保留原记录）"""
+    """将关注项目转入分析标书表（默认复制模式，保留原记录）。
 
+    G1：同一事务内按 detail_url 反查已落库的 ai_analysis JSON 并回填
+    control_price / bid_open_date / tenderer / analysis_content。
+    回填用 SAVEPOINT 做独立异常边界：解析或写库失败只降级为空值，
+    不影响转单本身；请求内不抓正文、不下附件、不调用模型。
+    """
+    conn = None
+    cursor = None
     try:
         from datetime import datetime
 
@@ -200,17 +211,15 @@ def api_move_to_analysis():
         focus = cursor.fetchone()
 
         if not focus:
-            cursor.close()
             return jsonify({'success': False, 'message': '原关注记录不存在'}), 404
 
         # 2. 检查是否已存在于分析表（避免重复）
         cursor.execute("""
-            SELECT id FROM analysis_projects 
+            SELECT id FROM analysis_projects
             WHERE project_name = %s AND publish_date = %s AND project_source = %s
         """, (focus['project_name'], focus['publish_date'], focus['project_source']))
 
         if cursor.fetchone():
-            cursor.close()
             return jsonify({
                 'success': False,
                 'message': '该项目已在分析标书列表中'
@@ -218,8 +227,8 @@ def api_move_to_analysis():
 
         # 3. 插入到分析标书表
         cursor.execute("""
-            INSERT INTO analysis_projects 
-            (project_name, publish_date, project_source, project_category, detail_url, 
+            INSERT INTO analysis_projects
+            (project_name, publish_date, project_source, project_category, detail_url,
              focus_id, import_time, decision, operator, created_time)
             VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending', '系统导入', NOW())
         """, (
@@ -234,26 +243,50 @@ def api_move_to_analysis():
 
         analysis_id = cursor.lastrowid
 
-        # 4. 根据参数决定是否删除原记录（默认保留）
+        # 4. G1 AI 回填：独立异常边界，失败不拖垮转单
+        ai_fill = {'filled': False, 'reason': 'not_attempted'}
+        cursor.execute('SAVEPOINT ai_fill')
+        try:
+            ai_fill = bridge.fill_from_ai(
+                cursor,
+                analysis_id,
+                focus.get('detail_url'),
+                project_name=focus.get('project_name'),
+                publish_date=focus.get('publish_date'),
+                model=ai_service.ai_config().get('model', ''),
+            )
+            cursor.execute('RELEASE SAVEPOINT ai_fill')
+        except Exception as ae:
+            cursor.execute('ROLLBACK TO SAVEPOINT ai_fill')
+            ai_fill = {'filled': False, 'reason': 'fill_error'}
+            current_app.logger.warning(
+                'G1 AI fill failed: focus_id=%s analysis_id=%s err=%s',
+                focus_id, analysis_id, ae)
+
+        # 5. 根据参数决定是否删除原记录（默认保留）
         action_msg = '已复制到分析标书模块（原项目仍保留在关注列表）'
         if remove_from_focus:
             cursor.execute("DELETE FROM focus_projects WHERE id = %s", (focus_id,))
             action_msg = '已移动到分析标书模块（已从关注列表移除）'
 
         conn.commit()
-        cursor.close()
 
         return jsonify({
             'success': True,
             'message': action_msg,
             'analysis_id': analysis_id,
-            'retained_in_focus': not remove_from_focus
+            'retained_in_focus': not remove_from_focus,
+            'ai_fill': ai_fill,
         })
 
     except Exception as e:
-        import traceback
-        current_app.logger.error(f"转入分析标书失败: {str(e)}")
+        current_app.logger.error('转入分析标书失败: %s', e)
         return jsonify({'success': False, 'message': '服务器内部错误'}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 
 @focus_bp.route('/api/count')

@@ -376,7 +376,10 @@ def _doc_to_text(content: bytes, suffix: str) -> str:
         src = os.path.join(td, 'src' + suffix)
         with open(src, 'wb') as f:
             f.write(content)
-        prof = f'file:///tmp/lo_prof_{uuid.uuid4().hex[:8]}'
+        # profile 必须跟随 TemporaryDirectory：原先写死 /tmp/lo_prof_* 会落在
+        # 本机 10MB tmpfs，大附件转换直接失败。部署侧把 TMPDIR 指向大分区即可，
+        # tempfile 会自动使用该目录，无需新增配置项。
+        prof = 'file://' + os.path.join(td, 'lo_prof_%s' % uuid.uuid4().hex[:8])
         with _LO_LOCK:
             subprocess.run(
                 ['soffice', '--headless', f'-env:UserInstallation={prof}',
