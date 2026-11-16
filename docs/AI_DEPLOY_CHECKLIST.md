@@ -182,3 +182,48 @@ systemctl is-active tenders && journalctl -u tenders -n 3 --no-pager
 
 **本次备份留档**：`~/prod-dirty-2026-11-16-2200.patch`（63 KB）、`~/prod-untracked-bak-2026-11-16-2206/`、
 `~/env.bak-2026-11-16-2212`、`~/tenders.service.bak-2026-11-16-2213`。
+
+---
+
+## 11. 增量上线：批量自动补正文（2026-11-16 22:40，`52c94a4`）
+
+### 11.1 为什么改
+
+22:24 用户连点 4 次「开始 AI 分析」，全部 **0 秒完成、成功 0**。查明原因：
+`ai_analysis.html` 批量按钮**硬编码 `content_filter: 'has_content'`**，只分析已有正文的记录；
+当日有正文的 5 条早被验收单条 + 任务 1 消费完，于是候选恒为 0。界面只显示「完成：成功 0」，
+分不清「没数据」还是「坏了」。
+
+### 11.2 改了什么（5 files, +278/-35）
+
+| 文件 | 变更 |
+|---|---|
+| `app/services/ai_analyzer_service.py` | 新增 `auto_fetch_contents()`：按「日期内 + 标题命中关键词 + 无正文」调 `tools/fetch_detail_content.process_table()` 抓正文，3 workers，单表异常只跳过；`run_batch(auto_fetch=True)` 在分析前调用 |
+| 同上 | 0 候选不再只报「成功 0」，改为「没有需要分析的记录：<原因>（本次自动抓取正文 N 条，失败 M）；勾选「重新分析」可强制重跑」 |
+| `app/routes/ai_analysis.py` | `/api/analyze` 透传 `auto_fetch`（默认 True） |
+| `tools/ai_batch_runner.py` | 新增 `--no-auto-fetch`（默认自动），日志打印 `fetch=True/False` |
+| `templates/ai_analysis.html` | 删除「抓取详情正文」按钮及其 JS；提示改为「自动抓取当日命中关键词记录的正文后分析」 |
+| `tests/test_ai_auto_fetch.py` | 9 条：聚合计数/过滤参数/单表失败不阻塞/工具缺失降级/抓取先于挑选/0 候选文案/开关关闭/进程参数 |
+
+### 11.3 生产验证（task 7，limit=1/表）
+
+```
+[runner] 启动 task_id=7 ... today=True kw=True fetch=True
+[auto-fetch] bidding_info total=1 ok=1 fail=0
+[auto-fetch] jiangsu_bidding_info total=1 ok=1 fail=0
+[auto-fetch] zhejiang_bidding_info total=1 ok=1 fail=0
+[runner] 结束 50.4s ok=2 status=done message=完成：成功 2，失败 0，深入分析 2（本次自动抓取正文 3 条，失败 0）
+```
+单测：本地 106 条 OK、生产线分支 123 条 OK；生产模板 `btnFetch=0`、新提示 1 处。
+
+### 11.4 新发现：`systemctl restart` 会杀掉独立任务进程
+
+task 6（22:30 启动，60 条候选，已分析 18 条）在 22:40 部署重启时被中断：
+`start_new_session=True` 只脱离会话，**挡不住 systemd 按 cgroup 全杀**。
+任务行留在 `running` 直到 180 秒心跳超时才允许新任务启动（手动 `try_start` 会被拒）。
+
+- 运维规则：**重启服务前先查** `SELECT id,status,heartbeat_at FROM ai_batch_tasks WHERE status='running'`；
+  有活动任务就等它结束，或先 `UPDATE ... SET status='paused'` 明确记录后再重启。
+- 彻底解：用 `systemd-run --scope --unit=ai-batch-<id>` 拉起 runner，让它脱离 tenders.service 的 cgroup。
+  列为后续项，本次未做。
+- 本次已将 task 6 标为 `failed`，备注「部署重启（52c94a4）中断，已分析记录保留有效」；18 条 ok 结果有效。
