@@ -714,6 +714,24 @@
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 
     <script>
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+
+        function safeHttpUrl(value) {
+            if (!value) return '';
+            try {
+                const url = new URL(value, window.location.origin);
+                return ['http:', 'https:'].includes(url.protocol)
+                    ? escapeHtml(url.href)
+                    : '';
+            } catch (error) {
+                return '';
+            }
+        }
+
         const API_BASE = "{{ url_for('analysis.api_list') }}".replace('/list', '');
         const BIDDING_API_BASE = "{{ url_for('bidding.api_list') }}".replace('/list', '');
         let currentPage = 1;
@@ -788,8 +806,17 @@
             }
 
             data.forEach(item => {
-                const decisionClass = item.decision;
-                const decisionText = item.decision_text;
+                const projectName = escapeHtml(item.project_name);
+                const projectSource = escapeHtml(item.project_source);
+                const publishDate = escapeHtml(item.publish_date);
+                const bidOpenDate = escapeHtml(item.bid_open_date || '待定');
+                const tenderer = escapeHtml(item.tenderer || '');
+                const operator = escapeHtml(item.operator || '');
+                const decisionReason = escapeHtml(item.decision_reason || '');
+                const analysisContent = escapeHtml(item.analysis_content || '');
+                const detailUrl = safeHttpUrl(item.detail_url);
+                const decisionClass = escapeHtml(item.decision);
+                const decisionText = escapeHtml(item.decision_text);
 
                 const priceDisplay = item.control_price ?
                     `<span class="price-tag">¥${item.control_price.toFixed(2)}万</span>` :
@@ -813,46 +840,46 @@
                     <div class="project-card decision-${decisionClass}">
                         <div class="row align-items-start">
                             <div class="col-lg-8 mb-3 mb-lg-0">
-                                <div class="project-title">${item.project_name}</div>
+                                <div class="project-title">${projectName}</div>
                                 <div class="mb-2 mt-2">
                                     <div class="meta-item">
                                         <i class="fas fa-building"></i>
-                                        <span>${item.project_source}</span>
+                                        <span>${projectSource}</span>
                                     </div>
                                     <div class="meta-item">
                                         <i class="fas fa-calendar"></i>
-                                        <span>发布: ${item.publish_date}</span>
+                                        <span>发布: ${publishDate}</span>
                                     </div>
                                     <div class="meta-item">
                                         <i class="fas fa-gavel"></i>
-                                        <span>开标: ${item.bid_open_date || '待定'}</span>
+                                        <span>开标: ${bidOpenDate}</span>
                                     </div>
                                 </div>
                                 <div class="d-flex align-items-center flex-wrap gap-2">
                                     <span class="decision-badge decision-${decisionClass}">${decisionText}</span>
-                                    ${item.tenderer ? `<span class="badge bg-light text-dark border"><i class="fas fa-user me-1"></i>${item.tenderer}</span>` : ''}
-                                    ${item.operator ? `<span class="badge bg-light text-dark border"><i class="fas fa-user-edit me-1"></i>${item.operator}</span>` : ''}
+                                    ${tenderer ? `<span class="badge bg-light text-dark border"><i class="fas fa-user me-1"></i>${tenderer}</span>` : ''}
+                                    ${operator ? `<span class="badge bg-light text-dark border"><i class="fas fa-user-edit me-1"></i>${operator}</span>` : ''}
                                 </div>
                                 ${item.decision_reason ? `
                                     <div class="remark-box">
                                         <i class="fas fa-comment-alt me-1 text-primary"></i>
-                                        ${item.decision_reason}
+                                        ${decisionReason}
                                     </div>
                                 ` : ''}
                                 ${item.analysis_content ? `
                                     <div class="analysis-box">
-                                        <span class="analysis-label">标书分析情况：</span>${item.analysis_content}
+                                        <span class="analysis-label">标书分析情况：</span>${analysisContent}
                                     </div>
                                 ` : ''}
                             </div>
                             <div class="col-lg-2 text-center mb-3 mb-lg-0">
                                 <div class="mb-2 text-muted small fw-bold">招标控制价</div>
                                 <div class="mb-2">${priceDisplay}</div>
-                                ${item.operator ? `<div class="small text-muted"><i class="fas fa-user-edit me-1"></i>操作人: ${item.operator}</div>` : ''}
+                                ${operator ? `<div class="small text-muted"><i class="fas fa-user-edit me-1"></i>操作人: ${operator}</div>` : ''}
                             </div>
                             <div class="col-lg-2 ps-lg-3">
-                                ${item.detail_url ? `
-                                    <a href="${item.detail_url}" target="_blank" class="btn-action btn-outline-custom w-100 mb-2 justify-content-center">
+                                ${detailUrl ? `
+                                    <a href="${detailUrl}" target="_blank" rel="noopener noreferrer" class="btn-action btn-outline-custom w-100 mb-2 justify-content-center">
                                         <i class="fas fa-external-link-alt"></i> 查看原文
                                     </a>
                                 ` : ''}

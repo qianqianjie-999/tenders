@@ -21,10 +21,10 @@ class JiangsuPostSpider(scrapy.Spider):
     allowed_domains = ['jsggzy.jszwfw.gov.cn']
 
     # API 配置
-    API_URL = 'http://jsggzy.jszwfw.gov.cn/inteligentsearch/rest/esinteligentsearch/getFullTextDataNew'
+    API_URL = 'https://jsggzy.jszwfw.gov.cn/inteligentsearch/rest/esinteligentsearch/getFullTextDataNew'
 
     # 详情页基础 URL
-    DETAIL_BASE_URL = 'http://jsggzy.jszwfw.gov.cn'
+    DETAIL_BASE_URL = 'https://jsggzy.jszwfw.gov.cn'
     MAX_TIMEOUT_ERRORS = 100
 
     def __init__(self, target_date=None, *args, **kwargs):
@@ -189,8 +189,8 @@ class JiangsuPostSpider(scrapy.Spider):
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
                     ]),
-                    'Origin': 'http://jsggzy.jszwfw.gov.cn',
-                    'Referer': 'http://jsggzy.jszwfw.gov.cn/'
+                    'Origin': 'https://jsggzy.jszwfw.gov.cn',
+                    'Referer': 'https://jsggzy.jszwfw.gov.cn/'
                 },
                 callback=self.parse_api_response,
                 meta={
@@ -332,8 +332,8 @@ class JiangsuPostSpider(scrapy.Spider):
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
                     ]),
-                    'Origin': 'http://jsggzy.jszwfw.gov.cn',
-                    'Referer': 'http://jsggzy.jszwfw.gov.cn/'
+                    'Origin': 'https://jsggzy.jszwfw.gov.cn',
+                    'Referer': 'https://jsggzy.jszwfw.gov.cn/'
                 },
                 callback=self.parse_api_response,
                 meta={

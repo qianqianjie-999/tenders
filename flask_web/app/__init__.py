@@ -1,11 +1,13 @@
+import os
 import secrets
 
-from flask import Flask, request, session
+from flask import Flask, jsonify, redirect, request, session, url_for
 from flask_wtf.csrf import CSRFError
 from datetime import timedelta
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_login import current_user
 from app.config import Config
 from app.extensions import init_db_pool, csrf
 from app.routes.design import design_bp
@@ -49,6 +51,25 @@ def _rate_limit_exempt():
     return request.path.startswith('/static/')
 
 
+PUBLIC_ENDPOINTS = {
+    'auth.login',
+    'enhanced_monitor.health_check',
+    'static',
+}
+
+
+def _is_public_endpoint(endpoint):
+    return endpoint in PUBLIC_ENDPOINTS
+
+
+def _wants_json_response():
+    return (
+        request.path.startswith('/api/')
+        or '/api/' in request.path
+        or request.accept_mimetypes.best == 'application/json'
+    )
+
+
 # 初始化速率限制
 limiter = Limiter(
     key_func=_rate_limit_key,
@@ -73,9 +94,15 @@ def create_app():
     app.config['REMEMBER_COOKIE_DURATION'] = timedelta(hours=8)  # 记住我有效期 8 小时
     
     # 安全配置
-    app.config['SESSION_COOKIE_SECURE'] = False  # 内网使用HTTP，设为False
+    secure_cookies = os.environ.get(
+        'SESSION_COOKIE_SECURE', 'true'
+    ).lower() not in ('0', 'false', 'no')
+    app.config['SESSION_COOKIE_SECURE'] = secure_cookies
     app.config['SESSION_COOKIE_HTTPONLY'] = True  # 防止JavaScript访问cookie，减少XSS攻击的风险
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # 限制cookie的发送范围，防止CSRF攻击
+    app.config['REMEMBER_COOKIE_SECURE'] = secure_cookies
+    app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+    app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
     app.config['PREFERRED_URL_SCHEME'] = 'https'  # 外部访问使用HTTPS，设为https
 
     # 初始化扩展
@@ -127,6 +154,46 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(enhanced_monitor_bp)
 
+    @app.before_request
+    def require_authenticated_user():
+        """默认拒绝匿名访问，仅登录页、健康检查和静态资源公开。"""
+        if _is_public_endpoint(request.endpoint):
+            return None
+        if current_user.is_authenticated:
+            return None
+        if _wants_json_response():
+            return jsonify({
+                'success': False,
+                'message': '请先登录',
+                'need_auth': True,
+            }), 401
+        next_url = request.full_path if request.query_string else request.path
+        return redirect(url_for('auth.login', next=next_url))
+
+    @app.after_request
+    def apply_security_headers(response):
+        """为所有 Flask 响应增加浏览器侧安全边界。"""
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            "font-src 'self' data:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'self'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "object-src 'none'"
+        )
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response.headers['Permissions-Policy'] = (
+            'camera=(), microphone=(), geolocation=()'
+        )
+        response.headers['X-Permitted-Cross-Domain-Policies'] = 'none'
+        return response
+
     # 为分析模块的验证接口添加CSRF豁免
     from app.routes.analysis import verify_access_code
     csrf.exempt(verify_access_code)
@@ -135,19 +202,6 @@ def create_app():
     from app.routes.bidding import verify_access_code as bidding_verify_access_code
     csrf.exempt(bidding_verify_access_code)
     
-    # 为main模块的API接口添加CSRF豁免
-    from app.routes.main import api_keywords, api_keyword_detail
-    csrf.exempt(api_keywords)
-    csrf.exempt(api_keyword_detail)
-    
-    # 为focus模块的API接口添加CSRF豁免
-    from app.routes.focus import api_add, api_update, api_delete, api_add_track, api_move_to_analysis
-    csrf.exempt(api_add)
-    csrf.exempt(api_update)
-    csrf.exempt(api_delete)
-    csrf.exempt(api_add_track)
-    csrf.exempt(api_move_to_analysis)
-
     return app
 
 

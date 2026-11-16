@@ -2,11 +2,34 @@
 爬虫监控路由
 提供实时监控API和页面
 """
+import re
+
 from flask import Blueprint, render_template, jsonify, request
+from flask_login import current_user
 from app.services.monitor_service import MonitorService
-from app.extensions import csrf, get_db_connection
+from app.extensions import get_db_connection
 
 monitor_bp = Blueprint('monitor', __name__, url_prefix='/monitor')
+
+ALLOWED_SPIDERS = {
+    'jining_get',
+    'sd_post',
+    'jinan_post',
+    'taian_post',
+    'zibo_post',
+    'jiangsu_post',
+    'zhejiang_post',
+}
+
+
+@monitor_bp.before_request
+def require_monitor_admin():
+    """监控数据和进程控制仅允许管理员访问。"""
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': '请先登录'}), 401
+    if not current_user.is_administrator():
+        return jsonify({'success': False, 'message': '需要管理员权限'}), 403
+    return None
 
 
 @monitor_bp.route('/')
@@ -135,7 +158,6 @@ def api_spiders():
 
 
 @monitor_bp.route('/api/start', methods=['POST'])
-@csrf.exempt
 def api_start():
     """API: 启动爬虫"""
 
@@ -145,13 +167,22 @@ def api_start():
     
     spider_name = data['spider_name']
     args = data.get('args', [])
+    if spider_name not in ALLOWED_SPIDERS:
+        return jsonify({'success': False, 'message': '不允许的爬虫名称'}), 400
+    if not isinstance(args, list) or len(args) > 5:
+        return jsonify({'success': False, 'message': '启动参数格式错误'}), 400
+    if any(
+        not isinstance(arg, str)
+        or not re.fullmatch(r'target_date=\d{4}-\d{2}-\d{2}', arg)
+        for arg in args
+    ):
+        return jsonify({'success': False, 'message': '仅允许 target_date 参数'}), 400
     
     result = MonitorService.execute_spider(spider_name, args)
-    return jsonify(result)
+    return jsonify(result), 200 if result.get('success') else 400
 
 
 @monitor_bp.route('/api/stop', methods=['POST'])
-@csrf.exempt
 def api_stop():
     """API: 停止爬虫"""
 
@@ -161,7 +192,7 @@ def api_stop():
     
     pid = data['pid']
     result = MonitorService.stop_spider(pid)
-    return jsonify(result)
+    return jsonify(result), 200 if result.get('success') else 400
 
 
 @monitor_bp.route('/api/dashboard')

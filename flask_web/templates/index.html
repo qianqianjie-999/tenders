@@ -1580,6 +1580,23 @@
     <script src="{{ url_for('static', filename='js/bootstrap-datepicker.zh-CN.min.js') }}"></script>
 
     <script>
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value == null ? '' : String(value);
+        return div.innerHTML;
+    }
+
+    function safeHttpUrl(value) {
+        if (!value) return '';
+        try {
+            const url = new URL(value, window.location.origin);
+            return ['http:', 'https:'].includes(url.protocol)
+                ? escapeHtml(url.href)
+                : '';
+        } catch (error) {
+            return '';
+        }
+    }
 
         // 添加状态变量跟踪当前是单日期还是范围模式
 let currentDateFilter = {
@@ -2182,6 +2199,11 @@ function renderTable(data, pageSize) {
     data.forEach((item, index) => {
         const sequenceNumber = (currentPage - 1) * itemsPerPage + index + 1;
         const rowClass = item.is_highlighted ? 'highlight-row' : '';
+        const projectKey = escapeHtml(item.project_key || '');
+        const publishDate = escapeHtml(item.publish_date);
+        const projectSource = escapeHtml(item.project_source);
+        const projectCategory = escapeHtml(item.project_category || '未分类');
+        const detailUrl = safeHttpUrl(item.detail_url);
 
         const projectData = encodeURIComponent(JSON.stringify({
             project_name: item.original_name || item.project_name.replace(/<[^>]*>/g, ''),
@@ -2192,7 +2214,7 @@ function renderTable(data, pageSize) {
         }));
 
         html += `
-        <tr class="${rowClass}" data-project-key="${item.project_key || ''}">
+        <tr class="${rowClass}" data-project-key="${projectKey}">
             <td>${sequenceNumber}</td>
             <td>
                 <div class="d-flex align-items-start">
@@ -2200,16 +2222,16 @@ function renderTable(data, pageSize) {
                     ${item.has_keyword ? '<span class="badge bg-warning ms-2 category-badge">人工查阅</span>' : ''}
                 </div>
             </td>
-            <td>${item.publish_date}</td>
+            <td>${publishDate}</td>
             <td>
-                <span class="badge bg-info category-badge">${item.project_source}</span>
+                <span class="badge bg-info category-badge">${projectSource}</span>
             </td>
             <td>
-                <span class="badge bg-secondary category-badge">${item.project_category || '未分类'}</span>
+                <span class="badge bg-secondary category-badge">${projectCategory}</span>
             </td>
             <td>
-                ${item.detail_url ?
-                    `<a href="${item.detail_url}" target="_blank" class="detail-url" title="${item.detail_url}">
+                ${detailUrl ?
+                    `<a href="${detailUrl}" target="_blank" rel="noopener noreferrer" class="detail-url" title="${detailUrl}">
                         <i class="fas fa-external-link-alt me-1"></i>查看详情
                     </a>` :
                     '<span class="text-muted">无链接</span>'}
@@ -2408,6 +2430,10 @@ function renderKeywordProjectsTable(data) {
         const rowClass = item.is_highlighted ? 'highlight-row' : '';
         // 计算正确的序号（基于当前页）
         const sequenceNumber = (currentPage - 1) * pageSize + index + 1;
+        const publishDate = escapeHtml(item.publish_date);
+        const projectSource = escapeHtml(item.project_source);
+        const projectCategory = escapeHtml(item.project_category || '未分类');
+        const detailUrl = safeHttpUrl(item.detail_url);
 
         html += `
         <tr class="${rowClass}">
@@ -2418,16 +2444,16 @@ function renderKeywordProjectsTable(data) {
                     ${item.is_highlighted ? '<span class="badge bg-warning ms-2 category-badge">人工查阅</span>' : ''}
                 </div>
             </td>
-            <td>${item.publish_date}</td>
+            <td>${publishDate}</td>
             <td>
-                <span class="badge bg-info category-badge">${item.project_source}</span>
+                <span class="badge bg-info category-badge">${projectSource}</span>
             </td>
             <td>
-                <span class="badge bg-secondary category-badge">${item.project_category || '未分类'}</span>
+                <span class="badge bg-secondary category-badge">${projectCategory}</span>
             </td>
             <td>
-                ${item.detail_url ?
-                    `<a href="${item.detail_url}" target="_blank" class="detail-url" title="${item.detail_url}">
+                ${detailUrl ?
+                    `<a href="${detailUrl}" target="_blank" rel="noopener noreferrer" class="detail-url" title="${detailUrl}">
                         <i class="fas fa-external-link-alt me-1"></i>查看详情
                     </a>` :
                     '<span class="text-muted">无链接</span>'}

@@ -87,7 +87,7 @@ class SpiderMonitorDB:
                 'host': os.getenv('DB_HOST', 'localhost'),
                 'port': int(os.getenv('DB_PORT', 3306)),
                 'user': os.getenv('DB_USER', 'bidding_user'),
-                'password': os.getenv('DB_PASSWORD', 'your_password'),
+                'password': os.getenv('DB_PASSWORD', 'CHANGE_ME_SET_IN_ENV'),
                 'database': os.getenv('DB_NAME', 'bidding_db'),
                 'charset': 'utf8mb4',
                 'cursorclass': pymysql.cursors.DictCursor,
@@ -471,6 +471,30 @@ class SpiderMonitorDB:
                 
         except Exception as e:
             logger.error(f"[MonitorDB] 更新入库数量失败: {e}")
+            return False
+
+    def log_item(self, spider_name: str, item: Any, spider_run_id: int = None):
+        """
+        记录爬虫已抓取一条数据，用于运行过程中实时更新抓取数量。
+
+        实际入库数量由 Pipeline 通过 increment_items_stored 单独维护。
+        """
+        if spider_run_id is None:
+            spider_run_id = self.current_run_id
+        if not spider_run_id or not self._ensure_connection():
+            return False
+
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE spider_run_logs
+                    SET items_crawled = items_crawled + 1
+                    WHERE id = %s AND spider_name = %s
+                """, (spider_run_id, spider_name))
+                self.connection.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            logger.error(f"[MonitorDB] 记录抓取条目失败: {e}")
             return False
     
     def get_current_run_id(self) -> Optional[int]:

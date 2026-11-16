@@ -1433,7 +1433,10 @@
             try {
                 const response = await fetch("{{ url_for('monitor.api_start') }}", {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    },
                     body: JSON.stringify({
                         spider_name: currentSpider,
                         args: args ? args.split(' ') : []
@@ -1461,7 +1464,10 @@
             try {
                 const response = await fetch("{{ url_for('monitor.api_stop') }}", {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+                    },
                     body: JSON.stringify({ pid: pid })
                 });
                 

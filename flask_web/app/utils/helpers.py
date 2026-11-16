@@ -1,4 +1,5 @@
 from datetime import datetime, date
+import html
 import re
 from functools import wraps
 from flask import jsonify
@@ -23,14 +24,21 @@ def highlight_keywords(text: str, keywords: list) -> str:
     if not text:
         return text
 
-    filtered_keywords = [kw for kw in keywords if len(kw) >= 2]
+    text = html.escape(str(text), quote=True)
+
+    filtered_keywords = [
+        html.escape(str(kw), quote=True)
+        for kw in keywords
+        if len(str(kw)) >= 2
+    ]
     if not filtered_keywords:
         return text
 
     sorted_keywords = sorted(filtered_keywords, key=len, reverse=True)
 
     def replace_once(match):
-        return f'<span class="highlight-keyword" title="相关关键词: {match.group(0)}">{match.group(0)}</span>'
+        value = html.escape(match.group(0), quote=True)
+        return f'<span class="highlight-keyword" title="相关关键词: {value}">{value}</span>'
 
     pattern = '|'.join(re.escape(kw) for kw in sorted_keywords)
     text = re.sub(pattern, replace_once, text, flags=re.IGNORECASE)

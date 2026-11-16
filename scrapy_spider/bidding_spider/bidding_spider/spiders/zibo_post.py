@@ -22,10 +22,10 @@ class ZiboPostSpider(scrapy.Spider):
     allowed_domains = ['ggzyjy.zibo.gov.cn']
 
     # API基础URL
-    API_BASE_URL = 'http://ggzyjy.zibo.gov.cn:8082/EpointWebBuilder_zbggzy/rest/frontAppCustomAction/getPageInfoListNew'
+    API_BASE_URL = 'https://ggzyjy.zibo.gov.cn/EWB-FRONT/rest/frontAppCustomAction/getPageInfoListNew'
 
     # 详情页基础URL
-    DETAIL_BASE_URL = 'http://ggzyjy.zibo.gov.cn:8082/gonggongziyuan-content.html'
+    DETAIL_BASE_URL = 'https://ggzyjy.zibo.gov.cn'
 
     def __init__(self, target_date=None, *args, **kwargs):
         """
@@ -181,8 +181,8 @@ class ZiboPostSpider(scrapy.Spider):
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
                     ]),
-                    'Origin': 'http://ggzyjy.zibo.gov.cn:8082',
-                    'Referer': 'http://ggzyjy.zibo.gov.cn:8082/'
+                    'Origin': 'https://ggzyjy.zibo.gov.cn',
+                    'Referer': 'https://ggzyjy.zibo.gov.cn/'
                 },
                 callback=self.parse_api_response,
                 meta={
@@ -276,7 +276,12 @@ class ZiboPostSpider(scrapy.Spider):
                         relationguid = info.get('relationguid', '')
                         categorynum = info.get('categorynum', '')
 
-                        detail_url = f"{self.DETAIL_BASE_URL}?infoid={infoid}&relationguid={relationguid}&categorynum={categorynum}"
+                        detail_path = info.get('infourl', '')
+                        detail_url = (
+                            urljoin(f"{self.DETAIL_BASE_URL}/", detail_path)
+                            if detail_path
+                            else ''
+                        )
 
                         item['project_name'] = title
                         item['publish_date'] = publish_date
@@ -327,8 +332,8 @@ class ZiboPostSpider(scrapy.Spider):
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
                     ]),
-                    'Origin': 'http://ggzyjy.zibo.gov.cn:8082',
-                    'Referer': 'http://ggzyjy.zibo.gov.cn:8082/'
+                    'Origin': 'https://ggzyjy.zibo.gov.cn',
+                    'Referer': 'https://ggzyjy.zibo.gov.cn/'
                 },
                 callback=self.parse_api_response,
                 meta={

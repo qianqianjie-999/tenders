@@ -70,9 +70,9 @@ class MariaDBPipeline:
             'jiangsu_post': {
                 'condition': """
                 AND DATE(publish_date) = CURDATE()
-                AND detail_url LIKE 'http://jsggzy.jszwfw.gov.cn%'
+                AND detail_url LIKE 'https://jsggzy.jszwfw.gov.cn%'
                 """,
-                'description': "加载今日数据且域名符合'http://jsggzy.jszwfw.gov.cn'"
+                'description': "加载今日数据且域名符合'https://jsggzy.jszwfw.gov.cn'"
             },
             'zhejiang_post': {
                 'condition': """
@@ -379,7 +379,7 @@ class MariaDBPipeline:
                         logger.info(f"jining_get爬虫跳过非指定域名: {detail_url}")
                         return item
                 elif spider_name == 'jiangsu_post':
-                    if detail_url and 'http://jsggzy.jszwfw.gov.cn' not in detail_url:
+                    if detail_url and 'https://jsggzy.jszwfw.gov.cn' not in detail_url:
                         logger.info(f"jiangsu_post 爬虫跳过非指定域名：{detail_url}")
                         return item
                 elif spider_name == 'zhejiang_post':

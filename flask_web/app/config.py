@@ -76,8 +76,8 @@ class Config:
         '其他': []
     }
 
-    # 访问控制口令
-    ANALYSIS_ACCESS_CODE = os.environ.get('ANALYSIS_ACCESS_CODE', 'kwd12345')
+    # 访问控制口令。未配置时关闭口令通道，禁止使用代码内默认值。
+    ANALYSIS_ACCESS_CODE = (os.environ.get('ANALYSIS_ACCESS_CODE') or '').strip() or None
 
     # 2026-10-21：用户认证迁移至 bidding_db.users 表，USERS_CONFIG 已废弃
     # （init_users.py 可读取旧 .env 中的 USERS_CONFIG 做一次性迁移）
