@@ -1,0 +1,51 @@
+{
+  "checks": [
+    {
+      "name": "统计卡片渲染",
+      "ok": true,
+      "detail": "卡片数=3"
+    },
+    {
+      "name": "模型状态文案",
+      "ok": true,
+      "detail": "本地模型：qwen3.8:27b"
+    },
+    {
+      "name": "模型异常提示未误报",
+      "ok": true,
+      "detail": "alert可见=False"
+    },
+    {
+      "name": "列表有数据",
+      "ok": true,
+      "detail": "行数=20"
+    },
+    {
+      "name": "样式已生效(非裸HTML)",
+      "ok": true,
+      "detail": "btn radius=3.2px"
+    },
+    {
+      "name": "详情弹窗打开",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "弹窗内显示 AI 字段",
+      "ok": true,
+      "detail": "高速公路智能交通安全系统（一至五期）运维项目（2026年度）公开招标招标公告 公开招标 智能交通 相关性 10/10交通智能化监控 项目名称：高速公路智能交通安"
+    },
+    {
+      "name": "转单按钮存在",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "转单二次校验弹窗",
+      "ok": true,
+      "detail": "code输入框出现=True"
+    }
+  ],
+  "console_errors": [],
+  "failed_requests": []
+}

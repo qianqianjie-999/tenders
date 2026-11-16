@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 分析回填 · 成果快照</title>
+<style>
+  :root{
+    --ink:#1a1d21; --sub:#5b6470; --line:#e3e7ec; --bg:#f6f7f9;
+    --card:#ffffff; --accent:#1f6feb; --ok:#0b8a55; --warn:#b4530a; --bad:#c0392b;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:32px 20px 56px;background:var(--bg);color:var(--ink);
+       font-family:"Noto Sans CJK SC","Microsoft YaHei","PingFang SC",-apple-system,sans-serif;
+       font-size:14px;line-height:1.65;}
+  .wrap{max-width:980px;margin:0 auto;}
+  h1{font-size:23px;margin:0 0 6px;letter-spacing:-.2px;}
+  .meta{color:var(--sub);font-size:12.5px;margin-bottom:22px;}
+  h2{font-size:15px;margin:30px 0 12px;padding-left:9px;border-left:3px solid var(--accent);}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 6px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 14px 12px;}
+  .kpi .lab{color:var(--sub);font-size:12px;}
+  .kpi .val{font-size:25px;font-weight:600;letter-spacing:-.5px;margin-top:2px;}
+  .kpi .sub{color:var(--sub);font-size:11.5px;margin-top:1px;}
+  .kpi.up .val{color:var(--ok);}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px 0;overflow:hidden;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:9px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{background:#fafbfc;font-weight:600;color:var(--sub);font-size:12px;}
+  tr:last-child td{border-bottom:none;}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .tot td{background:#fafbfc;font-weight:600;}
+  .pct{font-weight:600;}
+  .pct.hi{color:var(--ok);}
+  code{background:#eef1f5;border-radius:4px;padding:1.5px 5px;font-size:12.3px;
+       font-family:"JetBrains Mono",Consolas,monospace;}
+  pre{background:#1d2126;color:#e6edf3;border-radius:8px;padding:13px 15px;overflow-x:auto;
+      font-size:12.3px;line-height:1.6;margin:10px 0 0;
+      font-family:"JetBrains Mono",Consolas,monospace;}
+  .note{background:#fff8e6;border:1px solid #f0dca8;border-radius:8px;padding:11px 14px;
+        font-size:12.8px;color:#6b4e12;margin-top:12px;}
+  .danger{background:#fdeceb;border-color:#f3c6c1;color:#7d2a20;}
+  .ok-note{background:#eaf7f0;border:1px solid #bfe3d0;color:#14563a;}
+  .entry{display:grid;grid-template-columns:26px 1fr;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);}
+  .entry:last-child{border-bottom:none;}
+  .entry .n{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;
+            font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:600;}
+  .entry .t{font-weight:600;}
+  .entry .d{color:var(--sub);font-size:12.5px;}
+  .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;
+       background:#eef1f5;color:var(--sub);margin-left:6px;vertical-align:1px;}
+  .tag.g{background:#e3f3ea;color:var(--ok);}
+  .sample{border-bottom:1px solid var(--line);padding:13px 14px;}
+  .sample:last-child{border-bottom:none;}
+  .sample .h{font-weight:600;font-size:13.2px;margin-bottom:7px;}
+  .sample .row{display:grid;grid-template-columns:88px 1fr;gap:8px;font-size:12.6px;margin:2.5px 0;}
+  .sample .k{color:var(--sub);}
+  footer{margin-top:30px;color:var(--sub);font-size:12px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>AI 分析回填 · 成果快照</h1>
+  <div class="meta">快照时间 2026-11-16 19:10 ｜ 数据源 MySQL 生产库 ｜ 回填任务运行中（18:46 启动） ｜ 本地 qwen3.8:27b</div>
+
+  <div class="kpis">
+    <div class="kpi up">
+      <div class="lab">有效 AI 结论</div>
+      <div class="val">130</div>
+      <div class="sub">基线 60 条，已 +70</div>
+    </div>
+    <div class="kpi up">
+      <div class="lab">真实覆盖率</div>
+      <div class="val">7.7%</div>
+      <div class="sub">基线 3.6%，翻倍</div>
+    </div>
+    <div class="kpi">
+      <div class="lab">失败记录</div>
+      <div class="val" style="color:var(--ok)">0</div>
+      <div class="sub">全程零 failed</div>
+    </div>
+    <div class="kpi">
+      <div class="lab">剩余待分析</div>
+      <div class="val" style="color:var(--warn)">651</div>
+      <div class="sub">后台持续消化中</div>
+    </div>
+  </div>
+
+  <h2>一、覆盖率现状（真实口径）</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>表</th><th class="num">总数</th><th class="num">有正文</th><th class="num">有效结论</th><th class="num">覆盖率</th><th class="num">源数据占位</th><th class="num">失败</th><th class="num">待分析</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>bidding_info</td><td class="num">1,013</td><td class="num">406</td><td class="num">84</td><td class="num pct hi">8.3%</td><td class="num">321</td><td class="num">0</td><td class="num">322</td></tr>
+        <tr><td>jiangsu_bidding_info</td><td class="num">194</td><td class="num">194</td><td class="num">23</td><td class="num pct hi">11.9%</td><td class="num">171</td><td class="num">0</td><td class="num">171</td></tr>
+        <tr><td>zhejiang_bidding_info</td><td class="num">481</td><td class="num">181</td><td class="num">23</td><td class="num pct hi">4.8%</td><td class="num">158</td><td class="num">0</td><td class="num">158</td></tr>
+        <tr class="tot"><td>合计</td><td class="num">1,688</td><td class="num">781</td><td class="num">130</td><td class="num pct hi">7.7%</td><td class="num">650</td><td class="num">0</td><td class="num">651</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <strong>口径修正（这是本轮最值钱的一条）：</strong>按「<code>ai_analysis</code> 字段非空」统计会得到 780 条 / 46.2%，
+    其中 <strong>650 条是 <code>{"source": {...}}</code> 爬虫元数据</strong>，不是 AI 结论。
+    真实口径 = <code>status='ok'</code> 且 JSON 含 <code>normalize_analysis</code> 字段，只有 130 条。
+    这个口径不修，所有进度判断都是假的。
+  </div>
+
+  <h2>二、怎么自己看（三个入口）</h2>
+  <div class="card">
+    <div class="entry">
+      <div class="n">1</div>
+      <div>
+        <div class="t">浏览器看实时页面 <span class="tag g">已启动</span></div>
+        <div class="d">
+          <code>http://127.0.0.1:5000/ai-analysis/</code>（未登录会跳登录页 <code>/auth/login</code>）<br>
+          账号 <code>admin</code> / <code>pm</code> / <code>yxd</code>，密码是系统原密码。<br>
+          页面顶部有模型健康状态，列表里每条能点开看 AI 抽出的预算、采购人、资质要求；进度条会随回填实时增长。
+        </div>
+      </div>
+    </div>
+    <div class="entry">
+      <div class="n">2</div>
+      <div>
+        <div class="t">命令行看数字</div>
+        <div class="d">一条命令出上面那张表 + G1 命中率 + 批量上限：</div>
+        <pre>cd /home/qianqianjie/WorkBuddy/Worktrees/tenders/optimization-9f749643
+HOME=/home/qianqianjie /home/qianqianjie/tenders/venv/bin/python tools/ai_coverage.py report</pre>
+      </div>
+    </div>
+    <div class="entry">
+      <div class="n">3</div>
+      <div>
+        <div class="t">日志看过程</div>
+        <div class="d"><code>/home/qianqianjie/mountSysdisk/ai_backfill_20261116.log</code> —— 每轮一条汇总，条级进度看库里 <code>ok</code> 数增长。</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>三、样本证据（本轮真实产出，非模拟）</h2>
+  <div class="card">
+    <div class="sample">
+      <div class="h">id=342 ｜ 烟台市芝罘区政法大楼附属办公楼装修改造项目</div>
+      <div class="row"><span class="k">采购人</span><span>烟台市公安局芝罘分局</span></div>
+      <div class="row"><span class="k">预算</span><span><strong>1384.82 万元</strong></span></div>
+      <div class="row"><span class="k">资质要求</span><span>建筑工程施工总承包二级及以上 + 安全生产许可证；项目经理需建筑专业二级及以上建造师及 B 证；不接受联合体；45% 合同份额面向中小企业（小微占 70%）</span></div>
+    </div>
+    <div class="sample">
+      <div class="h">id=341 ｜ 烟台市 2026–2027 年度互联网媒体广告监测服务采购</div>
+      <div class="row"><span class="k">采购人</span><span>烟台市市场监督管理局</span></div>
+      <div class="row"><span class="k">预算</span><span>15.07 万元 ｜ 截止 2026-11-25 14:00</span></div>
+      <div class="row"><span class="k">关键条款</span><span>专门面向中小企业、不接受大型企业；不接受联合体；电子标不见面开标</span></div>
+    </div>
+    <div class="sample">
+      <div class="h">id=343 ｜ 烟台市住建事业“十五五”发展规划编制</div>
+      <div class="row"><span class="k">采购人</span><span>烟台市住房和城乡建设局</span></div>
+      <div class="row"><span class="k">预算</span><span>150 万元 ｜ 公开招标 ｜ 截止 2026-12-03 09:00</span></div>
+      <div class="row"><span class="k">关键条款</span><span>面向中小微企业；无特定资质；<strong>接受联合体投标</strong>（与前两条相反，说明模型是真读正文而非套模板）</span></div>
+    </div>
+  </div>
+
+  <h2>四、本轮改了什么</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>文件</th><th>改动</th><th>为什么</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>flask_web/app/services/ai_analyzer_service.py</code></td>
+          <td>模型请求改用 <code>trust_env=False</code> 的 Session（3 处）</td>
+          <td>本机 <code>HTTP_PROXY</code> 会劫持 127.0.0.1 请求，模型明明开机也会被判 unavailable、批量永久跳过</td>
+        </tr>
+        <tr>
+          <td><code>tools/ai_coverage.py</code> <span class="tag">新增</span></td>
+          <td><code>report</code> 出真实覆盖率；<code>backfill</code> 跨轮循环跑，默认 dry-run，停机整批跳过不写 failed</td>
+          <td>后台默认 days=3 / 每表 20 条，651 条要 11 轮；且原口径无法判断真实进度</td>
+        </tr>
+        <tr>
+          <td><code>tests/test_ai_coverage.py</code> <span class="tag">新增</span></td>
+          <td>13 条测试：代理直连、结论结构判定、回填编排、停机安全</td>
+          <td>防回归；全套 62 条测试全绿</td>
+        </tr>
+        <tr>
+          <td><code>tests/test_g3_health.py</code></td>
+          <td>3 处 patch 目标同步到新 Session</td>
+          <td>连带改动，基线测试跟着改</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note ok-note">
+    停机安全性已实测：<code>backfill --execute</code> 在模型不可达时整批跳过，复核库内
+    <code>ok=20/20/20</code>、<code>pending=955/174/461</code>、<code>failed=0</code>，业务数据零改动。
+  </div>
+
+  <h2>五、还没做完的（说清不糊）</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>项</th><th>状态</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>651 条剩余回填</td><td><span class="tag">进行中</span></td><td>约 20–30 秒/条，长正文或触发 deep 分析时会到 3–6 分钟；23:15 已挂自动检查，跑完出最终表</td></tr>
+        <tr><td>G1 转单回填</td><td><span class="tag">数据断档</span></td><td>存量分析单 158 条是 2–10 月、主表是 11 月，日期完全不相交，命中率 0%。代码无 bug，扩覆盖率只对今后新转入有效</td></tr>
+        <tr><td>同步生产目录 + push</td><td><span class="tag">待点头</span></td><td>两个提交（<code>174b663</code>、<code>3956673</code>）仍在 worktree，未 push、未同步到 <code>/home/qianqianjie/tenders/</code></td></tr>
+        <tr><td>浏览器 UI 实测</td><td><span class="tag">未做</span></td><td>转入分析弹窗、上传附件、健康状态展示都还没在真实浏览器里点过</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note danger">
+    页面服务是为本次查看临时起的 <code>127.0.0.1:5000</code>，会议/查看结束后可关；生产部署仍走原有启动方式。
+  </div>
+
+  <footer>AI 分析回填成果快照 · 生成于 2026-11-16 19:10 · 数字为运行时快照，实时值以 <code>ai_coverage.py report</code> 或页面为准</footer>
+</div>
+</body>
+</html>

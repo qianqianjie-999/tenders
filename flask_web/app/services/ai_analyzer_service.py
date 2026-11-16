@@ -180,6 +180,51 @@ def classify_error(err: Optional[str]) -> str:
 _FENCE_RE = re.compile(r'^```(?:json)?\s*|\s*```$', re.IGNORECASE)
 
 
+def _repair_truncated_json(text: str, start: int) -> Optional[Dict[str, Any]]:
+    """修复「内容已完整、只缺尾部闭合」的 JSON。
+
+    本地模型偶发在最后一个字段后直接结束（finish_reason=stop、completion_tokens
+    远未触顶），输出少一个 `}`，括号扫描因 depth 不为 0 判为非法而整条丢弃。
+    这里按括号状态补齐；若最后一段字符串值本身被截半，则退回到上一个完整
+    键值对（字符串外的逗号处）再闭合，避免把半截文本当成结论。
+    """
+    depth = 0
+    in_str = False
+    esc = False
+    safe_cut = -1
+    safe_depth = 0
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == '\\':
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+        elif ch == ',' and depth >= 1:
+            safe_cut = i
+            safe_depth = depth
+    if depth <= 0:
+        return None
+    if in_str and safe_cut > start:
+        patched = text[start:safe_cut] + '}' * safe_depth
+    else:
+        patched = text[start:] + '}' * depth
+    try:
+        obj = json.loads(patched)
+        return obj if isinstance(obj, dict) else None
+    except Exception:
+        return None
+
+
 def _extract_json(raw: str) -> Optional[Dict[str, Any]]:
     """从模型输出里挖出第一个完整 JSON 对象。"""
     if not raw:
@@ -219,7 +264,8 @@ def _extract_json(raw: str) -> Optional[Dict[str, Any]]:
                     return obj if isinstance(obj, dict) else None
                 except Exception:
                     return None
-    return None
+    # 退化 3：括号未闭合（模型停在最后一个字段后直接结束）
+    return _repair_truncated_json(text, start)
 
 
 def _clean_str(v: Any, cap: int = 200) -> str:
@@ -323,7 +369,7 @@ def normalize_analysis(obj: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ----------------------------------------------------------------- 单条分析
-def _call_model(user_prompt: str, max_tokens: int = 2000) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+def _call_model(user_prompt: str, max_tokens: int = 4096) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """调用本地模型并解析 JSON，返回 (obj, 错误信息)。"""
     cfg = ai_config()
     payload = {
@@ -588,7 +634,7 @@ def deep_analyze_text(title: str, content: str, basic: Dict[str, Any],
         indicators=json.dumps(indicators, ensure_ascii=False),
         company=_company_text(company),
         content=body_text,
-    ), max_tokens=2400)
+    ), max_tokens=4096)
     if obj is None:
         # 模型偶尔输出分析过程而非 JSON：缩短输入 + 强硬格式要求后重试一次
         retry_prompt = (
@@ -600,7 +646,7 @@ def deep_analyze_text(title: str, content: str, basic: Dict[str, Any],
             f'我方资质：{_company_text(company)[:1500]}\n'
             f'正文节选：{body_text[:4000]}'
         )
-        obj, err = _call_model(retry_prompt, max_tokens=2400)
+        obj, err = _call_model(retry_prompt, max_tokens=4096)
     if obj is None:
         return None, err
     return normalize_deep(obj), None
