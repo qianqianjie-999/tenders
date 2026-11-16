@@ -123,3 +123,62 @@ systemctl is-active tenders && journalctl -u tenders -n 3 --no-pager
 | 模型主机单点关机 | 中 | 批量全停 | 已实现 G3：健康检查失败直接 503 不空等，页面不受影响 |
 | 11434 无鉴权 | 中 | 内网裸奔 | 确认 frps 未把 11434 映射到公网；仅内网/隧道可达 |
 | 15 万历史积压被误触发全量 | 低 | 跑 46 天 | 批量入口固定 `today_only`，不提供全量按钮 |
+
+---
+
+## 10. 上线实录（2026-11-16 22:06–22:22，已执行）
+
+**上线版本 `23b5a38`**（不是原计划的 `fe6da71`）。执行中发现生产那 26 个未提交改动不是垃圾，
+而是一条**正在线上运行的安全加固线**，直接 stash 拉代码会把它拆掉，故改为先收编再合并。
+
+### 10.1 与原计划的 4 处偏离
+
+| # | 原计划 | 实际做法 | 原因 |
+|---|---|---|---|
+| 1 | `git stash` 后 ff 拉 `fe6da71` | 先提交为 `1645db2`，再在本地合并出 `23b5a38`，生产 ff | 那 26 个改动含全局登录拦截/CSP/XSS 转义/依赖升级，stash 掉等于摘护栏 |
+| 2 | 直接 `git fetch origin` | 本地打增量 bundle → scp → `fetch <bundle>` | 生产仓库属主 `apache`，无 `~/.ssh` 密钥；且工作区文件 root 所有，`git` 需以 root + `safe.directory` 跑 |
+| 3 | 未涉及 | 恢复 focus/main 写接口的 CSRF 保护（仅 `api_check` 豁免） | 安全线的测试要求这些接口无 token 返回 400；已给 jiangsu/zhejiang 的 `/api/keywords` 补 `X-CSRFToken`，否则线上加关键词按钮是坏的 |
+| 4 | 未涉及 | `security.py` 换成主仓较新版本（≥12 位，不强制字符类） | 生产那份是旧版（≥9 位 + 必须含字母数字），与其自带 301 行测试自相矛盾 |
+
+### 10.2 执行结果
+
+| 步骤 | 结果 |
+|---|---|
+| 代码 | `58ee9fd → 23b5a38`，工作区干净（仅 `venv312/` 未跟踪） |
+| 依赖 | venv312 装 pdfplumber 0.11.9 / pdfminer.six 20251230 / Pillow 12.2.0 / pypdfium2 5.6.0 |
+| 表结构 | 三表各补 4 列，`ALGORITHM=INSTANT` 全部 <0.2s；行数 74828 / 31583 / 53261 未变 |
+| 配置 | `.env` 追加 `AI_BASE_URL` / `AI_MODEL`（24→26 行）；systemd 加 `--limit-request-line 8190` |
+| 服务 | `active`，gunicorn 26.2.0 正常重启，监听 0.0.0.0:9001 |
+
+### 10.3 验收（7 项）
+
+| # | 项 | 实测 |
+|---|---|---|
+| 1 | 服务起 | `/auth/login` → 200 |
+| 2 | AI 页在 | `/ai-analysis/` → 200（39 KB），未登录 302 → 登录页 |
+| 3 | 模型连通 | `reachable=True`，`http://10.140.140.170:11434/api/tags` |
+| 4 | 单条出词 | bidding_info id=80563，**20.4s** 出 JSON，`status=ok` |
+| 5 | 批量独立进程 | task 1：pid 433175 **ppid=1**，`done 4/4`，ok=4，failed=0，深入分析 4，22:17:41 完成 |
+| 6 | 超长请求行 | 重启后 414 计数 **0**（最后一次 22:03:50，重启前）；POST 查重 200 |
+| 7 | 上传解析 | `_bytes_to_text` 解析测试 PDF → `('Acceptance PDF 12345', 'pdf')` |
+
+**当日候选**：山东 420 + 江苏 164 + 浙江 134 = **718 条**（`today_only` + 关键词命中口径）。
+
+### 10.4 已知遗留
+
+- 生产单测 **113/114 通过**，`test_access_code_has_no_hardcoded_runtime_default` 失败：
+  该用例只从 `os.environ` 剔除 `ANALYSIS_ACCESS_CODE`，但 `Config` 会读 `.env`，而生产 `.env` 必然设了该值。
+  属**测试自身对环境敏感**，与代码无关；要修就改测试（改用临时 cwd/临时 .env）。
+- `venv312/` 未纳入 `.gitignore`，`git status` 永远有 1 条未跟踪目录；建议补一行。
+- 生产 `git stash@{0}`（`prod-dirty-2026-11-16-2206`）保留未删，内容已全量提交在 `1645db2`，确认无误后可 `git stash drop`。
+
+### 10.5 回滚（更新后）
+
+| 级别 | 动作 | 说明 |
+|---|---|---|
+| L1 代码 | `git -c safe.directory='*' reset --hard 58ee9fd && systemctl restart tenders` | **需 root**；4 列与 `.env` AI 键保留无副作用；会一并失去安全加固线的合并结果 |
+| L2 配置 | 去掉 `--limit-request-line`、删 `AI_*` 两行 → `daemon-reload && restart` | 批量入口自动 503 |
+| L3 数据 | `zcat /home/mariadb_backup/files/all_db_20261116_020001.sql.gz \| mysql` | 丢当日增量，先停 gunicorn |
+
+**本次备份留档**：`~/prod-dirty-2026-11-16-2200.patch`（63 KB）、`~/prod-untracked-bak-2026-11-16-2206/`、
+`~/env.bak-2026-11-16-2212`、`~/tenders.service.bak-2026-11-16-2213`。
