@@ -69,6 +69,8 @@ def parse_args(argv=None):
     p.add_argument('--keywords-only', action='store_true')
     p.add_argument('--no-auto-fetch', action='store_true',
                    help='不自动补正文，只分析已有 detail_content 的记录')
+    p.add_argument('--max-total', type=int, default=0,
+                   help='本次累计处理上限（0=只受轮数上限约束）')
     return p.parse_args(argv)
 
 
@@ -127,7 +129,7 @@ def main(argv=None) -> int:
                 ok_cnt = ai.run_batch(
                     tables, args.days, args.limit, args.status, args.force,
                     today_only=args.today_only, keywords_only=args.keywords_only,
-                    auto_fetch=not args.no_auto_fetch)
+                    auto_fetch=not args.no_auto_fetch, max_total=args.max_total)
             except Exception as e:
                 traceback.print_exc()
                 store.finish(task_id, 'failed', '任务异常: %s' % str(e)[:400])

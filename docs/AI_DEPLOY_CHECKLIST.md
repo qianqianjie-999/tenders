@@ -182,3 +182,21 @@ systemctl is-active tenders && journalctl -u tenders -n 3 --no-pager
 
 **本次备份留档**：`~/prod-dirty-2026-11-16-2200.patch`（63 KB）、`~/prod-untracked-bak-2026-11-16-2206/`、
 `~/env.bak-2026-11-16-2212`、`~/tenders.service.bak-2026-11-16-2213`。
+## 11. 批量改成「跑完为止」（2026-11-16 23:20 上线）
+
+原实现一次只取 limit 条就结束，用户得反复点按钮；且 `ai_analysis_status='failed'` 不会被排除，
+一批稳定失败的记录每次都被重新选中，正常记录永远排不进来（表现成「反复跑、成功 0」）。
+
+| 项 | 改法 | 上线动作 |
+|---|---|---|
+| 单轮 → 多轮 | `run_batch` 内 `while` 重取，直到 `pick_rows` 返回空；`MAX_ROUNDS=30` 硬顶 | 只换代码 |
+| 总闸 | 页面按「每批条数 × 10」传 `max_total`（后端 clamp 1..2000），runner 收 `--max-total` | 只换代码 |
+| 失败不重挑 | 失败 id **按表**记进 `excluded`（id 跨表会重复），后续轮次 `id NOT IN (...)` | 只换代码 |
+| 空正文不算候选 | `has_content` 由 `detail_content IS NOT NULL` 收紧为 `... AND <> ''`；抓取侧空串也重抓 | 只换代码（无 DDL） |
+| 软停止 | `POST /ai-analysis/api/stop` → 任务 `status='stopping'`；任务进程每条前查一次后收尾；`get_latest` 仍返回 `running=True`，进度条不会假完成 | 只换代码（无 DDL） |
+
+**开发机验证**：`python -m unittest discover -s tests` → 114 OK（新增 `tests/test_ai_batch_loop.py` 8 条）；
+真库跑过一次停止状态机（`try_start → request_stop → stopping → finish`）。
+
+**上线注意**：`tools/ai_coverage.py backfill` 的外层轮次已冗余（内层自己会跑完），行为正确、输出「第 2 轮」起显示 0 条属正常。
+

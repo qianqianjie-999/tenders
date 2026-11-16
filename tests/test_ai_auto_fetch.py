@@ -93,15 +93,19 @@ class RunBatchAutoFetchTests(unittest.TestCase):
     def tearDown(self):
         ai.set_progress_sink(None)
 
-    def _patch_common(self, rows=None):
+    def _patch_common(self, rows=None, pick=None):
+        picker = (mock.patch.object(ai, 'pick_rows', side_effect=pick) if pick
+                  else mock.patch.object(ai, 'pick_rows', return_value=rows or []))
         return [
             mock.patch.object(ai, 'check_model_health', return_value={'reachable': True}),
             mock.patch.object(ai, 'ensure_columns'),
             mock.patch.object(ai, 'load_keywords', return_value=['信号灯']),
             mock.patch.object(ai, 'load_company_profile', return_value={}),
-            mock.patch.object(ai, 'pick_rows', return_value=rows or []),
+            picker,
             mock.patch.object(ai, 'analyze_text', return_value=({'summary': 'x'}, None)),
             mock.patch.object(ai, 'save_analysis'),
+            # 循环里每条会查一次「是否请求停止」，单测不连库
+            mock.patch.object(ai, '_stop_requested', return_value=False),
         ]
 
     def _run(self, patches, **kw):
@@ -152,12 +156,14 @@ class RunBatchAutoFetchTests(unittest.TestCase):
     def test_success_message_carries_fetch_note(self):
         rows = [{'id': 1, 'project_name': '交通信号灯采购', 'detail_content': '正文',
                  'ai_analysis_status': None}]
-        patches = self._patch_common(rows=rows)
+        # 第二轮没候选就收工（循环版：不返回空列表会一直续跑）
+        patches = self._patch_common(pick=[rows, [], []])
         with mock.patch.object(ai, 'auto_fetch_contents',
                                return_value={'total': 1, 'ok': 1, 'fail': 0}):
             n = self._run(patches)
         self.assertEqual(n, 1)
-        self.assertIn('自动抓取正文 1 条', self.captured[-1]['message'])
+        # 循环版可能补抓多次，消息里的抓取数是累计值，这里只钉住"带上了抓取说明"
+        self.assertIn('自动抓取正文', self.captured[-1]['message'])
 
 
 class RunnerFlagTests(unittest.TestCase):

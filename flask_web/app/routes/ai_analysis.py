@@ -291,6 +291,13 @@ def api_analyze():
     payload = request.get_json(silent=True) or {}
     table = payload.get('table', 'all')
     limit = max(1, min(200, int(payload.get('limit', 20) or 20)))
+    # 累计上限：批量会「一轮轮跑到没候选」，这里给个总闸，避免无人值守跑一整天
+    # 把 GET_LOCK 长期占满。默认 10 轮 × 每轮条数。
+    try:
+        max_total = int(payload.get('max_total') or limit * 10)
+    except (TypeError, ValueError):
+        max_total = limit * 10
+    max_total = max(limit, min(2000, max_total))
     status = payload.get('content_filter', 'has_content')  # has_content / no_content / all（不限）
     force = bool(payload.get('force', False))
 
@@ -316,11 +323,21 @@ def api_analyze():
     # 前端不必再单独点「抓取详情正文」（2026-11-16 生产上因此 0 条空跑）
     ok = ai.start_batch_async(tables, 1, limit, status, force,
                               today_only=True, keywords_only=True,
-                              auto_fetch=bool(payload.get('auto_fetch', True)))
+                              auto_fetch=bool(payload.get('auto_fetch', True)),
+                              max_total=max_total)
     if not ok:
         return jsonify({'success': False, 'message': '已有分析任务在运行，请稍后再试',
                         'task': ai.get_task_state()}), 409
     return jsonify({'success': True, 'message': '分析任务已启动', 'task': ai.get_task_state()})
+
+
+@ai_analysis_bp.route('/api/stop', methods=['POST'])
+@login_required
+def api_stop():
+    """软停止批量任务：当前这条跑完即停，已完成的记录保留。"""
+    ok, msg = ai.request_stop()
+    code = 200 if ok else 409
+    return jsonify({'success': ok, 'message': msg, 'task': ai.get_task_state()}), code
 
 
 @ai_analysis_bp.route('/api/task')

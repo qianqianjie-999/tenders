@@ -150,7 +150,11 @@ def pick_pending_rows(conn, table: str, days: int, limit: int, force: bool = Fal
     if force:
         cond = "(detail_url IS NOT NULL AND detail_url <> '')"
     else:
-        cond = "(detail_url IS NOT NULL AND detail_url <> '' AND detail_content IS NULL)"
+        # 空串也算「没正文」：之前抓成空串后按 IS NULL 判定就永远不会重抓，
+        # 这批记录会一直占着 AI 分析的候选名额。代价是站点确实没正文的记录
+        # 每次跑都会再试一次（有 20 字符阈值兜底，不会写垃圾进库）。
+        cond = ("(detail_url IS NOT NULL AND detail_url <> '' "
+                "AND (detail_content IS NULL OR detail_content = ''))")
     params = []
     if today_only:
         date_cond = 'publish_date = CURDATE()'

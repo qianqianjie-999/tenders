@@ -19,7 +19,7 @@ import threading
 import time
 import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import requests
 
@@ -744,8 +744,13 @@ def ensure_columns(table: str):
 
 
 def pick_rows(table: str, days: int, limit: int, status: str, force: bool,
-              today_only: bool = False) -> List[Dict[str, Any]]:
-    """挑出待分析的行：优先已有正文、未分析的。today_only 只取当日发布。"""
+              today_only: bool = False,
+              exclude_ids: Optional[Set[int]] = None) -> List[Dict[str, Any]]:
+    """挑出待分析的行：优先已有正文、未分析的。today_only 只取当日发布。
+
+    exclude_ids：本轮/本任务里已经失败过的 id，不再重复挑，
+    否则一批稳定失败的记录会永远占住 LIMIT 名额，正常记录排不进来。
+    """
     conn = get_db_connection()
     try:
         cur = conn.cursor()
@@ -754,11 +759,18 @@ def pick_rows(table: str, days: int, limit: int, status: str, force: bool,
         if not force:
             conds.append("(ai_analysis_status <> 'ok' OR ai_analysis_status IS NULL)")
         if status == 'has_content':
-            conds.append('detail_content IS NOT NULL')
+            # 空串也算没正文：detail_content='' 的记录 AI 只能瞎猜，
+            # 而且抓取侧只认 IS NULL 才重抓，空串会长期卡在候选里占名额
+            conds.append('detail_content IS NOT NULL AND detail_content <> %s')
+            params.append('')
         elif status == 'no_content':
             conds.append('(detail_content IS NULL OR detail_content = %s)')
             params.append('')
         conds.append('detail_url IS NOT NULL')
+        if exclude_ids:
+            ids = sorted({int(i) for i in exclude_ids})
+            conds.append('id NOT IN (' + ','.join(['%s'] * len(ids)) + ')')
+            params.extend(ids)
         if today_only:
             conds.append('publish_date = CURDATE()')
         else:
@@ -920,14 +932,38 @@ def auto_fetch_contents(tables: List[str], days: int, today_only: bool,
     return stat
 
 
+# 循环轮数硬上限：max_total 为 0（不限）时也必须有终止条件，
+# 否则站点每轮漏抓一两条新正文，任务就会无限跑下去、长期占着运行锁。
+MAX_ROUNDS = 30
+
+
+def _stop_requested() -> bool:
+    """任务进程侧检查「用户点了停止」：库里的任务状态被改成 stopping。
+
+    每处理一条查一次（单条分析 20 秒量级，多一次 SELECT 可忽略），
+    这样点停止后最多再等当前这一条结束。
+    """
+    try:
+        from app.services import ai_task_store
+        return ai_task_store.stop_requested()
+    except Exception:
+        return False
+
+
 def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
               status: str = 'has_content', force: bool = False,
               today_only: bool = False, keywords_only: bool = False,
-              auto_fetch: bool = True) -> int:
+              auto_fetch: bool = True, max_total: int = 0) -> int:
     """同步批量分析（调用方自行放线程里跑）。返回分析成功条数。
 
     today_only=True 只分析当日发布；keywords_only=True 只分析命中后台关键词的。
     auto_fetch=True 先自动抓取命中关键词但没有正文的记录的详情正文，再分析。
+
+    循环口径（2026-11-16 改）：每轮取 limit_per_table 条分析，跑完再取下一轮，
+    直到没有候选（或达到 max_total / MAX_ROUNDS / 用户点停止）。
+    失败过的 id 记进 excluded，不在后续轮次重复挑——否则一批稳定失败的记录
+    每次都占满 LIMIT 名额，正常记录永远轮不上，表现成「反复跑、成功 0」。
+    max_total=0 表示只受 MAX_ROUNDS 约束。
     """
     # G3：开机探测。主机关机时整批跳过，一条 failed 都不写，
     # 避免一次停机把全部 pending 污染成 failed（failed=0 掩盖停机的老问题）。
@@ -947,102 +983,160 @@ def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
     keywords = load_keywords()
     company = load_company_profile()
 
-    # 自动补正文：没正文的记录 AI 只能靠标题瞎猜，先抓再分析
+    started_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     fetch_stat = {'total': 0, 'ok': 0, 'fail': 0}
+    done_cnt = 0        # 已处理（成功 + 失败）
+    ok_cnt = 0
+    fail_cnt = 0
+    deep_cnt = 0
+    total = 0           # 进度分母：逐轮累加，前端进度只增不减
+    rounds = 0
+    excluded: Dict[str, Set[int]] = {}   # 每张表各自记录失败过的 id（id 跨表会重复，不能混用）
+    stopped = False
+    aborted = False
+
+    def _fetch_note() -> str:
+        if not fetch_stat['total']:
+            return ''
+        return '（自动抓取正文 %d 条，失败 %d）' % (fetch_stat['ok'], fetch_stat['fail'])
+
+    def _fetch_once():
+        """补抓一次正文；抓取失败只跳过，不影响分析。"""
+        _set_state(running=True, total=total, done=done_cnt, ok=ok_cnt, failed=fail_cnt,
+                   deep_ok=deep_cnt, message='正在自动抓取详情正文…',
+                   current='', started_at=started_at)
+        one = auto_fetch_contents(valid, days, today_only, limit_per_table, keywords)
+        for key in ('total', 'ok', 'fail'):
+            fetch_stat[key] += int(one.get(key) or 0)
+
+    fetched = False
+    # 自动补正文：没正文的记录 AI 只能靠标题瞎猜，先抓再分析
     if auto_fetch:
-        _set_state(running=True, total=0, done=0, ok=0, failed=0, deep_ok=0,
-                   message='正在自动抓取详情正文…', current='',
-                   started_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        fetch_stat = auto_fetch_contents(valid, days, today_only, limit_per_table, keywords)
+        _fetch_once()
+        fetched = True
 
-    total = 0
-    rows_by_table: Dict[str, List[Dict[str, Any]]] = {}
-    for t in valid:
-        pool = limit_per_table * 10 if keywords_only else limit_per_table
-        rows = pick_rows(t, days, pool, status, force, today_only)
-        if keywords_only:
-            rows = [r for r in rows if match_keywords(
-                f"{r['project_name']}\n{(r.get('detail_content') or '')[:4000]}", keywords)][:limit_per_table]
-        rows_by_table[t] = rows
-        total += len(rows)
+    while True:
+        if _stop_requested():
+            stopped = True
+            break
 
-    fetch_note = ''
-    if fetch_stat['total']:
-        fetch_note = '（本次自动抓取正文 %d 条，失败 %d）' % (fetch_stat['ok'], fetch_stat['fail'])
+        if max_total and done_cnt >= max_total:
+            break
 
-    if total == 0:
+        cap = limit_per_table
+        if max_total:
+            cap = max(1, min(limit_per_table, max_total - done_cnt))
+
+        rows_by_table: Dict[str, List[Dict[str, Any]]] = {}
+        round_total = 0
+        for t in valid:
+            pool = cap * 10 if keywords_only else cap
+            rows = pick_rows(t, days, pool, status, force, today_only, excluded.setdefault(t, set()))
+            if keywords_only:
+                rows = [r for r in rows if match_keywords(
+                    f"{r['project_name']}\n{(r.get('detail_content') or '')[:4000]}", keywords)][:cap]
+            rows_by_table[t] = rows
+            round_total += len(rows)
+
+        if round_total == 0:
+            # 候选空了再补抓一次（新记录可能刚入库）；补抓后还是空就收工
+            if auto_fetch and not fetched:
+                _fetch_once()
+                fetched = True
+                continue
+            break
+
+        fetched = False     # 这一批消耗完，允许下一轮再补抓
+        rounds += 1
+        total = done_cnt + round_total
+        _set_state(running=True, total=total, done=done_cnt, ok=ok_cnt, failed=fail_cnt,
+                   deep_ok=deep_cnt, current='', started_at=started_at, finished_at=None,
+                   message='第 %d 轮分析中%s' % (rounds, _fetch_note()), model_status='ok')
+
+        for t, rows in rows_by_table.items():
+            for r in rows:
+                if _stop_requested():
+                    stopped = True
+                    break
+                _set_state(current=f"{t}#{r['id']} {r['project_name'][:40]}")
+                content = r.get('detail_content') or ''
+                result, err = analyze_text(r['project_name'], content)
+                # G3：运行中途主机不可达 -> 立即中止，剩余记录保持 pending
+                if result is None and classify_error(err) == 'unavailable':
+                    _set_state(message='模型服务不可达，中止批量；未处理记录保持 pending',
+                               model_status='unavailable')
+                    aborted = True
+                    break
+                # 命中后台关键词 -> 追加深入分析（资格/评分 vs 我方资质）
+                if result is not None:
+                    matched = match_keywords(f"{r['project_name']}\n{content[:4000]}", keywords)
+                    if matched:
+                        result['matched_keywords'] = matched
+                        _set_state(current=f"{t}#{r['id']} 深入分析 {r['project_name'][:32]}")
+                        deep, derr = deep_analyze_text(r['project_name'], content, result, company)
+                        if deep:
+                            result['deep'] = deep
+                            deep_cnt += 1
+                        elif derr:
+                            result['deep_error'] = derr
+                try:
+                    save_analysis(t, r['id'], result, err)
+                except Exception as e:
+                    err = f'save: {e}'
+                if result is not None:
+                    ok_cnt += 1
+                else:
+                    fail_cnt += 1
+                    # 失败的不再重挑，避免一批坏记录永远占住名额
+                    excluded.setdefault(t, set()).add(int(r['id']))
+                done_cnt = ok_cnt + fail_cnt
+                _set_state(done=done_cnt, ok=ok_cnt, failed=fail_cnt, deep_ok=deep_cnt)
+                # 本地 27B 模型连续跑，留一点喘息
+                time.sleep(0.3)
+            if stopped or aborted:
+                break
+
+        if stopped or aborted:
+            break
+        if rounds >= MAX_ROUNDS:
+            break
+
+    finished_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    tail = _fetch_note()
+
+    if aborted:
+        _set_state(running=False, status='aborted', current='', finished_at=finished_at,
+                   message='已中止：模型主机关机，成功 %d 条，其余保持 pending' % ok_cnt)
+        return ok_cnt
+
+    if stopped:
+        _set_state(running=False, status='aborted', current='', finished_at=finished_at,
+                   message='已手动停止：%d 轮，成功 %d，失败 %d，深入分析 %d%s'
+                           % (rounds, ok_cnt, fail_cnt, deep_cnt, tail))
+        return ok_cnt
+
+    if rounds == 0:
         # 不能再让前端显示「完成：成功 0」——要说明白是哪种 0
         reason = ('当日没有命中关键词的新记录'
                   if fetch_stat['total'] == 0
                   else '本次抓到的正文记录都已分析完')
-        _set_state(running=False, status='done', current='',
-                   finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        _set_state(running=False, status='done', current='', finished_at=finished_at,
                    message='没有需要分析的记录：%s%s；勾选「重新分析」可强制重跑已分析记录'
-                           % (reason, fetch_note),
+                           % (reason, tail),
                    model_status='ok')
         return 0
 
-    _set_state(running=True, total=total, done=0, ok=0, failed=0, deep_ok=0, current='',
-               started_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-               finished_at=None, message='开始分析%s' % fetch_note, model_status='ok')
-
-    ok_cnt = 0
-    fail_cnt = 0
-    deep_cnt = 0
-    aborted = False
-    for t, rows in rows_by_table.items():
-        for r in rows:
-            _set_state(current=f"{t}#{r['id']} {r['project_name'][:40]}")
-            content = r.get('detail_content') or ''
-            result, err = analyze_text(r['project_name'], content)
-            # G3：运行中途主机不可达 -> 立即中止，剩余记录保持 pending
-            if result is None and classify_error(err) == 'unavailable':
-                _set_state(message='模型服务不可达，中止批量；未处理记录保持 pending',
-                           model_status='unavailable')
-                aborted = True
-                break
-            # 命中后台关键词 -> 追加深入分析（资格/评分 vs 我方资质）
-            if result is not None:
-                matched = match_keywords(f"{r['project_name']}\n{content[:4000]}", keywords)
-                if matched:
-                    result['matched_keywords'] = matched
-                    _set_state(current=f"{t}#{r['id']} 深入分析 {r['project_name'][:32]}")
-                    deep, derr = deep_analyze_text(r['project_name'], content, result, company)
-                    if deep:
-                        result['deep'] = deep
-                        deep_cnt += 1
-                    elif derr:
-                        result['deep_error'] = derr
-            try:
-                save_analysis(t, r['id'], result, err)
-            except Exception as e:
-                err = f'save: {e}'
-            if result is not None:
-                ok_cnt += 1
-            else:
-                fail_cnt += 1
-            _set_state(done=ok_cnt + fail_cnt, ok=ok_cnt, failed=fail_cnt, deep_ok=deep_cnt)
-            # 本地 27B 模型连续跑，留一点喘息
-            time.sleep(0.3)
-        if aborted:
-            break
-
-    if aborted:
-        _set_state(running=False, status='aborted', current='',
-                   finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                   message='已中止：模型主机关机，成功 %d 条，其余保持 pending' % ok_cnt)
-        return ok_cnt
-
-    _set_state(running=False, status='done', current='',
-               finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-               message=f'完成：成功 {ok_cnt}，失败 {fail_cnt}，深入分析 {deep_cnt}{fetch_note}')
+    capped = '（已达本次上限 %d 条）' % max_total if (max_total and done_cnt >= max_total) else ''
+    _set_state(running=False, status='done', current='', finished_at=finished_at,
+               message='完成：%d 轮，成功 %d，失败 %d，深入分析 %d%s%s'
+                       % (rounds, ok_cnt, fail_cnt, deep_cnt, tail, capped))
     return ok_cnt
 
 
 def start_batch_async(tables: List[str], days: int, limit_per_table: int,
                       status: str, force: bool,
                       today_only: bool = False, keywords_only: bool = False,
-                      auto_fetch: bool = True) -> bool:
+                      auto_fetch: bool = True, max_total: int = 0) -> bool:
     """启动批量分析：拉起**独立进程**执行，已有任务在跑则返回 False。
 
     不复用 daemon 线程的原因（生产 gunicorn `--workers 2 --max-requests 1000`）：
@@ -1053,9 +1147,10 @@ def start_batch_async(tables: List[str], days: int, limit_per_table: int,
     """
     from app.services import ai_task_store
 
-    params = ('tables=%s;limit=%d;days=%d;status=%s;force=%d;today=%d;kw=%d;fetch=%d'
+    params = ('tables=%s;limit=%d;days=%d;status=%s;force=%d;today=%d;kw=%d;fetch=%d;max=%d'
               % (','.join(tables), limit_per_table, days, status, int(bool(force)),
-                 int(bool(today_only)), int(bool(keywords_only)), int(bool(auto_fetch))))
+                 int(bool(today_only)), int(bool(keywords_only)), int(bool(auto_fetch)),
+                 int(max_total)))
     ok, task_id, reason = ai_task_store.try_start(params, pid=os.getpid())
     if not ok:
         _set_state(message=reason or '已有分析任务在运行')
@@ -1086,6 +1181,8 @@ def start_batch_async(tables: List[str], days: int, limit_per_table: int,
         cmd.append('--keywords-only')
     if not auto_fetch:
         cmd.append('--no-auto-fetch')
+    if max_total:
+        cmd.extend(['--max-total', str(int(max_total))])
 
     log_dir = ROOT_DIR / 'logs'
     try:
@@ -1101,4 +1198,14 @@ def start_batch_async(tables: List[str], days: int, limit_per_table: int,
 
     ai_task_store.touch(task_id, pid=proc.pid)
     return True
+
+
+def request_stop() -> Tuple[bool, str]:
+    """Web 侧请求停止当前批量任务（软停止，不杀进程）。
+
+    只把库里的状态改 stopping，任务进程在处理下一条前读到就收尾退出，
+    已经分析完的记录不会回滚；正在跑的那一条会跑完（单条最长 3~6 分钟）。
+    """
+    from app.services import ai_task_store
+    return ai_task_store.request_stop()
 

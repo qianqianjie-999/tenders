@@ -193,6 +193,65 @@ def finish(task_id: int, status: str, message: str = '') -> None:
                 pass
 
 
+def request_stop() -> Tuple[bool, str]:
+    """把当前 running 任务标记为 stopping（软停止，不杀进程）。
+
+    任务进程在处理下一条记录前会读这个状态并收尾退出；已完成的记录不回滚，
+    正在分析的那一条会跑完（单条最长 3~6 分钟）。
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        ensure_table(conn)
+        cur = conn.cursor()
+        cur.execute(f"SELECT id FROM `{TABLE}` WHERE status = 'running' "
+                    "ORDER BY id DESC LIMIT 1")
+        row = cur.fetchone()
+        if not row:
+            cur.close()
+            return False, '当前没有正在运行的任务'
+        cur.execute(
+            f"UPDATE `{TABLE}` SET status='stopping', heartbeat_at=NOW(), "
+            "message='收到停止请求，当前这条跑完即停' WHERE id=%s AND status='running'",
+            (row['id'],))
+        conn.commit()
+        affected = cur.rowcount
+        cur.close()
+        if not affected:
+            return False, '任务状态已变化，请刷新后再试'
+        return True, '已发送停止请求，当前记录处理完即停'
+    except Exception as e:
+        logger.warning('请求停止任务失败: %s', e, exc_info=True)
+        return False, '停止请求失败：%s' % e
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def stop_requested() -> bool:
+    """任务进程侧：最新任务是否被要求停止。任何异常都按「没请求」处理。"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(f"SELECT status FROM `{TABLE}` WHERE status IN ('running', 'stopping') "
+                    "ORDER BY id DESC LIMIT 1")
+        row = cur.fetchone()
+        cur.close()
+        return bool(row) and (row.get('status') == 'stopping')
+    except Exception:
+        return False
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 def get_latest() -> Optional[Dict[str, Any]]:
     """读最近一条任务，转成前端/接口用的结构；无记录返回 None。"""
     conn = None
@@ -223,7 +282,10 @@ def get_latest() -> Optional[Dict[str, Any]]:
 
     age = row.get('age')
     age = int(age) if age is not None else None
-    still_running = row.get('status') == 'running'
+    # stopping 是「已请求停止、任务进程正在收尾」，对前端仍算运行中，
+    # 否则进度条会瞬间跳到完成、用户以为已经停了而实际还在跑当前这条
+    stopping = row.get('status') == 'stopping'
+    still_running = row.get('status') in ('running', 'stopping')
     fresh = age is not None and age <= STALE_SECONDS
     running = bool(still_running and fresh)
 
@@ -236,7 +298,8 @@ def get_latest() -> Optional[Dict[str, Any]]:
     return {
         'task_id': row.get('id'),
         'running': running,
-        'status': 'running' if running else (row.get('status') or ''),
+        'status': ('stopping' if (running and stopping)
+                   else ('running' if running else (row.get('status') or ''))),
         'params': row.get('params') or '',
         'total': int(row.get('total') or 0),
         'done': int(row.get('done') or 0),
