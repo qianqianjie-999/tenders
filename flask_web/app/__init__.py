@@ -143,12 +143,15 @@ def create_app():
     csrf.exempt(api_keyword_detail)
     
     # 为focus模块的API接口添加CSRF豁免
-    from app.routes.focus import api_add, api_update, api_delete, api_add_track, api_move_to_analysis
+    from app.routes.focus import (api_add, api_update, api_delete, api_add_track,
+                                  api_move_to_analysis, api_check)
     csrf.exempt(api_add)
     csrf.exempt(api_update)
     csrf.exempt(api_delete)
     csrf.exempt(api_add_track)
     csrf.exempt(api_move_to_analysis)
+    # 只读查重：POST 只是为了避免超长 GET 请求行（原 GET 也不需要 CSRF）
+    csrf.exempt(api_check)
 
     return app
 

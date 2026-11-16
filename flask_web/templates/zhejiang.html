@@ -2605,20 +2605,28 @@ $('#keywordProjectsModal').on('hidden.bs.modal', function() {
 function checkAndUpdateFocusStatus(data) {
     if (data.length === 0) return;
 
-    const keys = data.map(item => item.project_key).filter(key => key).join(',');
-    if (!keys) return;
+    const keys = data.map(item => item.project_key).filter(key => key);
+    if (keys.length === 0) return;
 
-    $.get('{{ url_for('focus.api_check') }}', { keys: keys }, function(response) {
-        if (response.success && response.focused) {
-            response.focused.forEach(key => {
-                const btn = $(`tr[data-project-key="${key}"] .focus-btn`);
-                if (btn.length) {
-                    btn.removeClass('btn-outline-warning').addClass('btn-warning');
-                    btn.prop('disabled', true);
-                    btn.attr('title', '已关注');
-                    btn.find('i').removeClass('far').addClass('fas');
-                }
-            });
+    // 用 POST 传数组：整页 key 拼进 URL 能到 6KB，超过 gunicorn 默认 4094 的
+    // 请求行上限，服务端直接 400 → 列表里"已关注"的星标全都不亮。
+    $.ajax({
+        url: '{{ url_for('focus.api_check') }}',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ keys: keys }),
+        success: function(response) {
+            if (response.success && response.focused) {
+                response.focused.forEach(key => {
+                    const btn = $(`tr[data-project-key="${key}"] .focus-btn`);
+                    if (btn.length) {
+                        btn.removeClass('btn-outline-warning').addClass('btn-warning');
+                        btn.prop('disabled', true);
+                        btn.attr('title', '已关注');
+                        btn.find('i').removeClass('far').addClass('fas');
+                    }
+                });
+            }
         }
     });
 }

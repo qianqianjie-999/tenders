@@ -165,15 +165,53 @@ def api_add_track(focus_id):
         return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
-@focus_bp.route('/api/check')
+# 一次查重最多收多少条 key，以及单条 key 的长度上限。
+# project_key = 项目名||发布日期||来源，中文名 URL-encode 后单条常有 200~600 字节。
+MAX_CHECK_KEYS = 200
+MAX_KEY_LENGTH = 500
+
+
+def _collect_check_keys():
+    """取待查 key：POST JSON 数组优先，GET 兼容旧缓存页面。"""
+    if request.method == 'POST':
+        payload = request.get_json(silent=True) or {}
+        raw = payload.get('keys')
+    else:
+        raw = request.args.get('keys', '')
+    if isinstance(raw, str):
+        raw = raw.split(',')
+    if not isinstance(raw, list):
+        return []
+
+    keys = []
+    for item in raw:
+        if item is None:
+            continue
+        key = str(item).strip()
+        # 超过长度上限的不可能是合法 key（名称||日期||来源），直接丢弃，
+        # 免得把 SQL 的 OR 条件撑成几千个参数。
+        if key and len(key) <= MAX_KEY_LENGTH:
+            keys.append(key)
+        if len(keys) >= MAX_CHECK_KEYS:
+            break
+    return keys
+
+
+@focus_bp.route('/api/check', methods=['GET', 'POST'])
 def api_check():
-    """检查项目是否已关注"""
+    """检查项目是否已关注。
+
+    为什么加 POST：原实现只有 GET，前端把整页 project_key（名称||日期||来源）
+    用逗号拼在 query 里；中文 URL-encode 后单条就 200~600 字节，一页 20 条可到 6KB，
+    超过 gunicorn 默认 4094 的 request-line 上限直接 400（生产 7 天 197 次，
+    表现为列表里"已关注"的星标不亮）。改为 POST JSON 数组；GET 保留给旧缓存页面。
+    """
     try:
-        keys = request.args.get('keys', '').split(',')
-        keys = [k for k in keys if k]
+        keys = _collect_check_keys()
         focused = FocusService.check_exists(keys)
         return jsonify({'success': True, 'focused': focused})
-    except Exception as e:
+    except Exception:
+        current_app.logger.exception('focus api/check failed')
         return jsonify({'success': False, 'message': '服务器内部错误'}), 500
 
 
