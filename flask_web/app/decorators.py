@@ -4,6 +4,7 @@
 2. @require_auth_write - 写入权限：登录 AND 访问口令，必须同时满足
 """
 from functools import wraps
+import hmac
 from flask import request, jsonify, current_app
 from flask_login import current_user
 
@@ -11,10 +12,10 @@ from flask_login import current_user
 def _check_access_code():
     """检查访问口令是否有效"""
     access_code = request.headers.get('X-Access-Code', '')
-    if not access_code:
-        access_code = request.args.get('access_code', '')
     config_code = current_app.config.get('ANALYSIS_ACCESS_CODE', '')
-    return config_code and access_code and access_code == config_code
+    if not config_code or not access_code:
+        return False
+    return hmac.compare_digest(str(access_code), str(config_code))
 
 
 def _unauthorized_response(message='未授权访问'):

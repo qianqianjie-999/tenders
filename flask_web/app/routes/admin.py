@@ -8,6 +8,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 
 from app.services.user_service import UserService
+from app.utils.security import validate_password_policy
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -56,8 +57,12 @@ def create_user():
         return jsonify({'success': False, 'message': '用户名和密码不能为空'}), 400
     if len(username) < 3 or len(username) > 20:
         return jsonify({'success': False, 'message': '用户名长度应为 3-20 个字符'}), 400
-    if len(password) < 6:
-        return jsonify({'success': False, 'message': '密码长度至少 6 位'}), 400
+    password_errors = validate_password_policy(password)
+    if password_errors:
+        return jsonify({
+            'success': False,
+            'message': '；'.join(password_errors),
+        }), 400
     if role not in ['user', 'admin']:
         return jsonify({'success': False, 'message': '无效的角色'}), 400
     if UserService.username_exists(username):
@@ -119,8 +124,12 @@ def update_user(user_id):
 
     new_password = data.get('new_password')
     if new_password:
-        if len(new_password) < 6:
-            return jsonify({'success': False, 'message': '密码长度至少 6 位'}), 400
+        password_errors = validate_password_policy(new_password)
+        if password_errors:
+            return jsonify({
+                'success': False,
+                'message': '；'.join(password_errors),
+            }), 400
         UserService.set_password(user_id, new_password)
 
     return jsonify({'success': True, 'message': '用户更新成功',
@@ -153,8 +162,12 @@ def reset_user_password(user_id):
 
     if not new_password:
         return jsonify({'success': False, 'message': '新密码不能为空'}), 400
-    if len(new_password) < 6:
-        return jsonify({'success': False, 'message': '密码长度至少 6 位'}), 400
+    password_errors = validate_password_policy(new_password)
+    if password_errors:
+        return jsonify({
+            'success': False,
+            'message': '；'.join(password_errors),
+        }), 400
 
     UserService.set_password(user_id, new_password)
     return jsonify({'success': True, 'message': '密码重置成功'})

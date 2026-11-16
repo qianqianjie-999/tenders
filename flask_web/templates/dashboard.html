@@ -972,6 +972,24 @@
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/chart.min.js') }}"></script>
     <script>
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+
+        function safeHttpUrl(value) {
+            if (!value) return '';
+            try {
+                const url = new URL(value, window.location.origin);
+                return ['http:', 'https:'].includes(url.protocol)
+                    ? escapeHtml(url.href)
+                    : '';
+            } catch (error) {
+                return '';
+            }
+        }
+
         // 全局变量
         let trendChart, categoryChart;
         let currentRange = 7;
@@ -1259,12 +1277,14 @@
                 // 确保百分比是数字
                 const percent = typeof source.percent === 'number' ? source.percent : 0;
 
+                const sourceName = escapeHtml(source.name);
+
                 return `
                 <div class="source-item">
                     <div class="source-header">
                         <div class="source-name">
                             <span class="source-badge ${badgeClass}" title="第${index + 1}名">${index + 1}</span>
-                            <span class="text-truncate" style="max-width: 140px;" title="${source.name}">${source.name}</span>
+                            <span class="text-truncate" style="max-width: 140px;" title="${sourceName}">${sourceName}</span>
                         </div>
                         <span class="source-count">${source.count.toLocaleString()} (${percent}%)</span>
                     </div>
@@ -1288,25 +1308,29 @@
 
             if(data.top_projects && data.top_projects.length > 0) {
                 const html = data.top_projects.map((project, index) => {
+                    const projectName = escapeHtml(project.name);
+                    const projectFullName = escapeHtml(project.full_name || project.name);
+                    const projectDate = escapeHtml(project.date);
+                    const projectUrl = safeHttpUrl(project.url);
                     // 生成关键词标签
                     const keywordTags = project.keywords && project.keywords.length > 0
-                        ? project.keywords.map(kw => `<span class="badge bg-danger bg-opacity-10 text-danger me-1" style="font-size:0.7rem;">${kw}</span>`).join('')
+                        ? project.keywords.map(kw => `<span class="badge bg-danger bg-opacity-10 text-danger me-1" style="font-size:0.7rem;">${escapeHtml(kw)}</span>`).join('')
                         : '';
 
                     // 判断是否有链接，有则渲染为a标签，无则保持div
-                    const hasUrl = project.url && project.url.trim() !== '';
+                    const hasUrl = projectUrl !== '';
                     const tag = hasUrl ? 'a' : 'div';
-                    const hrefAttr = hasUrl ? `href="${project.url}" target="_blank"` : '';
+                    const hrefAttr = hasUrl ? `href="${projectUrl}" target="_blank" rel="noopener noreferrer"` : '';
                     const cursorStyle = hasUrl ? 'cursor: pointer;' : 'cursor: default;';
 
                     return `
-                    <${tag} ${hrefAttr} class="jining-project-item" title="${project.full_name || project.name}" style="${cursorStyle} text-decoration: none; color: inherit;">
+                    <${tag} ${hrefAttr} class="jining-project-item" title="${projectFullName}" style="${cursorStyle} text-decoration: none; color: inherit;">
                         <div class="jining-project-rank ${index < 3 ? 'top3' : ''}">${index + 1}</div>
                         <div class="jining-project-info">
-                            <div class="jining-project-name">${project.name}</div>
+                            <div class="jining-project-name">${projectName}</div>
                             <div class="d-flex align-items-center mt-1">
                                 <span class="jining-project-meta me-2">
-                                    <i class="far fa-calendar-alt me-1"></i>${project.date}
+                                    <i class="far fa-calendar-alt me-1"></i>${projectDate}
                                 </span>
                                 ${keywordTags}
                             </div>
@@ -1326,20 +1350,24 @@
                 return;
             }
 
-            const html = activities.map(item => `
+            const html = activities.map(item => {
+                const activityName = escapeHtml(item.name);
+                const activitySource = escapeHtml(item.source);
+                const activityTime = escapeHtml(item.time);
+                return `
                 <tr>
                     <td>
                         <div class="d-flex align-items-center">
                             <div class="bg-primary bg-opacity-10 text-primary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width:28px;height:28px;flex-shrink:0;">
                                 <i class="fas fa-file-alt small"></i>
                             </div>
-                            <div class="text-truncate" style="max-width:110px;" title="${item.name}">${item.name}</div>
+                            <div class="text-truncate" style="max-width:110px;" title="${activityName}">${activityName}</div>
                         </div>
                     </td>
-                    <td><span class="badge bg-light text-dark text-truncate" style="max-width: 70px; display: inline-block;">${item.source}</span></td>
-                    <td class="text-muted small">${item.time}</td>
+                    <td><span class="badge bg-light text-dark text-truncate" style="max-width: 70px; display: inline-block;">${activitySource}</span></td>
+                    <td class="text-muted small">${activityTime}</td>
                 </tr>
-            `).join('');
+            `}).join('');
             $('#activity-body').html(html);
         }
     </script>

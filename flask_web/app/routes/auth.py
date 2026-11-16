@@ -4,11 +4,13 @@
 """
 import os as _os
 import sys as _sys
+from urllib.parse import urlsplit
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models.user import User
 from app.services.user_service import UserService
+from app.utils.security import validate_password_policy
 
 # 登录失败限流（2026-10-07 新增）：服务端、账号级、跨进程/跨 worker 共享。
 # 本架构下 frp 为 L4 透传，服务端拿不到真实客户端 IP，按 IP 限流无意义。
@@ -23,7 +25,12 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 def _is_safe_redirect_url(url):
     """验证重定向 URL 是否安全（仅允许站内相对路径）"""
-    return bool(url) and url.startswith('/')
+    if not url or not url.startswith('/') or url.startswith('//'):
+        return False
+    if '\\' in url:
+        return False
+    parsed = urlsplit(url)
+    return not parsed.scheme and not parsed.netloc
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -49,9 +56,6 @@ def login():
 
         # 服务端账号级登录失败限流（详见 login_guard.py 头注）
         locked, wait = _login_guard.is_locked(username)
-        if locked:
-            flash(f'登录失败次数过多，请 {wait} 秒后再试', 'error')
-            return render_template('auth/login.html'), 429
 
         # 2026-10-21：用户由 .env USERS_CONFIG 迁移至 users 表
         row = UserService.get_by_username(username)
@@ -73,6 +77,10 @@ def login():
             if _is_safe_redirect_url(next_page):
                 return redirect(next_page)
             return redirect(url_for('main.index'))
+
+        if locked:
+            flash(f'登录失败次数过多，请 {wait} 秒后再试', 'error')
+            return render_template('auth/login.html'), 429
 
         _login_guard.record_failure(username)
         remaining_attempts = _login_guard.remaining_attempts(username)
@@ -114,8 +122,9 @@ def change_password():
             flash('新密码两次输入不一致', 'error')
             return render_template('auth/change_password.html')
 
-        if len(new_password) < 6:
-            flash('新密码长度至少 6 位', 'error')
+        password_errors = validate_password_policy(new_password)
+        if password_errors:
+            flash('；'.join(password_errors), 'error')
             return render_template('auth/change_password.html')
 
         if not current_user.check_password(old_password):

@@ -386,9 +386,20 @@ class MonitorService:
         """
         try:
             spider_root = cls.get_spider_root()
-            logs_dir = spider_root / 'logs'
-            target = logs_dir / filename
-            if not target.exists():
+            logs_dir = (spider_root / 'logs').resolve()
+            candidate = Path(filename)
+            if (
+                candidate.is_absolute()
+                or candidate.name != filename
+                or candidate.suffix != '.log'
+            ):
+                return {'success': False, 'message': '日志文件不存在'}
+            target = (logs_dir / candidate).resolve()
+            try:
+                target.relative_to(logs_dir)
+            except ValueError:
+                return {'success': False, 'message': '日志文件不存在'}
+            if target.is_symlink() or not target.is_file():
                 return {'success': False, 'message': '日志文件不存在'}
 
             # 为分页，从文件末尾取 offset + lines 条，再截取前 lines 条作为本次返回
@@ -1024,6 +1035,12 @@ class MonitorService:
     def execute_spider(cls, spider_name, args=None):
         """执行爬虫命令"""
         try:
+            allowed_spiders = {
+                'jining_get', 'sd_post', 'jinan_post', 'taian_post',
+                'zibo_post', 'jiangsu_post', 'zhejiang_post',
+            }
+            if spider_name not in allowed_spiders:
+                return {'success': False, 'message': '不允许的爬虫名称'}
             import sys
             spider_root = cls.get_spider_root()
 
@@ -1059,6 +1076,9 @@ class MonitorService:
             import psutil
             
             process = psutil.Process(pid)
+            cmdline = ' '.join(process.cmdline()).lower()
+            if 'scrapy' not in cmdline or 'crawl' not in cmdline:
+                return {'success': False, 'message': '目标进程不是爬虫进程'}
             process.terminate()
             
             # 等待进程结束

@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, jsonify, current_app, Markup
+from flask import Blueprint, render_template, request, jsonify, current_app
+from markupsafe import Markup
 from flask_login import login_required
 from datetime import date
 from app.services.bidding_service import BiddingService

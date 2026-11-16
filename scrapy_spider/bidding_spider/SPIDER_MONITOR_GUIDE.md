@@ -251,7 +251,7 @@ class YourSpider(scrapy.Spider):
 export DB_HOST=localhost
 export DB_PORT=3306
 export DB_USER=bidding_user
-export DB_PASSWORD=your_password
+export DB_PASSWORD=CHANGE_ME_SET_IN_ENV
 export DB_NAME=bidding_db
 ```
 
@@ -260,7 +260,7 @@ export DB_NAME=bidding_db
 ```python
 import os
 os.environ['DB_HOST'] = 'localhost'
-os.environ['DB_PASSWORD'] = 'your_password'
+os.environ['DB_PASSWORD'] = 'CHANGE_ME_SET_IN_ENV'
 ```
 
 ## 验证埋点是否生效
