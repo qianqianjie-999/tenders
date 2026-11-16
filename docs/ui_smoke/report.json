@@ -44,6 +44,26 @@
       "name": "转单二次校验弹窗",
       "ok": true,
       "detail": "code输入框出现=True"
+    },
+    {
+      "name": "主页存在 AI 分析入口",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "入口标题正确",
+      "ok": true,
+      "detail": "AI 分析"
+    },
+    {
+      "name": "入口显示已分析数",
+      "ok": true,
+      "detail": "count=253"
+    },
+    {
+      "name": "点击可跳转 AI 分析页",
+      "ok": true,
+      "detail": "http://127.0.0.1:5000/ai-analysis/"
     }
   ],
   "console_errors": [],

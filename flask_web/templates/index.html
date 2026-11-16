@@ -1112,7 +1112,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 第二行：7个功能块 -->
+            <!-- 第二行：8个功能块 -->
             <div class="row">
                 <div class="col-12">
                     <div class="header-blocks-container">
@@ -1146,6 +1146,17 @@
                             <div class="block-content">
                                 <div class="block-title">重点关注</div>
                                 <div class="block-value" id="focus-count">0</div>
+                            </div>
+                        </a>
+
+                        <!-- AI 分析 -->
+                        <a href="{{ url_for('ai_analysis.index') }}" class="header-function-block" id="ai-analysis-block">
+                            <div class="block-icon">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="block-content">
+                                <div class="block-title">AI 分析</div>
+                                <div class="block-value" id="ai-analysis-count">0</div>
                             </div>
                         </a>
 
@@ -1755,6 +1766,7 @@ $(document).ready(function() {
     // 初始化头部数量统计
     updateBiddingCount();
     updateAnalysisCount();
+    updateAiAnalysisCount();
     updateFocusCount();
     updateDesignCount();
     updateAuditCount();
@@ -1874,6 +1886,23 @@ function updateAnalysisCount() {
         }
     }).fail(function() {
         $('#analysis-count').text('0');
+    });
+}
+
+// 更新 AI 分析数量（三张主表已分析合计）
+function updateAiAnalysisCount() {
+    $.get('{{ url_for('ai_analysis.api_stats') }}', function(response) {
+        if (response && response.data) {
+            let done = 0;
+            Object.keys(response.data).forEach(function(k) {
+                done += parseInt(response.data[k].analyzed) || 0;
+            });
+            $('#ai-analysis-count').text(done);
+        } else {
+            $('#ai-analysis-count').text('0');
+        }
+    }).fail(function() {
+        $('#ai-analysis-count').text('0');
     });
 }
 

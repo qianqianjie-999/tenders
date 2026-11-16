@@ -139,6 +139,27 @@ def main():
         else:
             check('转单二次校验弹窗', False, '未找到按钮')
 
+        print('== 4. 主页 AI 入口 ==')
+        page.goto(BASE + '/', wait_until='domcontentloaded', timeout=40000)
+        found = False
+        try:
+            page.wait_for_selector('#ai-analysis-block', timeout=15000)
+            found = True
+        except Exception as e:
+            detail = str(e)[:120]
+        check('主页存在 AI 分析入口', found, '' if found else '未找到 #ai-analysis-block')
+        if found:
+            title = page.locator('#ai-analysis-block .block-title').inner_text().strip()
+            check('入口标题正确', 'AI' in title, title)
+            page.wait_for_timeout(2500)
+            cnt = page.locator('#ai-analysis-count').inner_text().strip()
+            check('入口显示已分析数', cnt.isdigit() and int(cnt) > 0, 'count=%s' % cnt)
+            page.screenshot(path=os.path.join(OUT, '04_home_entry.png'))
+            page.locator('#ai-analysis-block').click()
+            page.wait_for_load_state('domcontentloaded')
+            page.wait_for_timeout(800)
+            check('点击可跳转 AI 分析页', '/ai-analysis' in page.url, page.url)
+
         browser.close()
 
     print('\n== console 错误 (%d) ==' % len(report['console_errors']))
