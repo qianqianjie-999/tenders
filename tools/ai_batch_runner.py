@@ -67,6 +67,8 @@ def parse_args(argv=None):
     p.add_argument('--force', action='store_true', help='已分析过的也重跑')
     p.add_argument('--today-only', action='store_true')
     p.add_argument('--keywords-only', action='store_true')
+    p.add_argument('--no-auto-fetch', action='store_true',
+                   help='不自动补正文，只分析已有 detail_content 的记录')
     return p.parse_args(argv)
 
 
@@ -102,9 +104,9 @@ def main(argv=None) -> int:
                 print('[runner] 已有任务进程持有运行锁，退出', flush=True)
                 return 2
 
-            print('[runner] 启动 task_id=%s tables=%s limit=%d days=%d today=%s kw=%s'
+            print('[runner] 启动 task_id=%s tables=%s limit=%d days=%d today=%s kw=%s fetch=%s'
                   % (task_id, ','.join(tables), args.limit, args.days,
-                     args.today_only, args.keywords_only), flush=True)
+                     args.today_only, args.keywords_only, not args.no_auto_fetch), flush=True)
 
             ai.set_progress_sink(lambda payload: store.touch(task_id, **payload))
 
@@ -124,7 +126,8 @@ def main(argv=None) -> int:
             try:
                 ok_cnt = ai.run_batch(
                     tables, args.days, args.limit, args.status, args.force,
-                    today_only=args.today_only, keywords_only=args.keywords_only)
+                    today_only=args.today_only, keywords_only=args.keywords_only,
+                    auto_fetch=not args.no_auto_fetch)
             except Exception as e:
                 traceback.print_exc()
                 store.finish(task_id, 'failed', '任务异常: %s' % str(e)[:400])

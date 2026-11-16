@@ -312,9 +312,11 @@ def api_analyze():
             'model_status': health,
         }), 503
 
-    # 只分析「当日发布 + 命中关键词」的记录
+    # 只分析「当日发布 + 命中关键词」的记录；默认先自动补正文再分析，
+    # 前端不必再单独点「抓取详情正文」（2026-11-16 生产上因此 0 条空跑）
     ok = ai.start_batch_async(tables, 1, limit, status, force,
-                              today_only=True, keywords_only=True)
+                              today_only=True, keywords_only=True,
+                              auto_fetch=bool(payload.get('auto_fetch', True)))
     if not ok:
         return jsonify({'success': False, 'message': '已有分析任务在运行，请稍后再试',
                         'task': ai.get_task_state()}), 409

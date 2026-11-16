@@ -212,9 +212,6 @@
                 <input type="number" class="form-control form-control-sm" id="oLimit" min="1" max="200" value="20">
             </div>
             <div class="col-12 col-md-10 d-flex flex-wrap gap-2">
-                <button class="btn btn-sm btn-outline-primary" id="btnFetch">
-                    <i class="fas fa-cloud-download-alt me-1"></i>抓取详情正文
-                </button>
                 <button class="btn btn-sm btn-primary" id="btnAnalyze">
                     <i class="fas fa-magic me-1"></i>开始 AI 分析
                 </button>
@@ -224,7 +221,7 @@
                 <button class="btn btn-sm btn-outline-success" id="btnCompany">
                     <i class="fas fa-id-card me-1"></i>公司资质档案
                 </button>
-                <span class="small text-muted align-self-center">每表最多处理 N 条；抓取与分析仅针对当日发布、且分析只取命中关键词的记录</span>
+                <span class="small text-muted align-self-center">每表最多分析 N 条；自动抓取当日命中关键词记录的正文后分析</span>
             </div>
         </div>
 
@@ -589,7 +586,7 @@
             $('dmDeepBox').innerHTML = a.deep
                 ? renderDeep(a.deep)
                 : (a.deep_error ? `<div class="small text-danger">深入分析失败：${esc(a.deep_error)}</div>` : '');
-            $('dmContent').textContent = d.detail_content || '（无正文，请先抓取详情正文）';
+            $('dmContent').textContent = d.detail_content || '（无正文，点「开始 AI 分析」会自动抓取）';
             $('dmLink').href = d.detail_url || '#';
             $('dmLink').style.display = d.detail_url ? '' : 'none';
             new bootstrap.Modal($('detailModal')).show();
@@ -616,25 +613,6 @@
             alert('启动失败：' + e.message);
         } finally {
             setTimeout(() => { $('btnAnalyze').disabled = false; }, 1200);
-        }
-    });
-
-    $('btnFetch').addEventListener('click', async () => {
-        const payload = {
-            table: $('fTable').value,
-            limit: parseInt($('oLimit').value || 20, 10)
-        };
-        if (!confirm('将抓取「当日发布」记录的详情页正文，速度较慢（每条 1-2 秒）。继续？')) return;
-        $('btnFetch').disabled = true;
-        try {
-            const res = await api('/ai-analysis/api/fetch-detail', {
-                method: 'POST', headers: headers(true), body: JSON.stringify(payload)
-            });
-            alert(res.message + '\n\n日志：' + (res.log || ''));
-        } catch (e) {
-            alert('启动失败：' + e.message);
-        } finally {
-            setTimeout(() => { $('btnFetch').disabled = false; }, 1500);
         }
     });
 

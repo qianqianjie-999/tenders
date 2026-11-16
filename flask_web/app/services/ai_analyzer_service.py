@@ -873,12 +873,61 @@ def _set_state(**kw):
 
 
 
+def auto_fetch_contents(tables: List[str], days: int, today_only: bool,
+                        limit_per_table: int, keywords: List[str]) -> Dict[str, int]:
+    """批量前自动补正文：只抓「日期内 + 标题命中关键词 + 还没有正文」的记录。
+
+    为什么要有它（2026-11-16 生产实录）：批量按钮只分析「已有正文」的记录，
+    用户忘了先点「抓取详情正文」，任务就 0 秒完成、成功 0，看着像功能坏了。
+    现在抓取并进批量，点一次「开始 AI 分析」走完整链路；单条抓取失败只跳过，
+    不阻塞后续分析。
+
+    返回 {'total', 'ok', 'fail'}；抓取工具不可用时返回全 0（分析照跑）。
+    """
+    stat = {'total': 0, 'ok': 0, 'fail': 0}
+    try:
+        tools = str(ROOT_DIR / 'tools')
+        if tools not in sys.path:
+            sys.path.insert(0, tools)
+        import fetch_detail_content as fdc
+    except Exception as e:
+        print('[auto-fetch] 抓取工具不可用，跳过：%s' % e, flush=True)
+        return stat
+
+    for t in tables:
+        conn = None
+        try:
+            conn = fdc.get_conn()
+            _set_state(message='自动抓取正文：%s（单表上限 %d 条）' % (t, limit_per_table),
+                       current='fetch %s' % t)
+            res = fdc.process_table(conn, t, days, limit_per_table,
+                                    workers=3, force=False, dry_run=False,
+                                    today_only=today_only, keywords=keywords)
+            stat['total'] += int(res.get('total') or 0)
+            stat['ok'] += int(res.get('ok') or 0)
+            stat['fail'] += int(res.get('fail') or 0)
+            print('[auto-fetch] %s total=%s ok=%s fail=%s'
+                  % (t, res.get('total'), res.get('ok'), res.get('fail')), flush=True)
+        except Exception as e:
+            # 抓取是"锦上添花"：站点改版/超时都不该让整批分析失败
+            print('[auto-fetch] %s 失败：%s: %s' % (t, type(e).__name__, e), flush=True)
+        finally:
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+    return stat
+
+
 def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
               status: str = 'has_content', force: bool = False,
-              today_only: bool = False, keywords_only: bool = False) -> int:
+              today_only: bool = False, keywords_only: bool = False,
+              auto_fetch: bool = True) -> int:
     """同步批量分析（调用方自行放线程里跑）。返回分析成功条数。
 
     today_only=True 只分析当日发布；keywords_only=True 只分析命中后台关键词的。
+    auto_fetch=True 先自动抓取命中关键词但没有正文的记录的详情正文，再分析。
     """
     # G3：开机探测。主机关机时整批跳过，一条 failed 都不写，
     # 避免一次停机把全部 pending 污染成 failed（failed=0 掩盖停机的老问题）。
@@ -897,6 +946,15 @@ def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
 
     keywords = load_keywords()
     company = load_company_profile()
+
+    # 自动补正文：没正文的记录 AI 只能靠标题瞎猜，先抓再分析
+    fetch_stat = {'total': 0, 'ok': 0, 'fail': 0}
+    if auto_fetch:
+        _set_state(running=True, total=0, done=0, ok=0, failed=0, deep_ok=0,
+                   message='正在自动抓取详情正文…', current='',
+                   started_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        fetch_stat = auto_fetch_contents(valid, days, today_only, limit_per_table, keywords)
+
     total = 0
     rows_by_table: Dict[str, List[Dict[str, Any]]] = {}
     for t in valid:
@@ -908,9 +966,25 @@ def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
         rows_by_table[t] = rows
         total += len(rows)
 
+    fetch_note = ''
+    if fetch_stat['total']:
+        fetch_note = '（本次自动抓取正文 %d 条，失败 %d）' % (fetch_stat['ok'], fetch_stat['fail'])
+
+    if total == 0:
+        # 不能再让前端显示「完成：成功 0」——要说明白是哪种 0
+        reason = ('当日没有命中关键词的新记录'
+                  if fetch_stat['total'] == 0
+                  else '本次抓到的正文记录都已分析完')
+        _set_state(running=False, status='done', current='',
+                   finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                   message='没有需要分析的记录：%s%s；勾选「重新分析」可强制重跑已分析记录'
+                           % (reason, fetch_note),
+                   model_status='ok')
+        return 0
+
     _set_state(running=True, total=total, done=0, ok=0, failed=0, deep_ok=0, current='',
                started_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-               finished_at=None, message='开始分析', model_status='ok')
+               finished_at=None, message='开始分析%s' % fetch_note, model_status='ok')
 
     ok_cnt = 0
     fail_cnt = 0
@@ -961,13 +1035,14 @@ def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
 
     _set_state(running=False, status='done', current='',
                finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-               message=f'完成：成功 {ok_cnt}，失败 {fail_cnt}，深入分析 {deep_cnt}')
+               message=f'完成：成功 {ok_cnt}，失败 {fail_cnt}，深入分析 {deep_cnt}{fetch_note}')
     return ok_cnt
 
 
 def start_batch_async(tables: List[str], days: int, limit_per_table: int,
                       status: str, force: bool,
-                      today_only: bool = False, keywords_only: bool = False) -> bool:
+                      today_only: bool = False, keywords_only: bool = False,
+                      auto_fetch: bool = True) -> bool:
     """启动批量分析：拉起**独立进程**执行，已有任务在跑则返回 False。
 
     不复用 daemon 线程的原因（生产 gunicorn `--workers 2 --max-requests 1000`）：
@@ -978,9 +1053,9 @@ def start_batch_async(tables: List[str], days: int, limit_per_table: int,
     """
     from app.services import ai_task_store
 
-    params = ('tables=%s;limit=%d;days=%d;status=%s;force=%d;today=%d;kw=%d'
+    params = ('tables=%s;limit=%d;days=%d;status=%s;force=%d;today=%d;kw=%d;fetch=%d'
               % (','.join(tables), limit_per_table, days, status, int(bool(force)),
-                 int(bool(today_only)), int(bool(keywords_only))))
+                 int(bool(today_only)), int(bool(keywords_only)), int(bool(auto_fetch))))
     ok, task_id, reason = ai_task_store.try_start(params, pid=os.getpid())
     if not ok:
         _set_state(message=reason or '已有分析任务在运行')
@@ -1009,6 +1084,8 @@ def start_batch_async(tables: List[str], days: int, limit_per_table: int,
         cmd.append('--today-only')
     if keywords_only:
         cmd.append('--keywords-only')
+    if not auto_fetch:
+        cmd.append('--no-auto-fetch')
 
     log_dir = ROOT_DIR / 'logs'
     try:
