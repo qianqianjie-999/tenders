@@ -229,3 +229,38 @@
 - **部署前必须**：`TMPDIR` 指向大分区（`/tmp` 是 10 MB tmpfs，大附件转换会失败）；worktree 分支需 ff 同步到 `optimization`，改动才在生产目录生效。
 - `analysis.html` 的 XSS 转义与主工作目录安全加固改动**同源但独立**，合并时会产生冲突，需人工对齐。
 - 本轮提交为本地 commit，**未 push**。
+
+## 9. 任务状态落库 + 独立进程（2026-11-16，生产 gunicorn 适配）
+
+生产用 `gunicorn --workers 2 --threads 4 --max-requests 1000`。原实现把任务状态放在
+模块级 `_task_state`、批量跑在 daemon 线程里，两种失效方式：
+
+| 失效 | 现象 | 根因 |
+|---|---|---|
+| worker 被 `--max-requests 1000` 回收 | 批量跑到一半无声消失，页面永远停在"任务启动中" | 线程随进程死亡，状态只在内存 |
+| 两个 worker 内存互不可见 | 页面显示无任务，用户再点一次 → 两份并发跑 | `_task_state` 是进程内的 |
+
+改法：
+
+- 新增 `flask_web/app/services/ai_task_store.py`：状态表 `ai_batch_tasks`（首次使用幂等建表），
+  `GET_LOCK` 串行化"检查-插入"，`heartbeat_at` + `STALE_SECONDS=180` 判活；
+  心跳过期的 `running` 行会被标记 `aborted` 并由新任务接管，页面不再卡死。
+- 新增 `tools/ai_batch_runner.py`：批量分析放到**独立进程**，由 Web 侧
+  `subprocess.Popen(..., start_new_session=True)` 拉起，worker 回收不影响它；
+  进程内另有 20 秒心跳线程，兜住单条长正文（3~6 分钟）期间的误判。
+- `ai_analyzer_service.start_batch_async()` 改为拉进程（不再是线程）；
+  `get_task_state()` 改为**读库**，DB 不可用时退回内存。
+- 进度由 `set_progress_sink()` 注入，`run_batch` 主体逻辑未改（只给 3 个终态补 `status`）。
+
+验收（开发机实测）：
+
+| 判据 | 结果 |
+|---|---|
+| 父进程 `kill -9` 后任务是否跑完 | **PASS**：父进程 8s 被杀，任务进程继续跑完 3/3，29.7s，`status=done` |
+| 跨进程重复启动 | **PASS**：第二个进程 `start -> False`，提示"已有分析任务在运行" |
+| 心跳过期接管 | **PASS**：400s 无心跳 → `running=False`、`stale=True`，新任务成功接管，旧行标 `aborted` |
+| 新进程读状态 | **PASS**：另起 Flask（5001）`GET /api/task` 读到 `task_id=6 done 3/3` |
+| 单测 | **PASS**：新增 14 条，全套 **86 条 OK** |
+
+部署注意：`ai_batch_tasks` 表由应用自动创建，无需手工迁移；任务进程用 `sys.executable`
+（生产即 `venv312/bin/python`）与 apache 身份运行，日志写 `logs/ai_batch_web.log`。

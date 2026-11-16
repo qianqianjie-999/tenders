@@ -13,14 +13,20 @@ ai_analysis / ai_analysis_status / ai_analyzed_at。
 import json
 import os
 import re
+import subprocess
+import sys
 import threading
 import time
 import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
 from app.extensions import get_db_connection
+
+# 仓库根目录（flask_web/app/services/ai_analyzer_service.py -> tenders/）
+ROOT_DIR = Path(__file__).resolve().parents[3]
 
 # 模型服务是本机/内网直连，必须绕开环境代理：requests 默认 trust_env=True，
 # 会读 HTTP_PROXY/HTTPS_PROXY；本机 NO_PROXY 未包含 127.0.0.1，代理一旦不转发
@@ -809,6 +815,8 @@ def save_analysis(table: str, rid: int, result: Optional[Dict[str, Any]], error:
 
 
 # ----------------------------------------------------------------- 批量任务
+# 状态双写：内存（同进程快速读）+ 数据库（跨 gunicorn worker 共享，见 ai_task_store）。
+# 真正的进度落库由"任务进程"通过 set_progress_sink() 注入，Web 进程不写库。
 _task_lock = threading.Lock()
 _task_state: Dict[str, Any] = {
     'running': False,
@@ -824,8 +832,24 @@ _task_state: Dict[str, Any] = {
     'model_status': 'unknown',
 }
 
+_progress_sink = None
+
+
+def set_progress_sink(sink) -> None:
+    """注入进度落库回调（只有独立任务进程需要设置）。"""
+    global _progress_sink
+    _progress_sink = sink
+
 
 def get_task_state() -> Dict[str, Any]:
+    """优先读数据库（跨 worker 一致），失败才退回本进程内存。"""
+    try:
+        from app.services import ai_task_store
+        latest = ai_task_store.get_latest()
+        if latest:
+            return latest
+    except Exception:
+        pass
     with _task_lock:
         return dict(_task_state)
 
@@ -833,6 +857,20 @@ def get_task_state() -> Dict[str, Any]:
 def _set_state(**kw):
     with _task_lock:
         _task_state.update(kw)
+    sink = _progress_sink
+    if sink is None:
+        return
+    payload = dict(kw)
+    # 前端用的是 running；库里存 status，这里做一次映射
+    if 'status' not in payload and 'running' in payload:
+        payload['status'] = 'running' if payload['running'] else 'done'
+    payload.pop('running', None)
+    try:
+        sink(payload)
+    except Exception:
+        # 状态写不进去不能中断分析，最多页面进度不动
+        pass
+
 
 
 def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
@@ -846,7 +884,7 @@ def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
     # 避免一次停机把全部 pending 污染成 failed（failed=0 掩盖停机的老问题）。
     health = check_model_health()
     if not health['reachable']:
-        _set_state(running=False, current='',
+        _set_state(running=False, status='aborted', current='',
                    finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                    message='模型主机关机，跳过本次批量；待分析记录保持 pending（%s）'
                            % health['message'],
@@ -916,12 +954,12 @@ def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
             break
 
     if aborted:
-        _set_state(running=False, current='',
+        _set_state(running=False, status='aborted', current='',
                    finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                    message='已中止：模型主机关机，成功 %d 条，其余保持 pending' % ok_cnt)
         return ok_cnt
 
-    _set_state(running=False, current='',
+    _set_state(running=False, status='done', current='',
                finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                message=f'完成：成功 {ok_cnt}，失败 {fail_cnt}，深入分析 {deep_cnt}')
     return ok_cnt
@@ -930,21 +968,60 @@ def run_batch(tables: List[str], days: int = 3, limit_per_table: int = 20,
 def start_batch_async(tables: List[str], days: int, limit_per_table: int,
                       status: str, force: bool,
                       today_only: bool = False, keywords_only: bool = False) -> bool:
-    """起后台线程跑批量任务；已有任务在跑则返回 False。"""
-    with _task_lock:
-        if _task_state['running']:
-            return False
-        _task_state.update(running=True, total=0, done=0, ok=0, failed=0, deep_ok=0,
-                           current='', message='任务启动中',
-                           started_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                           finished_at=None)
+    """启动批量分析：拉起**独立进程**执行，已有任务在跑则返回 False。
 
-    def _worker():
-        try:
-            run_batch(tables, days, limit_per_table, status, force, today_only, keywords_only)
-        except Exception as e:
-            _set_state(running=False, message=f'任务异常: {e}',
-                       finished_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    不复用 daemon 线程的原因（生产 gunicorn `--workers 2 --max-requests 1000`）：
+      - 线程随 worker 回收一起消失，批量跑一半无声中断；
+      - 两个 worker 内存互不可见，重复点击会同时跑两份。
+    进程用 start_new_session 脱离 worker 的会话/进程组，worker 重启不影响它；
+    启动权由 ai_task_store 的数据库命名锁串行化，状态写库供所有 worker 读。
+    """
+    from app.services import ai_task_store
 
-    threading.Thread(target=_worker, name='ai-analysis-batch', daemon=True).start()
+    params = ('tables=%s;limit=%d;days=%d;status=%s;force=%d;today=%d;kw=%d'
+              % (','.join(tables), limit_per_table, days, status, int(bool(force)),
+                 int(bool(today_only)), int(bool(keywords_only))))
+    ok, task_id, reason = ai_task_store.try_start(params, pid=os.getpid())
+    if not ok:
+        _set_state(message=reason or '已有分析任务在运行')
+        return False
+
+    _set_state(running=True, total=0, done=0, ok=0, failed=0, deep_ok=0, current='',
+               message='任务启动中',
+               started_at=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+               finished_at=None)
+
+    runner = ROOT_DIR / 'tools' / 'ai_batch_runner.py'
+    if not runner.exists():
+        ai_task_store.finish(task_id, 'failed', '任务脚本不存在：%s' % runner)
+        _set_state(running=False, message='任务脚本不存在')
+        return False
+
+    cmd = [sys.executable, '-u', str(runner),
+           '--task-id', str(task_id),
+           '--tables', ','.join(tables),
+           '--days', str(days),
+           '--limit', str(limit_per_table),
+           '--status', status or 'all']
+    if force:
+        cmd.append('--force')
+    if today_only:
+        cmd.append('--today-only')
+    if keywords_only:
+        cmd.append('--keywords-only')
+
+    log_dir = ROOT_DIR / 'logs'
+    try:
+        log_dir.mkdir(exist_ok=True)
+        with open(log_dir / 'ai_batch_web.log', 'ab') as log_file:
+            proc = subprocess.Popen(
+                cmd, cwd=str(ROOT_DIR), stdout=log_file, stderr=subprocess.STDOUT,
+                env={**os.environ, 'PYTHONUNBUFFERED': '1'}, start_new_session=True)
+    except Exception as e:
+        ai_task_store.finish(task_id, 'failed', '启动失败: %s' % e)
+        _set_state(running=False, message='启动任务进程失败: %s' % e)
+        return False
+
+    ai_task_store.touch(task_id, pid=proc.pid)
     return True
+
