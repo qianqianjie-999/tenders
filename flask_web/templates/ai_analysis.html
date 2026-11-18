@@ -96,17 +96,23 @@
             background:#f8fafc; color:#475569; font-weight:600; font-size:.78rem;
             white-space:nowrap; border-bottom:2px solid var(--border-color); padding:.6rem .75rem;
         }
-        .ai-table td { padding:.6rem .75rem; vertical-align:top; }
-        /* 固定列宽，剩余空间只给「项目名称 / 资格要求」，避免数值列之间被撑出大空隙 */
-        .ai-table .c-idx { width:52px; }
-        .ai-table .c-date { width:96px; white-space:nowrap; }
-        .ai-table .c-region { width:104px; white-space:nowrap; }
-        .ai-table .c-method { width:104px; white-space:nowrap; }
-        .ai-table .c-budget { width:110px; white-space:nowrap; }
-        .ai-table .c-deadline { width:132px; white-space:nowrap; }
-        .ai-table .c-purchaser { width:200px; }
-        .ai-table .c-op { width:84px; white-space:nowrap; }
-        .ai-table .c-name, .ai-table .c-qual { width: auto; }
+        .ai-table td { padding:.6rem .75rem; vertical-align:top; overflow:hidden; }
+        /* 收紧固定列宽、整表 width:100% 自适应容器，彻底去掉横向滚动条；
+           固定列合计约 776px，剩余空间留给「项目名称 / 资格要求」两列 */
+        .ai-table .c-idx { width:44px; }
+        .ai-table .c-date { width:90px; white-space:nowrap; }
+        .ai-table .c-region { width:96px; word-break:break-all; }
+        .ai-table .c-method { width:82px; }
+        .ai-table .c-budget { width:92px; white-space:nowrap; }
+        .ai-table .c-deadline { width:112px; white-space:nowrap; }
+        .ai-table .c-purchaser { width:140px; }
+        .ai-table .c-op { width:116px; white-space:nowrap; }
+        .ai-table .c-name, .ai-table .c-qual { width:auto; }
+        /* 项目名称单行截断，hover 看全名，避免长标题撑高整行 */
+        .ai-table .c-name .row-title {
+            display:block; max-width:100%; white-space:nowrap;
+            overflow:hidden; text-overflow:ellipsis;
+        }
         .ai-table tbody tr { cursor:pointer; }
         .ai-table tbody tr:hover { background:#f8fafc; }
         .row-title { color:#1e293b; font-weight:600; text-decoration:none; line-height:1.45; }
@@ -459,7 +465,7 @@
         return `<tr data-table="${d.table}" data-id="${d.id}">
             <td class="text-muted c-idx">${idx}</td>
             <td class="c-name">
-                <a href="#" class="row-title">${esc(d.project_name)}</a>
+                <a href="#" class="row-title" title="${esc(d.project_name)}">${esc(d.project_name)}</a>
                 <div class="mt-1">${statusBadge}${hit}${fit}
                     ${d.announcement_type ? `<span class="badge-soft b-type">${esc(d.announcement_type)}</span>` : ''}
                     ${relBadge(d.relevance)}
@@ -582,7 +588,7 @@
             const body = res.data.map((d, i) => renderItem(d, base + i + 1, i)).join('');
             $('listContainer').innerHTML =
                 `<div class="panel p-0"><div class="table-responsive">
-                    <table class="table ai-table align-middle mb-0" style="min-width:1380px">${head}<tbody>${body}</tbody></table>
+                    <table class="table ai-table align-middle mb-0" style="width:100%">${head}<tbody>${body}</tbody></table>
                 </div></div>`;
             renderPagination(res.pagination);
             checkFocusStatus(currentRows);
