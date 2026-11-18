@@ -510,8 +510,9 @@
         btn.classList.add('btn-warning');
         btn.title = '已关注';
         btn.disabled = true;
-        const icon = btn.querySelector('i');
-        if (icon) { icon.classList.remove('far'); icon.classList.add('fas'); }
+        // 直接重建图标：toggleFocus 点击时把按钮换成了 spinner，
+        // 只改 class 无法把 spinner 变回星星，会导致一直转圈。
+        btn.innerHTML = '<i class="fas fa-star"></i>';
     }
 
     // 点星标：直接加入重点关注列表（不跳转），与主页星标行为一致
