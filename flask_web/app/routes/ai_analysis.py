@@ -18,6 +18,26 @@ ai_analysis_bp = Blueprint('ai_analysis', __name__, url_prefix='/ai-analysis')
 
 TABLE_LIST = list(ai.TABLE_PROJECTS.keys())
 
+# 列表「只看命中关键词」：按后台 highlight_keywords 实时匹配标题 + 正文前 4000 字，
+# 与 run_batch 的 match_keywords 口径一致。关键词由后台维护，数量有限，但仍设硬顶，
+# 防止有人往表里灌几千条把 SQL 撑爆。
+MAX_LIST_KEYWORDS = 60
+
+
+def _keyword_like_cond(keywords):
+    """返回 (SQL 片段, 参数列表)；转义 LIKE 通配符，关键词当字面量匹配。"""
+    parts, params = [], []
+    for raw in (keywords or [])[:MAX_LIST_KEYWORDS]:
+        kw = str(raw).strip()
+        if not kw:
+            continue
+        escaped = kw.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        like = '%%%s%%' % escaped
+        parts.append("(project_name LIKE %s ESCAPE '\\\\' "
+                     "OR LEFT(detail_content, 4000) LIKE %s ESCAPE '\\\\')")
+        params.extend([like, like])
+    return ('(' + ' OR '.join(parts) + ')') if parts else '', params
+
 # G2 人工上传：只存解析文本，不落盘原件（绕开 /static 被 Apache Alias 直出
 # 绕过鉴权、以及生产 apache 用户对附件目录写权限两个坑）
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
@@ -134,6 +154,11 @@ def api_list():
         page = max(1, int(request.args.get('page', 1) or 1))
         page_size = min(100, max(1, int(request.args.get('page_size', 20) or 20)))
         offset = (page - 1) * page_size
+        # 默认只看命中后台关键词的项目；显式传 0/false/off 才放开
+        matched_only = request.args.get('matched_only', '1').strip().lower() \
+            not in ('0', 'false', 'off', 'no', '')
+        keywords = ai.load_keywords()
+        kw_cond, kw_params = _keyword_like_cond(keywords) if matched_only else ('', [])
 
         tables = TABLE_LIST if table in ('all', '', None) else [_table_or_none(table)]
         tables = [t for t in tables if t]
@@ -175,12 +200,16 @@ def api_list():
             if keyword:
                 conds.append('project_name LIKE %s')
                 params.append(f'%{keyword}%')
+            if kw_cond:
+                conds.append(kw_cond)
+                params.extend(kw_params)
 
             where = ' AND '.join(conds)
             cur.execute(
                 f"SELECT id, project_name, publish_date, project_source, project_category, "
                 f"detail_url, ai_analysis, ai_analysis_status, ai_analyzed_at, "
-                f"(detail_content IS NOT NULL AND detail_content <> '') AS has_content "
+                f"(detail_content IS NOT NULL AND detail_content <> '') AS has_content, "
+                f"LEFT(detail_content, 4000) AS hit_text "
                 f"FROM `{t}` WHERE {where} "
                 f"ORDER BY CAST(JSON_UNQUOTE(JSON_EXTRACT(ai_analysis, '$.relevance')) AS UNSIGNED) DESC, "
                 f"publish_date DESC, id DESC", params)
@@ -220,7 +249,11 @@ def api_list():
                 'budget': a.get('budget', '未获取'),
                 'deadline': a.get('deadline', '未获取'),
                 'qualification': a.get('qualification', '未获取'),
-                'matched_keywords': a.get('matched_keywords', []),
+                # 未分析/旧记录可能没写 matched_keywords，用当前关键词实时补，列表只显示命中项时徽章才不空
+                'matched_keywords': a.get('matched_keywords') or (
+                    ai.match_keywords(
+                        f"{r['project_name']}\n{r.get('hit_text') or ''}", keywords)
+                    if keywords else []),
                 'fit_score': (a.get('deep') or {}).get('fit_score'),
                 'has_deep': bool(a.get('deep')),
                 'risk': a.get('risk', []),

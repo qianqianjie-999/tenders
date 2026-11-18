@@ -199,10 +199,18 @@
                 <input type="date" class="form-control form-control-sm" id="fEnd">
             </div>
             <div class="col-12 col-md-2">
-                <div class="form-label-sm">标题关键词</div>
+                <div class="form-label-sm">标题搜索</div>
                 <input type="text" class="form-control form-control-sm" id="fKeyword" placeholder="如：信号灯">
             </div>
+            <div class="col-12 col-md-2">
+                <div class="form-label-sm">命中过滤</div>
+                <div class="form-check form-switch ps-0">
+                    <input class="form-check-input" type="checkbox" id="fMatchedOnly" checked>
+                    <label class="form-check-label small" for="fMatchedOnly">只看命中关键词</label>
+                </div>
+            </div>
         </div>
+        <div class="small text-muted mt-1">项目列表默认只显示命中后台关键词的项目（标题或正文前 4000 字，与分析口径一致）；取消勾选可查看全部。</div>
 
         <hr class="my-3">
 
@@ -473,6 +481,7 @@
             start_date: $('fStart').value || '',
             end_date: $('fEnd').value || '',
             keyword: $('fKeyword').value || '',
+            matched_only: $('fMatchedOnly').checked ? '1' : '0',
             page: currentPage,
             page_size: 20
         });
@@ -480,7 +489,10 @@
         try {
             const res = await api('/ai-analysis/api/list?' + p.toString());
             if (!res.data.length) {
-                $('listContainer').innerHTML = '<div class="panel empty-state"><i class="fas fa-inbox fa-2x mb-3 d-block"></i>没有符合条件的记录</div>';
+                const why = $('fMatchedOnly').checked
+                    ? '当前筛选范围内没有命中后台关键词的项目；可放宽日期或取消「只看命中关键词」'
+                    : '没有符合条件的记录';
+                $('listContainer').innerHTML = `<div class="panel empty-state"><i class="fas fa-inbox fa-2x mb-3 d-block"></i>${why}</div>`;
                 $('paginationContainer').innerHTML = '';
                 return;
             }
@@ -648,7 +660,7 @@
 
     $('btnRefresh').addEventListener('click', () => { loadStats(); loadList(1); });
 
-    ['fTable', 'fStatus', 'fAnn', 'fCat'].forEach(id =>
+    ['fTable', 'fStatus', 'fAnn', 'fCat', 'fMatchedOnly'].forEach(id =>
         $(id).addEventListener('change', () => loadList(1)));
     ['fRel', 'fStart', 'fEnd'].forEach(id =>
         $(id).addEventListener('change', () => loadList(1)));
