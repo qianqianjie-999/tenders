@@ -316,6 +316,7 @@
     const TABLE_LABEL = {bidding_info: '山东', jiangsu_bidding_info: '江苏', zhejiang_bidding_info: '浙江'};
     let currentPage = 1;
     let currentDetail = null;
+    let currentRows = [];   // 当前页数据，星标点击时按行索引取，避免项目名特殊字符拼进 HTML 属性
 
     const $ = id => document.getElementById(id);
 
@@ -435,7 +436,12 @@
         return (v && v !== '未获取') ? esc(v) : '<span class="text-muted">未获取</span>';
     }
 
-    function renderItem(d, idx) {
+    // 星标 key 与主页一致：项目原名||发布日期||原始来源（不含地区标签）
+    function focusKey(d) {
+        return [d.project_name, d.publish_date, d.project_source].join('||');
+    }
+
+    function renderItem(d, idx, rowIndex) {
         const statusBadge = d.status === 'ok'
             ? '<span class="badge-soft b-ptype">已分析</span>'
             : (d.status === 'failed'
@@ -466,8 +472,78 @@
             <td class="c-deadline">${cell(d.deadline)}</td>
             <td class="c-purchaser">${cell(d.purchaser)}</td>
             <td class="c-qual">${qual}</td>
-            <td class="c-op"><button class="btn btn-sm btn-outline-primary btn-detail"><i class="fas fa-eye me-1"></i>详情</button></td>
+            <td class="c-op">
+                <button class="btn btn-sm btn-outline-warning btn-focus" data-row-index="${rowIndex}" title="加入重点关注">
+                    <i class="far fa-star"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary btn-detail"><i class="fas fa-eye me-1"></i>详情</button>
+            </td>
         </tr>`;
+    }
+
+    // 批量查关注状态，给已关注的星标点亮（复用 focus 页的 check 接口）
+    async function checkFocusStatus(rows) {
+        const keys = rows.map(focusKey);
+        if (!keys.length) return;
+        try {
+            const res = await api('/focus/api/check', {
+                method: 'POST', headers: headers(true),
+                body: JSON.stringify({keys: keys})
+            });
+            const focused = new Set(res.focused || []);
+            keys.forEach((k, i) => {
+                if (!focused.has(k)) return;
+                const btn = document.querySelector(`#listContainer .btn-focus[data-row-index="${i}"]`);
+                if (btn) markFocused(btn);
+            });
+        } catch (e) { /* 查关注失败不影响列表展示 */ }
+    }
+
+    function markFocused(btn) {
+        btn.classList.remove('btn-outline-warning');
+        btn.classList.add('btn-warning');
+        btn.title = '已关注';
+        btn.disabled = true;
+        const icon = btn.querySelector('i');
+        if (icon) { icon.classList.remove('far'); icon.classList.add('fas'); }
+    }
+
+    // 点星标：直接加入重点关注列表（不跳转），与主页星标行为一致
+    async function toggleFocus(btn) {
+        if (btn.disabled || btn.classList.contains('btn-warning')) return;
+        const i = parseInt(btn.dataset.rowIndex, 10);
+        const d = currentRows[i];
+        if (!d) return;
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        try {
+            const res = await api('/focus/api/add', {
+                method: 'POST', headers: headers(true),
+                body: JSON.stringify({
+                    project_name: d.project_name,
+                    publish_date: d.publish_date,
+                    project_source: d.project_source,
+                    project_category: d.project_category || '未分类',
+                    detail_url: d.detail_url || ''
+                })
+            });
+            if (res.success) {
+                markFocused(btn);
+                alert('已加入重点关注列表');
+            } else {
+                // 并发/重复添加时按已关注处理，避免误报失败
+                if (res.message && res.message.includes('已在关注列表')) {
+                    markFocused(btn);
+                } else {
+                    throw new Error(res.message || '加入失败');
+                }
+            }
+        } catch (e) {
+            btn.disabled = false;
+            btn.innerHTML = original;
+            alert('加入关注失败：' + e.message);
+        }
     }
 
     async function loadList(page) {
@@ -502,12 +578,14 @@
                 <th class="c-region">项目来源</th><th class="c-method">采购方式</th><th class="c-budget">预算金额</th>
                 <th class="c-deadline">投标截止</th><th class="c-purchaser">招标人</th>
                 <th class="c-qual">资格要求</th><th class="c-op">操作</th></tr></thead>`;
-            const body = res.data.map((d, i) => renderItem(d, base + i + 1)).join('');
+            currentRows = res.data;
+            const body = res.data.map((d, i) => renderItem(d, base + i + 1, i)).join('');
             $('listContainer').innerHTML =
                 `<div class="panel p-0"><div class="table-responsive">
                     <table class="table ai-table align-middle mb-0" style="min-width:1380px">${head}<tbody>${body}</tbody></table>
                 </div></div>`;
             renderPagination(res.pagination);
+            checkFocusStatus(currentRows);
         } catch (e) {
             $('listContainer').innerHTML = `<div class="panel text-danger">加载失败：${esc(e.message)}</div>`;
         }
@@ -671,6 +749,8 @@
     });
 
     $('listContainer').addEventListener('click', e => {
+        const focusBtn = e.target.closest('.btn-focus');
+        if (focusBtn) { toggleFocus(focusBtn); return; }   // 只拦截星标，其余保持点行打开详情
         const row = e.target.closest('tr[data-table]');
         if (!row) return;
         openDetail(row.dataset.table, row.dataset.id);
